@@ -517,6 +517,11 @@ class Post {
   // 帖子头部徽章
   final List<GrantedBadge>? badgesGranted; // 帖子头部显示的徽章
 
+  // 用户身份标识
+  final bool moderator;          // 用户是否为版主
+  final bool admin;              // 用户是否为管理员
+  final bool groupModerator;     // 用户是否为分类群组版主
+
   Post({
     required this.id,
     this.name,
@@ -564,6 +569,9 @@ class Post {
     this.userTitle,
     this.userStatus,
     this.badgesGranted,
+    this.moderator = false,
+    this.admin = false,
+    this.groupModerator = false,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
@@ -636,6 +644,9 @@ class Post {
       badgesGranted: (json['badges_granted'] as List<dynamic>?)
           ?.map((e) => GrantedBadge.fromJson(e as Map<String, dynamic>))
           .toList(),
+      moderator: json['moderator'] as bool? ?? false,
+      admin: json['admin'] as bool? ?? false,
+      groupModerator: json['group_moderator'] as bool? ?? false,
     );
   }
 
@@ -723,6 +734,9 @@ class Post {
     String? userTitle,
     UserStatus? userStatus,
     List<GrantedBadge>? badgesGranted,
+    bool? moderator,
+    bool? admin,
+    bool? groupModerator,
     bool clearCurrentUserReaction = false,
   }) {
     return Post(
@@ -772,6 +786,9 @@ class Post {
       userTitle: userTitle ?? this.userTitle,
       userStatus: userStatus ?? this.userStatus,
       badgesGranted: badgesGranted ?? this.badgesGranted,
+      moderator: moderator ?? this.moderator,
+      admin: admin ?? this.admin,
+      groupModerator: groupModerator ?? this.groupModerator,
     );
   }
 }

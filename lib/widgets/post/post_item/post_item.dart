@@ -12,7 +12,6 @@ import '../../../services/toast_service.dart';
 import '../../../utils/time_utils.dart';
 import '../../content/discourse_html_content/chunked/chunked_html_content.dart';
 import '../small_action_item.dart';
-import '../moderator_action_item.dart';
 import '../post_links.dart';
 import 'widgets/post_header.dart';
 import 'widgets/post_action_bar.dart';
@@ -270,15 +269,8 @@ class _PostItemState extends ConsumerState<PostItem> {
       return SmallActionItem(post: post);
     }
 
-    if (post.postType == PostTypes.moderatorAction) {
-      return ModeratorActionItem(
-        post: post,
-        topicId: widget.topicId,
-        onReply: widget.onReply,
-      );
-    }
-
     final bool isWhisper = post.postType == PostTypes.whisper;
+    final bool isModeratorAction = post.postType == PostTypes.moderatorAction;
 
     final currentUser = ref.read(currentUserProvider).value;
     final isOwnPost = currentUser != null && currentUser.username == post.username;
@@ -442,28 +434,40 @@ class _PostItemState extends ConsumerState<PostItem> {
           const SizedBox(height: 12),
 
                     // Content (HTML)
-                    ChunkedHtmlContent(
-                      html: post.cooked,
-                      textStyle: theme.textTheme.bodyMedium?.copyWith(
-                        height: 1.5,
-                        fontSize: (theme.textTheme.bodyMedium?.fontSize ?? 14) *
-                            ref.watch(preferencesProvider).contentFontScale,
-                      ),
-                      linkCounts: post.linkCounts,
-                      mentionedUsers: post.mentionedUsers,
-                      post: post,
-                      topicId: widget.topicId,
-                      onInternalLinkTap: (topicId, topicSlug, postNumber) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => TopicDetailPage(
-                              topicId: topicId,
-                              initialTitle: topicSlug,
-                              scrollToPostNumber: postNumber,
+                    // 版主操作帖子给内容区加高亮背景（与 Discourse 网页版一致）
+                    Container(
+                      decoration: isModeratorAction
+                          ? BoxDecoration(
+                              color: theme.colorScheme.tertiaryContainer.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            )
+                          : null,
+                      padding: isModeratorAction
+                          ? const EdgeInsets.all(12)
+                          : EdgeInsets.zero,
+                      child: ChunkedHtmlContent(
+                        html: post.cooked,
+                        textStyle: theme.textTheme.bodyMedium?.copyWith(
+                          height: 1.5,
+                          fontSize: (theme.textTheme.bodyMedium?.fontSize ?? 14) *
+                              ref.watch(preferencesProvider).contentFontScale,
+                        ),
+                        linkCounts: post.linkCounts,
+                        mentionedUsers: post.mentionedUsers,
+                        post: post,
+                        topicId: widget.topicId,
+                        onInternalLinkTap: (topicId, topicSlug, postNumber) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => TopicDetailPage(
+                                topicId: topicId,
+                                initialTitle: topicSlug,
+                                scrollToPostNumber: postNumber,
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
 
                     // 相关链接

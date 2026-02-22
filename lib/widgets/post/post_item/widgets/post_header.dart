@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../constants.dart';
 import '../../../../models/topic.dart';
 import '../../../../pages/user_profile_page.dart';
@@ -120,12 +121,23 @@ class PostHeader extends StatelessWidget {
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        color: theme.colorScheme.onSurface,
+                        color: (post.moderator || post.admin)
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface,
                       ),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                     ),
                   ),
+                  // 版主盾牌图标（版主或分类群组版主）
+                  if (post.moderator || post.groupModerator) ...[
+                    const SizedBox(width: 4),
+                    FaIcon(
+                      FontAwesomeIcons.shieldHalved,
+                      size: 12,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ],
                   // 用户状态 emoji
                   if (post.userStatus?.emoji != null) ...[
                     const SizedBox(width: 4),
