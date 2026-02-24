@@ -22,18 +22,21 @@ class BrowsingHistoryPage extends ConsumerStatefulWidget {
 
 class _BrowsingHistoryPageState extends ConsumerState<BrowsingHistoryPage> {
   final ScrollController _scrollController = ScrollController();
+  late final UserContentSearchNotifier _searchNotifier;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // 提前保存 notifier 引用，避免在 dispose 中使用 ref
+    _searchNotifier = ref.read(userContentSearchProvider(SearchInType.seen).notifier);
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
-    // 清理搜索状态，防止重新进入时仍处于搜索模式
-    ref.read(userContentSearchProvider(SearchInType.seen).notifier).exitSearchMode();
+    // 延迟清理搜索状态，避免在 widget tree finalizing 期间修改 provider
+    Future(_searchNotifier.exitSearchMode);
     super.dispose();
   }
 

@@ -187,8 +187,8 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
     _controller.scrollController.removeListener(_onScroll);
     _screenTrack.stop();
     _controller.dispose();
-    // 清理搜索状态，防止重新进入时仍处于搜索模式
-    _topicSearchNotifier.exitSearchMode();
+    // 延迟清理搜索状态，避免在 widget tree finalizing 期间修改 provider
+    Future(_topicSearchNotifier.exitSearchMode);
     super.dispose();
   }
 

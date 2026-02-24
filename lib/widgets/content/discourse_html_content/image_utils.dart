@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:html/parser.dart' as html_parser;
 import '../../../constants.dart';
 import '../../../pages/image_viewer_page.dart';
 import '../../../services/discourse/discourse_service.dart';
@@ -35,37 +36,28 @@ class GalleryInfo {
     final List<String?> filenames = [];
     final Map<String, int> thumbnailToIndex = {};
 
-    // 匹配 a.lightbox 锚点标签及其内部内容
-    // Discourse 后端生成格式：
-    //   <a class="lightbox" href="原图URL" title="文件名" data-download-href="...">
-    //     <img src="缩略图URL" ...>
-    //     <div class="meta">...</div>
-    //   </a>
-    // Discourse 前端选择器：*:not(.spoiler):not(.spoiled) .lightbox
-    final lightboxRe = RegExp(
-      r'<a\s[^>]*class\s*=\s*"[^"]*\blightbox\b[^"]*"[^>]*>[\s\S]*?</a>',
-      caseSensitive: false,
-    );
-    final hrefRe = RegExp(r'''href\s*=\s*["']([^"']+)["']''', caseSensitive: false);
-    final titleRe = RegExp(r'''title\s*=\s*["']([^"']+)["']''', caseSensitive: false);
-    final srcRe = RegExp(r'''<img[^>]+src\s*=\s*["']([^"']+)["']''', caseSensitive: false);
-    // 检查 lightbox 是否在 spoiler 内（向前查找最近的未关闭 spoiler 标签）
-    final spoilerOpenRe = RegExp(
-      r'class\s*=\s*"[^"]*\b(?:spoiler|spoiled)\b[^"]*"',
-      caseSensitive: false,
-    );
+    final doc = html_parser.parseFragment(html);
 
-    for (final m in lightboxRe.allMatches(html)) {
+    // 查找所有 a.lightbox 元素
+    final lightboxLinks = doc.querySelectorAll('a.lightbox');
+
+    for (final anchor in lightboxLinks) {
       // 排除 spoiler 内的 lightbox（与 Discourse 前端行为一致）
-      final before = html.substring((m.start - 200).clamp(0, m.start), m.start);
-      if (spoilerOpenRe.hasMatch(before)) continue;
-
-      final tag = m.group(0)!;
-      final anchorTag = tag.substring(0, tag.indexOf('>') + 1);
+      bool inSpoiler = false;
+      var parent = anchor.parent;
+      while (parent != null) {
+        if (parent.classes.contains('spoiler') ||
+            parent.classes.contains('spoiled')) {
+          inSpoiler = true;
+          break;
+        }
+        parent = parent.parent;
+      }
+      if (inSpoiler) continue;
 
       // 原图 URL：从 a.lightbox 的 href 获取
-      final href = hrefRe.firstMatch(anchorTag)?.group(1);
-      if (href == null) continue;
+      final href = anchor.attributes['href'];
+      if (href == null || href.isEmpty) continue;
 
       var originalUrl = href;
       if (originalUrl.startsWith('/') && !originalUrl.startsWith('//')) {
@@ -73,12 +65,14 @@ class GalleryInfo {
       }
 
       // 文件名：从 a.lightbox 的 title 获取
-      final filename = titleRe.firstMatch(anchorTag)?.group(1);
+      final filename = anchor.attributes['title'];
 
       // 缩略图 URL：从内部 img 的 src 获取
-      final imgSrcMatch = srcRe.firstMatch(tag);
-      var thumbnailUrl = imgSrcMatch?.group(1);
-      if (thumbnailUrl != null && thumbnailUrl.startsWith('/') && !thumbnailUrl.startsWith('//')) {
+      final img = anchor.querySelector('img');
+      var thumbnailUrl = img?.attributes['src'];
+      if (thumbnailUrl != null &&
+          thumbnailUrl.startsWith('/') &&
+          !thumbnailUrl.startsWith('//')) {
         thumbnailUrl = '${AppConstants.baseUrl}$thumbnailUrl';
       }
 
@@ -90,7 +84,8 @@ class GalleryInfo {
       if (thumbnailUrl != null) {
         thumbnailToIndex[thumbnailUrl] = index;
         // 缩略图转原图后的 URL 也加入（处理 optimized → original 的情况）
-        final thumbOriginal = DiscourseImageUtils.getOriginalUrl(thumbnailUrl);
+        final thumbOriginal =
+            DiscourseImageUtils.getOriginalUrl(thumbnailUrl);
         if (thumbOriginal != thumbnailUrl) {
           thumbnailToIndex[thumbOriginal] = index;
         }
@@ -297,6 +292,7 @@ class DiscourseImageUtils {
         lowerUrl.endsWith('.png') ||
         lowerUrl.endsWith('.gif') ||
         lowerUrl.endsWith('.webp') ||
+        lowerUrl.endsWith('.avif') ||
         lowerUrl.contains('/uploads/') ||
         lowerUrl.contains('/original/');
   }

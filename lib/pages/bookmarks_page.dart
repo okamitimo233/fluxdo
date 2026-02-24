@@ -22,18 +22,20 @@ class BookmarksPage extends ConsumerStatefulWidget {
 
 class _BookmarksPageState extends ConsumerState<BookmarksPage> {
   final ScrollController _scrollController = ScrollController();
+  late final UserContentSearchNotifier _searchNotifier;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _searchNotifier = ref.read(userContentSearchProvider(SearchInType.bookmarks).notifier);
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
-    // 清理搜索状态，防止重新进入时仍处于搜索模式
-    ref.read(userContentSearchProvider(SearchInType.bookmarks).notifier).exitSearchMode();
+    // 延迟清理搜索状态，避免在 widget tree finalizing 期间修改 provider
+    Future(_searchNotifier.exitSearchMode);
     super.dispose();
   }
 

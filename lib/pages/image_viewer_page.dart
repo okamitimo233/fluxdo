@@ -747,48 +747,50 @@ class _ImageViewerPageState extends State<ImageViewerPage>
     return null;
   }
 
-  /// 构建 SVG fallback 组件
+  /// 构建图片解码 fallback 组件（SVG / AVIF）
   Widget _buildSvgFallback(String imageUrl) {
-    return _SvgImageFallback(
+    return _ImageDecodeFallback(
       imageUrl: imageUrl,
       cacheManager: _cacheManager,
     );
   }
 }
 
-/// SVG 图片 fallback 组件
-/// 当普通图片解码失败时，检测是否为 SVG 并渲染
-class _SvgImageFallback extends StatefulWidget {
+/// 图片解码 fallback 组件
+/// 当普通图片解码失败时，依次检测 SVG 和 AVIF 并渲染
+class _ImageDecodeFallback extends StatefulWidget {
   final String imageUrl;
   final DiscourseCacheManager cacheManager;
 
-  const _SvgImageFallback({
+  const _ImageDecodeFallback({
     required this.imageUrl,
     required this.cacheManager,
   });
 
   @override
-  State<_SvgImageFallback> createState() => _SvgImageFallbackState();
+  State<_ImageDecodeFallback> createState() => _ImageDecodeFallbackState();
 }
 
-class _SvgImageFallbackState extends State<_SvgImageFallback> {
+class _ImageDecodeFallbackState extends State<_ImageDecodeFallback> {
   String? _svgContent;
   bool _checked = false;
   bool _isSvg = false;
+  bool _isAvif = false;
 
   @override
   void initState() {
     super.initState();
-    _checkForSvg();
+    _detectAndDecode();
   }
 
-  Future<void> _checkForSvg() async {
+  Future<void> _detectAndDecode() async {
     try {
       final file = await widget.cacheManager.getSingleFile(widget.imageUrl);
       final bytes = await file.readAsBytes();
 
       if (bytes.isEmpty || !mounted) return;
 
+      // 1. 先检测 SVG
       if (_isSvgContent(bytes)) {
         final svgString = SvgUtils.sanitize(String.fromCharCodes(bytes));
         if (mounted) {
@@ -798,10 +800,22 @@ class _SvgImageFallbackState extends State<_SvgImageFallback> {
             _checked = true;
           });
         }
-      } else {
+        return;
+      }
+
+      // 2. 检测 AVIF magic bytes，交给 AvifImageProvider 解码（支持动画）
+      if (_isAvifContent(bytes)) {
         if (mounted) {
-          setState(() => _checked = true);
+          setState(() {
+            _isAvif = true;
+            _checked = true;
+          });
         }
+        return;
+      }
+
+      if (mounted) {
+        setState(() => _checked = true);
       }
     } catch (e) {
       if (mounted) {
@@ -828,6 +842,20 @@ class _SvgImageFallbackState extends State<_SvgImageFallback> {
     return prefix.startsWith('<svg') || prefix.startsWith('<?xml');
   }
 
+  /// 检测 AVIF magic bytes
+  /// AVIF 文件: offset 4-7 为 "ftyp"，offset 8-11 为 "avif"/"avis"/"mif1"
+  bool _isAvifContent(List<int> bytes) {
+    if (bytes.length < 12) return false;
+
+    // offset 4-7: "ftyp"
+    final ftyp = String.fromCharCodes(bytes.sublist(4, 8));
+    if (ftyp != 'ftyp') return false;
+
+    // offset 8-11: brand
+    final brand = String.fromCharCodes(bytes.sublist(8, 12));
+    return brand == 'avif' || brand == 'avis' || brand == 'mif1';
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isSvg && _svgContent != null) {
@@ -839,11 +867,21 @@ class _SvgImageFallbackState extends State<_SvgImageFallback> {
       );
     }
 
+    if (_isAvif) {
+      // 使用 AvifImageProvider 解码并渲染，自动支持动画 AVIF
+      return Center(
+        child: Image(
+          image: AvifImageProvider(widget.imageUrl),
+          fit: BoxFit.contain,
+        ),
+      );
+    }
+
     if (!_checked) {
       return const Center(child: LoadingSpinner());
     }
 
-    // 不是 SVG，显示错误图标
+    // 不是 SVG 也不是 AVIF，显示错误图标
     return const Center(
       child: Icon(
         Icons.broken_image_outlined,

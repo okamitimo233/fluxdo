@@ -1,7 +1,10 @@
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'avif_image_provider.dart';
+export 'avif_image_provider.dart' show AvifImageProvider;
 import 'dio_http_client.dart';
 
 /// Discourse 图片缓存管理器
@@ -136,15 +139,29 @@ class ExternalImageCacheManager extends CacheManager with ImageCacheManager {
   );
 }
 
+/// 检查 URL 是否指向 AVIF 图片
+bool _isAvifUrl(String url) {
+  try {
+    final path = Uri.parse(url).path.toLowerCase();
+    return path.endsWith('.avif');
+  } catch (_) {
+    return false;
+  }
+}
+
 /// 创建 Discourse 图片 Provider
 ///
 /// 用于需要 ImageProvider 的场景（CircleAvatar、DecorationImage 等）
-CachedNetworkImageProvider discourseImageProvider(
+/// AVIF URL 自动使用 AvifImageProvider 解码，其他格式使用 CachedNetworkImageProvider
+ImageProvider discourseImageProvider(
   String url, {
   double scale = 1.0,
   int? maxWidth,
   int? maxHeight,
 }) {
+  if (_isAvifUrl(url)) {
+    return AvifImageProvider(url, scale: scale);
+  }
   return CachedNetworkImageProvider(
     url,
     scale: scale,
