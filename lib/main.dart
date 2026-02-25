@@ -341,13 +341,18 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
     // 清除 Flutter 图片内存缓存，降低后台内存占用
     PaintingBinding.instance.imageCache.clear();
 
-    final user = ref.read(currentUserProvider).value;
-    if (user != null) {
-      // 先启动前台服务，确保进程不被杀死
-      await BackgroundNotificationService().enable(user.id);
+    try {
+      final user = ref.read(currentUserProvider).value;
+      if (user != null) {
+        // 先启动前台服务，确保进程不被杀死
+        await BackgroundNotificationService().enable(user.id);
+      }
+      // 服务就绪后再切换轮询模式
+      MessageBusService().enterBackgroundMode();
+    } catch (e) {
+      // 自签名应用可能不支持 BGTaskScheduler，静默忽略
+      debugPrint('[MainPage] 进入后台失败: $e');
     }
-    // 服务就绪后再切换轮询模式
-    MessageBusService().enterBackgroundMode();
   }
 
   Future<void> _handleAuthError(String message) async {
