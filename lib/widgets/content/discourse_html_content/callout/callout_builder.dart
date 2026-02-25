@@ -17,20 +17,31 @@ Widget buildCalloutBlock({
   final config = getCalloutConfig(type);
 
   // 移除 callout 标记，保留其他内容
-  // 注意：只处理 <p> 标签内的标记，不要影响 <pre>/<code> 内的内容
+  // 注意：只处理 <p> 标签内的标记，不要影响 <pre>/<code> 和嵌套 blockquote 内的内容
   var contentHtml = innerHtml;
 
+  // 只在嵌套 blockquote 之前的部分执行清理，避免破坏嵌套 callout 标记
+  final nestedBlockquoteIndex = contentHtml.indexOf('<blockquote');
+  var cleanPart = nestedBlockquoteIndex != -1
+      ? contentHtml.substring(0, nestedBlockquoteIndex)
+      : contentHtml;
+  final preservedPart = nestedBlockquoteIndex != -1
+      ? contentHtml.substring(nestedBlockquoteIndex)
+      : '';
+
   // 情况1: <p>[!type]...<br> 格式，移除标记和标题，但保留 <p> 和后续内容
-  contentHtml = contentHtml.replaceFirst(
+  cleanPart = cleanPart.replaceFirst(
     RegExp(r'<p>\s*\[![^\]]+\][+-]?.*?<br\s*/?>', dotAll: true),
     '<p>',
   );
 
   // 情况2: <p>[!type]...</p> 格式，整个 <p> 只包含标记/标题
-  contentHtml = contentHtml.replaceFirst(
+  cleanPart = cleanPart.replaceFirst(
     RegExp(r'<p>\s*\[![^\]]+\][+-]?.*?</p>', dotAll: true),
     '',
   );
+
+  contentHtml = cleanPart + preservedPart;
 
   // 清理空的 <p></p> 标签
   contentHtml = contentHtml.replaceAll(RegExp(r'<p>\s*</p>'), '');
