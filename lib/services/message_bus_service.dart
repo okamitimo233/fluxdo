@@ -290,13 +290,25 @@ class MessageBusService {
           }
         }
         
-        _failureCount++;
-        
-        if (e.type == DioExceptionType.receiveTimeout) {
-          debugPrint('[MessageBus] 长轮询超时，继续...');
+        // 处理速率限制（429 Too Many Requests）
+        if (e.response?.statusCode == 429) {
+          final retryAfter = int.tryParse(
+            e.response?.headers.value('Retry-After') ?? '',
+          );
+          final waitSeconds = (retryAfter ?? 60) + Random().nextInt(30);
+          debugPrint('[MessageBus] 触发速率限制，${waitSeconds}秒后重试');
+          await Future.delayed(Duration(seconds: waitSeconds));
           continue;
         }
-        
+
+        if (e.type == DioExceptionType.receiveTimeout) {
+          debugPrint('[MessageBus] 长轮询超时，继续...');
+          _failureCount = 0;
+          continue;
+        }
+
+        _failureCount++;
+
         final backoffSeconds = min(pow(2, _failureCount).toInt(), _maxBackoffSeconds);
         debugPrint('[MessageBus] 轮询失败: ${e.type}, ${e.message}');
         debugPrint('[MessageBus] $backoffSeconds秒后重试');
