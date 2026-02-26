@@ -143,8 +143,12 @@ class CfChallengeService {
       return null;
     }
 
-    // 打开 WebView 前先同步 Cookie 到 WebView
-    await CookieJarService().syncToWebView();
+    // Dio 请求已经 403，说明当前 cf_clearance 失效了。
+    // 在同步到 WebView 前删除它，否则 WebView 带着旧 cf_clearance 访问
+    // /challenge 时 CF 会直接放行，导致验证被跳过。
+    final cookieJarService = CookieJarService();
+    await cookieJarService.deleteCookie('cf_clearance');
+    await cookieJarService.syncToWebView();
     if (!overlayState.mounted) {
       debugPrint('[CfChallenge] Overlay no longer mounted');
       CfChallengeLogger.log('[VERIFY] Overlay not mounted');

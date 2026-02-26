@@ -24,6 +24,7 @@ class AppCookieManager extends Interceptor {
 
   /// Merge cookies into a Cookie string.
   /// Cookies with longer paths are listed before cookies with shorter paths.
+  /// 同名 cookie 去重：优先保留 domain cookie，避免重复发送。
   static String _mergeCookies(List<Cookie> cookies) {
     cookies.sort((a, b) {
       if (a.path == null && b.path == null) {
@@ -36,7 +37,22 @@ class AppCookieManager extends Interceptor {
         return b.path!.length.compareTo(a.path!.length);
       }
     });
-    return cookies.map((cookie) => '${cookie.name}=${CookieValueCodec.decode(cookie.value)}').join('; ');
+    // 按 name+path 去重，优先保留 domain cookie
+    final seen = <String>{};
+    final deduped = <Cookie>[];
+    // 先收集 domain cookie
+    for (final cookie in cookies) {
+      if (cookie.domain != null && seen.add('${cookie.name}|${cookie.path}')) {
+        deduped.add(cookie);
+      }
+    }
+    // 再收集没有 domain cookie 对应的 host-only cookie
+    for (final cookie in cookies) {
+      if (cookie.domain == null && seen.add('${cookie.name}|${cookie.path}')) {
+        deduped.add(cookie);
+      }
+    }
+    return deduped.map((cookie) => '${cookie.name}=${CookieValueCodec.decode(cookie.value)}').join('; ');
   }
 
   @override

@@ -84,11 +84,9 @@ class _WebViewLoginPageState extends State<WebViewLoginPage> {
     final cookies = await cookieManager.getCookies(url: WebUri('https://linux.do/'));
 
     String? tToken;
-    String? cfClearance;
 
     for (final cookie in cookies) {
-      if (cookie.name == '_t') tToken = cookie.value;
-      if (cookie.name == 'cf_clearance') cfClearance = cookie.value;
+      if (cookie.name == '_t') { tToken = cookie.value; break; }
     }
 
     if (tToken == null || tToken.isEmpty) return;
@@ -114,8 +112,7 @@ class _WebViewLoginPageState extends State<WebViewLoginPage> {
       }
     } catch (_) {}
 
-    // 保存 tokens 和用户名
-    await _service.saveTokens(tToken: tToken, cfClearance: cfClearance);
+    // 保存用户名
     if (username != null && username.isNotEmpty) {
       await _service.saveUsername(username);
     }
@@ -131,8 +128,10 @@ class _WebViewLoginPageState extends State<WebViewLoginPage> {
         CookieSyncService().setCsrfToken(csrf.toString());
       }
     } catch (_) {}
-    // 登录后从 WebView 同步 Cookie 到 CookieJar
+    // 登录后从 WebView 同步所有 Cookie 到 CookieJar（包括 _t、cf_clearance 等）
     await _cookieJar.syncFromWebView();
+    // 更新内存状态并通知监听者
+    _service.onLoginSuccess(tToken);
     // 登录后重新加载预热数据
     await PreloadedDataService().refresh();
 

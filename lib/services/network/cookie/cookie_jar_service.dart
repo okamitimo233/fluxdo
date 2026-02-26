@@ -335,11 +335,18 @@ class CookieJarService {
       final uri = Uri.parse(AppConstants.baseUrl);
       final cookies = await _cookieJar!.loadForRequest(uri);
 
+      // 优先返回 domain cookie（更可能是最新的、由服务器设置的），
+      // 避免 host-only 和 domain cookie 共存时取到旧值。
+      String? fallback;
       for (final cookie in cookies) {
         if (cookie.name == name) {
-          return CookieValueCodec.decode(cookie.value);
+          if (cookie.domain != null) {
+            return CookieValueCodec.decode(cookie.value);
+          }
+          fallback ??= CookieValueCodec.decode(cookie.value);
         }
       }
+      return fallback;
     } catch (e) {
       debugPrint('[CookieJar] Failed to get cookie $name: $e');
     }
@@ -359,7 +366,9 @@ class CookieJarService {
     try {
       final uri = Uri.parse(AppConstants.baseUrl);
       final cookie = io.Cookie(name, value)
-        ..path = path ?? '/';
+        ..path = path ?? '/'
+        ..secure = secure
+        ..httpOnly = httpOnly;
 
       if (domain != null) {
         cookie.domain = domain.startsWith('.') ? domain : '.$domain';
@@ -374,17 +383,36 @@ class CookieJarService {
     }
   }
 
-  /// 删除指定 Cookie
+  /// 删除指定 Cookie（遍历所有相关 host，删除所有匹配 name 的 cookie）
   Future<void> deleteCookie(String name) async {
     if (!_initialized) await initialize();
 
     try {
       final uri = Uri.parse(AppConstants.baseUrl);
-      final expiredCookie = io.Cookie(name, '')
-        ..path = '/'
-        ..expires = DateTime.now().subtract(const Duration(days: 1));
+      final expired = DateTime.now().subtract(const Duration(days: 1));
+      final relatedHosts = await _getRelatedHosts(uri.host);
 
-      await _cookieJar!.saveFromResponse(uri, [expiredCookie]);
+      for (final host in relatedHosts) {
+        final hostUri = Uri.parse('https://$host');
+        final cookies = await _cookieJar!.loadForRequest(hostUri);
+        final expiredCookies = <io.Cookie>[];
+
+        for (final cookie in cookies) {
+          if (cookie.name == name) {
+            final expired0 = io.Cookie(name, '')
+              ..path = cookie.path ?? '/'
+              ..expires = expired;
+            if (cookie.domain != null) {
+              expired0.domain = cookie.domain;
+            }
+            expiredCookies.add(expired0);
+          }
+        }
+
+        if (expiredCookies.isNotEmpty) {
+          await _cookieJar!.saveFromResponse(hostUri, expiredCookies);
+        }
+      }
     } catch (e) {
       debugPrint('[CookieJar] Failed to delete cookie $name: $e');
     }
@@ -424,12 +452,6 @@ class CookieJarService {
 
   /// 获取 cf_clearance
   Future<String?> getCfClearance() => getCookieValue('cf_clearance');
-
-  /// 设置 _t token
-  Future<void> setTToken(String value) => setCookie('_t', value);
-
-  /// 设置 cf_clearance
-  Future<void> setCfClearance(String value) => setCookie('cf_clearance', value);
 
   // ---------------------------------------------------------------------------
   // 私有工具方法

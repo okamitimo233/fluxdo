@@ -127,21 +127,12 @@ mixin _AuthMixin on _DiscourseServiceBase {
     return true;
   }
 
-  /// 保存登录 Token
-  Future<void> saveTokens({required String tToken, String? cfClearance}) async {
+  /// 登录成功后更新内存状态并通知监听者。
+  /// Cookie 写入由 syncFromWebView() 统一处理。
+  void onLoginSuccess(String tToken) {
     _tToken = tToken;
-    await _cookieJar.setTToken(tToken);
-    if (cfClearance != null) {
-      await _cookieJar.setCfClearance(cfClearance);
-    }
     _credentialsLoaded = false;
-    await PreloadedDataService().refresh();
     _authStateController.add(null);
-  }
-
-  /// 保存登录 Token（兼容旧方法）
-  Future<void> saveToken(String tToken) async {
-    await saveTokens(tToken: tToken);
   }
 
   /// 保存用户名
