@@ -169,13 +169,12 @@ class CategoryTabManagerSheet extends ConsumerWidget {
           ),
           // 标题
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
             child: Text(
-              '全部分类',
+              '浏览分类',
               style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
-          const Divider(height: 1),
           // 内容
           Expanded(
             child: categoriesAsync.when(
@@ -233,16 +232,17 @@ class _BrowseContent extends ConsumerWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       children: [
         // ---- 我的分类 ----
         Row(
           children: [
             Text(
               '我的分类',
-              style: theme.textTheme.titleSmall?.copyWith(
+              style: theme.textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: colorScheme.onSurfaceVariant,
+                color: colorScheme.outline,
+                letterSpacing: 0.5,
               ),
             ),
             const Spacer(),
@@ -253,19 +253,20 @@ class _BrowseContent extends ConsumerWidget {
                   MaterialPageRoute(builder: (_) => const _PinnedCategoryEditPage()),
                 );
               },
-              icon: const Icon(Icons.edit_outlined, size: 16),
+              icon: const Icon(Icons.edit_outlined, size: 14),
               label: const Text('编辑'),
               style: TextButton.styleFrom(
                 visualDensity: VisualDensity.compact,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
+                textStyle: const TextStyle(fontSize: 13),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         if (pinnedCategories.isEmpty)
           Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: 16),
             child: Text(
               '点击"编辑"添加常用分类到标签栏',
               style: TextStyle(color: colorScheme.outline, fontSize: 13),
@@ -273,7 +274,7 @@ class _BrowseContent extends ConsumerWidget {
           )
         else
           Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: 16),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -284,15 +285,15 @@ class _BrowseContent extends ConsumerWidget {
             ),
           ),
 
-        const Divider(height: 1),
-        const SizedBox(height: 16),
+        const SizedBox(height: 4),
 
         // ---- 全部分类（网格） ----
         Text(
           '全部分类',
-          style: theme.textTheme.titleSmall?.copyWith(
+          style: theme.textTheme.labelMedium?.copyWith(
             fontWeight: FontWeight.w600,
-            color: colorScheme.onSurfaceVariant,
+            color: colorScheme.outline,
+            letterSpacing: 0.5,
           ),
         ),
         const SizedBox(height: 12),
