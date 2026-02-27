@@ -257,6 +257,11 @@ class ExtendedImageGestureState extends State<ExtendedImageGesture>
       return;
     }
 
+    // 兜底：isSliding 已为 false 但页面仍处于偏移状态（竞态导致），强制回弹
+    if (extendedImageSlidePageState != null) {
+      extendedImageSlidePageState!.resetIfNeeded();
+    }
+
     if (_pageViewState != null && _pageViewState!.isDraging) {
       _pageViewState!.onDragEnd(
         DragEndDetails(

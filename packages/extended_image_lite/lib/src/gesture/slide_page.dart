@@ -62,6 +62,10 @@ class ExtendedImageSlidePageState extends State<ExtendedImageSlidePage>
   ///whether is sliding page
   bool get isSliding => _isSliding;
 
+  /// 滑动会话 ID，每次新滑动开始时递增。
+  /// 用于防止回弹动画完成时误将新会话的 _isSliding 重置。
+  int _slideSessionId = 0;
+
   Size? _pageSize;
   Size get pageSize => _pageSize ?? context.size!;
 
@@ -95,11 +99,13 @@ class ExtendedImageSlidePageState extends State<ExtendedImageSlidePage>
   void didUpdateWidget(ExtendedImageSlidePage oldWidget) {
     if (oldWidget.resetPageDuration != widget.resetPageDuration) {
       _backAnimationController.stop();
+      _backAnimationController.removeListener(_backAnimation);
       _backAnimationController.dispose();
       _backAnimationController = AnimationController(
         vsync: this,
         duration: widget.resetPageDuration,
       );
+      _backAnimationController.addListener(_backAnimation);
     }
     super.didUpdateWidget(oldWidget);
   }
@@ -108,10 +114,17 @@ class ExtendedImageSlidePageState extends State<ExtendedImageSlidePage>
   ExtendedImageGestureState? get imageGestureState =>
       _extendedImageGestureState;
   ExtendedImageSlidePageHandlerState? _extendedImageSlidePageHandlerState;
+
+  /// 回弹动画启动时记录的会话 ID
+  int _backAnimationSessionId = -1;
+
   void _backAnimation() {
     if (mounted) {
       setState(() {
-        if (_backAnimationController.isCompleted) {
+        // 仅当回弹动画的会话 ID 与当前一致时才重置 _isSliding，
+        // 避免新滑动会话被旧动画误重置。
+        if (_backAnimationController.isCompleted &&
+            _backAnimationSessionId == _slideSessionId) {
           _isSliding = false;
         }
       });
@@ -135,8 +148,11 @@ class ExtendedImageSlidePageState extends State<ExtendedImageSlidePage>
     ExtendedImageGestureState? extendedImageGestureState,
     ExtendedImageSlidePageHandlerState? extendedImageSlidePageHandlerState,
   }) {
+    // 如果回弹动画正在播放，打断它并从当前动画位置开始新滑动
     if (_backAnimationController.isAnimating) {
-      return;
+      _offset = _backOffsetAnimation?.value ?? _offset;
+      _scale = _backScaleAnimation?.value ?? _scale;
+      _backAnimationController.stop();
     }
     if (extendedImageGestureState != null) {
       assert(extendedImageGestureState.mounted);
@@ -161,18 +177,19 @@ class ExtendedImageSlidePageState extends State<ExtendedImageSlidePage>
           pageGestureAxis: widget.slideAxis,
         );
 
-    {
-      _isSliding = true;
-      if (widget.slideType == SlideType.onlyImage) {
-        _extendedImageGestureState?.slide();
-        _extendedImageSlidePageHandlerState?.slide();
-      }
-
-      if (mounted) {
-        setState(() {});
-      }
-      widget.onSlidingPage?.call(this);
+    if (!_isSliding) {
+      _slideSessionId++;
     }
+    _isSliding = true;
+    if (widget.slideType == SlideType.onlyImage) {
+      _extendedImageGestureState?.slide();
+      _extendedImageSlidePageHandlerState?.slide();
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+    widget.onSlidingPage?.call(this);
   }
 
   void endSlide(ScaleEndDetails details) {
@@ -205,6 +222,7 @@ class ExtendedImageSlidePageState extends State<ExtendedImageSlidePage>
           );
           _offset = Offset.zero;
           _scale = 1.0;
+          _backAnimationSessionId = _slideSessionId;
           _backAnimationController.reset();
           _backAnimationController.forward();
         } else {
@@ -242,6 +260,27 @@ class ExtendedImageSlidePageState extends State<ExtendedImageSlidePage>
     );
 
     return result;
+  }
+
+  /// 兜底重置：当手势结束但 isSliding 已为 false 时调用，
+  /// 确保不会因竞态导致页面卡在中间位置。
+  void resetIfNeeded() {
+    if (!_isSliding && !_popping && !_backAnimationController.isAnimating) {
+      if (_offset != Offset.zero || _scale != 1.0) {
+        _backOffsetAnimation = _backAnimationController.drive(
+          Tween<Offset>(begin: _offset, end: Offset.zero),
+        );
+        _backScaleAnimation = _backAnimationController.drive(
+          Tween<double>(begin: _scale, end: 1.0),
+        );
+        _offset = Offset.zero;
+        _scale = 1.0;
+        _backAnimationSessionId = _slideSessionId;
+        _isSliding = true;
+        _backAnimationController.reset();
+        _backAnimationController.forward();
+      }
+    }
   }
 
   void popPage() {

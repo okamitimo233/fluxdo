@@ -92,12 +92,14 @@ class ExtendedImageSlidePageHandlerState
   }
 
   void _handleScaleEnd(ScaleEndDetails details) {
+    _updateSlidePagePreOffset = null;
     if (_extendedImageSlidePageState != null &&
         _extendedImageSlidePageState!.isSliding) {
-      _updateSlidePagePreOffset = null;
       _extendedImageSlidePageState!.endSlide(details);
       return;
     }
+    // 兜底：isSliding 已为 false 但页面仍处于偏移状态（竞态导致），强制回弹
+    _extendedImageSlidePageState?.resetIfNeeded();
   }
 
   void slide() {
