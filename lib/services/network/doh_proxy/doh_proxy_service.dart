@@ -28,6 +28,7 @@ class DohProxyService {
   String? _currentDohServer;
   bool? _currentPreferIPv6;
   int? _currentPreferredPort;
+  String? _lastError;
   // ignore: unused_field
   Isolate? _ffiIsolate; // 保持引用防止 GC
   SendPort? _ffiSendPort;
@@ -38,6 +39,9 @@ class DohProxyService {
 
   /// 代理端口
   int? get port => _port;
+
+  /// 最近一次启动失败的原因
+  String? get lastError => _lastError;
 
   /// 启动 DOH 代理
   ///
@@ -61,6 +65,8 @@ class DohProxyService {
       await stop();
     }
 
+    _lastError = null;
+
     // 根据平台选择启动方式
     if (DohProxyFfi.isAvailable) {
       return _startWithFfi(preferredPort, preferIPv6, dohServer);
@@ -83,7 +89,8 @@ class DohProxyService {
           dohServer: dohServer,
         );
         if (resultPort <= 0) {
-          NetworkLogger.log('[DOH] FFI 启动失败，返回值: $resultPort');
+          _lastError = 'FFI 启动失败，返回值: $resultPort';
+          NetworkLogger.log('[DOH] $_lastError');
           return false;
         }
 
@@ -96,7 +103,8 @@ class DohProxyService {
         return true;
       });
     } catch (e) {
-      NetworkLogger.log('[DOH] FFI 启动异常: $e');
+      _lastError = 'FFI 启动异常: $e';
+      NetworkLogger.log('[DOH] $_lastError');
       return false;
     }
   }
@@ -106,7 +114,8 @@ class DohProxyService {
     try {
       final executablePath = await _getExecutablePath();
       if (executablePath == null) {
-        NetworkLogger.log('[DOH] 找不到代理可执行文件');
+        _lastError = '找不到代理可执行文件';
+        NetworkLogger.log('[DOH] $_lastError');
         return false;
       }
 
@@ -161,6 +170,10 @@ class DohProxyService {
       // 监听进程退出
       _process!.exitCode.then((code) {
         NetworkLogger.log('[DOH] 进程退出，代码: $code');
+        if (!completed) {
+          _lastError = '代理进程异常退出，退出码: $code';
+          NetworkLogger.log('[DOH] $_lastError');
+        }
         _cleanup();
         if (!completed) {
           completed = true;
@@ -172,7 +185,8 @@ class DohProxyService {
       final result = await completer.future.timeout(
         const Duration(seconds: 5),
         onTimeout: () {
-          NetworkLogger.log('[DOH] 代理启动超时');
+          _lastError = '代理启动超时（5秒内未响应）';
+          NetworkLogger.log('[DOH] $_lastError');
           return false;
         },
       );
@@ -184,7 +198,8 @@ class DohProxyService {
 
       return true;
     } catch (e) {
-      NetworkLogger.log('[DOH] 启动失败: $e');
+      _lastError = '启动失败: $e';
+      NetworkLogger.log('[DOH] $_lastError');
       await stop();
       return false;
     }
@@ -235,6 +250,7 @@ class DohProxyService {
     _currentDohServer = null;
     _currentPreferIPv6 = null;
     _currentPreferredPort = null;
+    // 注意：不清除 _lastError，保留用于 UI 展示
   }
 
   /// 获取 DOH 代理可执行文件路径（仅桌面平台）
@@ -312,11 +328,9 @@ class DohProxyService {
     if (result is Map && result['ok'] == true) {
       return (result['port'] as int?) ?? -1;
     }
-    if (result is Map && result['error'] != null) {
-      NetworkLogger.log('[DOH] FFI 启动失败: ${result['error']}');
-    } else {
-      NetworkLogger.log('[DOH] FFI 启动失败: unknown error');
-    }
+    final error = result is Map ? result['error']?.toString() : null;
+    _lastError = 'FFI 启动失败: ${error ?? 'unknown error'}';
+    NetworkLogger.log('[DOH] $_lastError');
     return -1;
   }
 

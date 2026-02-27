@@ -138,22 +138,38 @@ class _DohSettingsCardState extends State<DohSettingsCard> {
             if (!isRunning && !isApplying && _service.lastStartFailed)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.warning_amber_rounded, size: 16, color: theme.colorScheme.error),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '代理启动失败，DoH/ECH 无法生效',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.error,
+                    Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, size: 16, color: theme.colorScheme.error),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '代理启动失败，DoH/ECH 无法生效',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.error,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: isApplying ? null : _service.restartProxy,
+                          child: const Text('重试'),
+                        ),
+                      ],
+                    ),
+                    if (proxyService.lastError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 24, top: 4),
+                        child: Text(
+                          proxyService.lastError!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontSize: 11,
+                          ),
                         ),
                       ),
-                    ),
-                    TextButton(
-                      onPressed: isApplying ? null : _service.restartProxy,
-                      child: const Text('重试'),
-                    ),
                   ],
                 ),
               ),
