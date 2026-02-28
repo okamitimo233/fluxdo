@@ -139,7 +139,7 @@ class PostReactionPicker {
                               ),
                               child: Center(
                                 child: Image(
-                                  image: discourseImageProvider(_getEmojiUrl(r)),
+                                  image: emojiImageProvider(_getEmojiUrl(r)),
                                   width: iconSize,
                                   height: iconSize,
                                   errorBuilder: (_, _, _) => const Icon(Icons.emoji_emotions_outlined, size: 24),

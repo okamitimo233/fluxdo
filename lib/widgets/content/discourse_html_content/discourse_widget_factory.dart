@@ -128,9 +128,9 @@ class DiscourseWidgetFactory extends WidgetFactory {
       return _buildSvgWidget(resolvedUrl, width, height, isEmoji);
     }
 
-    // 使用自定义的鉴权 ImageProvider（即使在 waiting 状态也可以构建）
+    // 使用自定义的鉴权 ImageProvider（emoji 使用独立缓存池）
     final imageProvider = resolvedUrl != null
-        ? discourseImageProvider(resolvedUrl)
+        ? (isEmoji ? emojiImageProvider(resolvedUrl) : discourseImageProvider(resolvedUrl))
         : null;
 
     // 检查是否在画廊列表中（使用 findIndex 支持缩略图→原图的多种 URL 变体匹配）

@@ -257,7 +257,7 @@ class _PostReactionUsersSheetState extends State<PostReactionUsersSheet> {
                 )
               else if (emojiId != null)
                 Image(
-                  image: discourseImageProvider(_getEmojiUrl(emojiId)),
+                  image: emojiImageProvider(_getEmojiUrl(emojiId)),
                   width: 18,
                   height: 18,
                 ),
@@ -353,7 +353,7 @@ class _PostReactionUsersSheetState extends State<PostReactionUsersSheet> {
             // 回应 emoji（仅在"全部"标签下显示）
             if (_selectedReactionId == null)
               Image(
-                image: discourseImageProvider(_getEmojiUrl(item.reactionId)),
+                image: emojiImageProvider(_getEmojiUrl(item.reactionId)),
                 width: 20,
                 height: 20,
               ),

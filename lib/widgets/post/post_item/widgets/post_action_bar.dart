@@ -170,7 +170,7 @@ class PostActionBar extends StatelessWidget {
                                   padding: const EdgeInsets.symmetric(horizontal: 2),
                                   alignment: Alignment.center,
                                   child: Image(
-                                    image: discourseImageProvider(_getEmojiUrl(reaction.id)),
+                                    image: emojiImageProvider(_getEmojiUrl(reaction.id)),
                                     width: 16,
                                     height: 16,
                                   ),
@@ -207,7 +207,7 @@ class PostActionBar extends StatelessWidget {
                       alignment: Alignment.center,
                       child: currentUserReaction != null
                           ? Image(
-                              image: discourseImageProvider(_getEmojiUrl(currentUserReaction!.id)),
+                              image: emojiImageProvider(_getEmojiUrl(currentUserReaction!.id)),
                               width: 20,
                               height: 20,
                             )

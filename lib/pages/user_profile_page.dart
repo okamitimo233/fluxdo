@@ -1057,7 +1057,7 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage>
       final emojiUrl = _getEmojiUrl(cleanName);
 
       return Image(
-        image: discourseImageProvider(emojiUrl),
+        image: emojiImageProvider(emojiUrl),
         width: 18,
         height: 18,
         fit: BoxFit.contain,
@@ -1784,7 +1784,7 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage>
                 children: [
                   if (emojiUrl != null)
                     Image(
-                      image: discourseImageProvider(emojiUrl),
+                      image: emojiImageProvider(emojiUrl),
                       width: 20,
                       height: 20,
                       errorBuilder: (_, _, _) => const Icon(Icons.emoji_emotions, size: 20),

@@ -24,14 +24,15 @@ class DiscourseCacheManager extends CacheManager with ImageCacheManager {
     Config(
       key,
       stalePeriod: const Duration(days: 7),
-      maxNrOfCacheObjects: 200,
+      maxNrOfCacheObjects: 500,
+      repo: JsonCacheInfoRepository(databaseName: key),
       fileService: HttpFileService(httpClient: DioHttpClient()),
     ),
   );
 
   /// 内存级 URL 索引：记录已知存在于磁盘缓存中的 URL
   ///
-  /// 避免每次 isImageCached / preloadImage 都执行 SQLite 查询。
+  /// 避免每次 isImageCached / preloadImage 都查询磁盘缓存。
   /// 仅用于 "跳过已缓存" 的快速判断，不影响 CachedNetworkImage 自身的加载流程。
   final Set<String> _knownCachedUrls = {};
 
@@ -72,7 +73,7 @@ class DiscourseCacheManager extends CacheManager with ImageCacheManager {
 
   /// 检查图片是否已缓存
   Future<bool> isImageCached(String url) async {
-    // 先查内存索引，命中则跳过 SQLite
+    // 先查内存索引，命中则跳过磁盘查询
     if (_knownCachedUrls.contains(url)) return true;
 
     try {
@@ -91,7 +92,7 @@ class DiscourseCacheManager extends CacheManager with ImageCacheManager {
   ///
   /// 用于预加载画廊中的相邻图片
   Future<void> preloadImage(String url) async {
-    // 内存索引快速跳过已缓存 URL，避免 SQLite 查询
+    // 内存索引快速跳过已缓存 URL，避免磁盘查询
     if (_knownCachedUrls.contains(url)) return;
     // 避免并发重复下载同一 URL
     if (_pendingUrls.contains(url)) return;
@@ -116,6 +117,30 @@ class DiscourseCacheManager extends CacheManager with ImageCacheManager {
   }
 }
 
+/// Emoji 专用缓存管理器
+///
+/// 与内容图片分离，避免小体积高频 emoji 被大图片 LRU 淘汰。
+/// emoji 体积小（3-10KB）、种类有限、复用率极高，适合长期缓存。
+class EmojiCacheManager extends CacheManager with ImageCacheManager {
+  static const String key = 'emojiImageCache';
+  static EmojiCacheManager? _instance;
+
+  factory EmojiCacheManager() {
+    _instance ??= EmojiCacheManager._();
+    return _instance!;
+  }
+
+  EmojiCacheManager._() : super(
+    Config(
+      key,
+      stalePeriod: const Duration(days: 30), // emoji 很少变化，长期缓存
+      maxNrOfCacheObjects: 500,
+      repo: JsonCacheInfoRepository(databaseName: key),
+      fileService: HttpFileService(httpClient: DioHttpClient()),
+    ),
+  );
+}
+
 /// 通用外部图片缓存管理器
 ///
 /// 用于第三方服务的图片（如 mermaid.ink、GitHub 等）
@@ -133,7 +158,8 @@ class ExternalImageCacheManager extends CacheManager with ImageCacheManager {
     Config(
       key,
       stalePeriod: const Duration(days: 30), // 外部图片缓存更久
-      maxNrOfCacheObjects: 100,
+      maxNrOfCacheObjects: 200,
+      repo: JsonCacheInfoRepository(databaseName: key),
       // 使用默认 HTTP 客户端，不需要 Discourse 认证
     ),
   );
@@ -168,5 +194,16 @@ ImageProvider discourseImageProvider(
     maxWidth: maxWidth,
     maxHeight: maxHeight,
     cacheManager: DiscourseCacheManager(),
+  );
+}
+
+/// 创建 Emoji 图片 Provider
+///
+/// 使用独立的 [EmojiCacheManager]，不与内容图片竞争缓存空间
+ImageProvider emojiImageProvider(String url, {double scale = 1.0}) {
+  return CachedNetworkImageProvider(
+    url,
+    scale: scale,
+    cacheManager: EmojiCacheManager(),
   );
 }

@@ -896,7 +896,7 @@ Widget _buildStatusEmoji(UserStatus status) {
         '${AppConstants.baseUrl}/images/emoji/twitter/$cleanName.png?v=12';
 
     return Image(
-      image: discourseImageProvider(emojiUrl),
+      image: emojiImageProvider(emojiUrl),
       width: 14,
       height: 14,
       fit: BoxFit.contain,

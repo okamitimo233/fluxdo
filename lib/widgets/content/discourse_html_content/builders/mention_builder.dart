@@ -86,7 +86,7 @@ Widget _buildStatusEmoji(dom.Element imgElement, double size) {
       : src;
 
   return Image(
-    image: discourseImageProvider(resolvedSrc),
+    image: emojiImageProvider(resolvedSrc),
     width: size,
     height: size,
     errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),

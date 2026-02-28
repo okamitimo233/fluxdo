@@ -144,7 +144,7 @@ class PostHeader extends StatelessWidget {
                     Tooltip(
                       message: post.userStatus!.description ?? '',
                       child: Image(
-                        image: discourseImageProvider(_getEmojiUrl(post.userStatus!.emoji!)),
+                        image: emojiImageProvider(_getEmojiUrl(post.userStatus!.emoji!)),
                         width: 16,
                         height: 16,
                         errorBuilder: (_, _, _) => const SizedBox.shrink(),
