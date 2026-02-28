@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'network/discourse_dio.dart';
+import 'network/exceptions/oauth_exception.dart';
 import 'toast_service.dart';
 import '../models/cdk_user_info.dart';
 
@@ -40,12 +41,16 @@ class CdkOAuthService {
     try {
       final response = await _dio.get(
         '$baseUrl/api/v1/oauth/user-info',
-        options: Options(extra: {'skipCsrf': true}),
+        options: Options(extra: {'skipCsrf': true, 'showErrorToast': false}),
       );
       final cdkData = response.data['data'];
       return CdkUserInfo.fromJson(cdkData);
-    } catch (e) {
-      return null;
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        throw OAuthExpiredException(serviceName: 'CDK', statusCode: statusCode);
+      }
+      rethrow;
     }
   }
 

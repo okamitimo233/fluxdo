@@ -188,10 +188,68 @@ class _MetaversePageState extends ConsumerState<MetaversePage> {
     );
   }
 
+  Future<void> _reauthorizeLdc() async {
+    if (_ldcProcessing) return;
+    setState(() => _ldcProcessing = true);
+    try {
+      final service = LdcOAuthService();
+      try {
+        await service.logout();
+      } catch (_) {
+        // 忽略登出错误
+      }
+      if (!mounted) return;
+      final result = await service.authorize(context);
+      if (result && mounted) {
+        // 授权成功后再清除旧缓存，然后拉取新数据
+        await ref.read(ldcUserInfoProvider.notifier).clear();
+        ref.read(ldcUserInfoProvider.notifier).refresh();
+        ToastService.showSuccess('LDC 重新授权成功');
+      }
+    } catch (e) {
+      if (mounted) {
+        ToastService.showError('授权失败: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _ldcProcessing = false);
+      }
+    }
+  }
+
+  Future<void> _reauthorizeCdk() async {
+    if (_cdkProcessing) return;
+    setState(() => _cdkProcessing = true);
+    try {
+      final service = CdkOAuthService();
+      try {
+        await service.logout();
+      } catch (_) {
+        // 忽略登出错误
+      }
+      if (!mounted) return;
+      final result = await service.authorize(context);
+      if (result && mounted) {
+        await ref.read(cdkUserInfoProvider.notifier).clear();
+        ref.read(cdkUserInfoProvider.notifier).refresh();
+        ToastService.showSuccess('CDK 重新授权成功');
+      }
+    } catch (e) {
+      if (mounted) {
+        ToastService.showError('授权失败: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _cdkProcessing = false);
+      }
+    }
+  }
+
   Widget _buildLdcServiceItem(ThemeData theme) {
     if (_ldcEnabled) {
       return LdcBalanceCard(
         onDisable: _ldcProcessing ? null : () => _toggleLdc(false),
+        onReauthorize: _ldcProcessing ? null : _reauthorizeLdc,
       );
     }
 
@@ -272,6 +330,7 @@ class _MetaversePageState extends ConsumerState<MetaversePage> {
     if (_cdkEnabled) {
       return CdkBalanceCard(
         onDisable: _cdkProcessing ? null : () => _toggleCdk(false),
+        onReauthorize: _cdkProcessing ? null : _reauthorizeCdk,
       );
     }
 

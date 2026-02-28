@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/cdk_user_info.dart';
 import '../services/cdk_oauth_service.dart';
+import '../services/network/exceptions/oauth_exception.dart';
 import 'core_providers.dart';
 
 final cdkUserInfoProvider = AsyncNotifierProvider<CdkUserInfoNotifier, CdkUserInfo?>(() {
@@ -47,33 +48,45 @@ class CdkUserInfoNotifier extends AsyncNotifier<CdkUserInfo?> {
   }
 
   Future<CdkUserInfo?> _fetchUserInfo() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final enabled = prefs.getBool(_cdkEnabledKey) ?? false;
+    final prefs = await SharedPreferences.getInstance();
+    final enabled = prefs.getBool(_cdkEnabledKey) ?? false;
 
-      if (!enabled) return null;
+    if (!enabled) return null;
 
-      final currentUser = await ref.read(currentUserProvider.future);
-      if (currentUser == null) return null;
+    final currentUser = await ref.read(currentUserProvider.future);
+    if (currentUser == null) return null;
 
-      final service = CdkOAuthService();
-      final userInfo = await service.getUserInfo();
+    final service = CdkOAuthService();
+    final userInfo = await service.getUserInfo();
 
-      if (userInfo != null) {
-        await prefs.setString(_cacheKey, jsonEncode(userInfo.toJson()));
-        await prefs.setString(_cacheUserKey, userInfo.username);
-      }
-
-      return userInfo;
-    } catch (e) {
-      return null;
+    if (userInfo != null) {
+      await prefs.setString(_cacheKey, jsonEncode(userInfo.toJson()));
+      await prefs.setString(_cacheUserKey, userInfo.username);
     }
+
+    return userInfo;
   }
 
   Future<void> refresh() async {
+    final previousData = state.value;
     // ignore: invalid_use_of_internal_member
     state = const AsyncLoading<CdkUserInfo?>().copyWithPrevious(state);
-    state = await AsyncValue.guard(() => _fetchUserInfo());
+    try {
+      final result = await _fetchUserInfo();
+      state = AsyncValue.data(result);
+    } catch (e, st) {
+      if (e is OAuthExpiredException) {
+        // 登录态过期：清除缓存并立即反映到 UI
+        final prefs = await SharedPreferences.getInstance();
+        await _clearCache(prefs);
+        state = AsyncValue.error(e, st);
+      } else if (previousData != null) {
+        // 网络错误等：保留旧数据
+        state = AsyncValue.data(previousData);
+      } else {
+        state = AsyncValue.error(e, st);
+      }
+    }
   }
 
   Future<void> clear() async {

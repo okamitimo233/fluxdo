@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ldc_user_info.dart';
 import '../services/ldc_oauth_service.dart';
+import '../services/network/exceptions/oauth_exception.dart';
 import 'core_providers.dart';
 
 final ldcUserInfoProvider = AsyncNotifierProvider<LdcUserInfoNotifier, LdcUserInfo?>(() {
@@ -47,34 +48,46 @@ class LdcUserInfoNotifier extends AsyncNotifier<LdcUserInfo?> {
   }
 
   Future<LdcUserInfo?> _fetchUserInfo() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final enabled = prefs.getBool(_ldcEnabledKey) ?? false;
+    final prefs = await SharedPreferences.getInstance();
+    final enabled = prefs.getBool(_ldcEnabledKey) ?? false;
 
-      if (!enabled) return null;
+    if (!enabled) return null;
 
-      final currentUser = await ref.read(currentUserProvider.future);
-      if (currentUser == null) return null;
-      final gamificationScore = currentUser.gamificationScore;
+    final currentUser = await ref.read(currentUserProvider.future);
+    if (currentUser == null) return null;
+    final gamificationScore = currentUser.gamificationScore;
 
-      final service = LdcOAuthService();
-      final userInfo = await service.getUserInfo(gamificationScore: gamificationScore);
+    final service = LdcOAuthService();
+    final userInfo = await service.getUserInfo(gamificationScore: gamificationScore);
 
-      if (userInfo != null) {
-        await prefs.setString(_cacheKey, jsonEncode(userInfo.toJson()));
-        await prefs.setString(_cacheUserKey, userInfo.username);
-      }
-
-      return userInfo;
-    } catch (e) {
-      return null;
+    if (userInfo != null) {
+      await prefs.setString(_cacheKey, jsonEncode(userInfo.toJson()));
+      await prefs.setString(_cacheUserKey, userInfo.username);
     }
+
+    return userInfo;
   }
 
   Future<void> refresh() async {
+    final previousData = state.value;
     // ignore: invalid_use_of_internal_member
     state = const AsyncLoading<LdcUserInfo?>().copyWithPrevious(state);
-    state = await AsyncValue.guard(() => _fetchUserInfo());
+    try {
+      final result = await _fetchUserInfo();
+      state = AsyncValue.data(result);
+    } catch (e, st) {
+      if (e is OAuthExpiredException) {
+        // 登录态过期：清除缓存并立即反映到 UI
+        final prefs = await SharedPreferences.getInstance();
+        await _clearCache(prefs);
+        state = AsyncValue.error(e, st);
+      } else if (previousData != null) {
+        // 网络错误等：保留旧数据
+        state = AsyncValue.data(previousData);
+      } else {
+        state = AsyncValue.error(e, st);
+      }
+    }
   }
 
   Future<void> clear() async {

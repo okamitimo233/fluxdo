@@ -29,6 +29,9 @@ import '../widgets/ldc_balance_card.dart';
 import '../providers/ldc_providers.dart';
 import '../widgets/cdk_balance_card.dart';
 import '../providers/cdk_providers.dart';
+import '../services/ldc_oauth_service.dart';
+import '../services/cdk_oauth_service.dart';
+import '../services/toast_service.dart';
 import '../utils/number_utils.dart';
 import '../services/emoji_handler.dart';
 import '../constants.dart';
@@ -134,6 +137,38 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       if (mounted) {
         LoadingDialog.hide(context);
       }
+    }
+  }
+
+  Future<void> _reauthorizeLdc() async {
+    final service = LdcOAuthService();
+    try {
+      await service.logout();
+    } catch (_) {
+      // 忽略登出错误
+    }
+    if (!mounted) return;
+    final result = await service.authorize(context);
+    if (result && mounted) {
+      await ref.read(ldcUserInfoProvider.notifier).clear();
+      ref.read(ldcUserInfoProvider.notifier).refresh();
+      ToastService.showSuccess('LDC 重新授权成功');
+    }
+  }
+
+  Future<void> _reauthorizeCdk() async {
+    final service = CdkOAuthService();
+    try {
+      await service.logout();
+    } catch (_) {
+      // 忽略登出错误
+    }
+    if (!mounted) return;
+    final result = await service.authorize(context);
+    if (result && mounted) {
+      await ref.read(cdkUserInfoProvider.notifier).clear();
+      ref.read(cdkUserInfoProvider.notifier).refresh();
+      ToastService.showSuccess('CDK 重新授权成功');
     }
   }
 
@@ -268,12 +303,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
             Consumer(
               builder: (context, ref, _) {
-                final ldcUserInfo = ref.watch(ldcUserInfoProvider).value;
-                if (ldcUserInfo == null) return const SizedBox.shrink();
+                final ldcState = ref.watch(ldcUserInfoProvider);
+                final hasError = ldcState.hasError && !ldcState.hasValue;
+                final hasData = ldcState.value != null;
+                if (!hasError && !hasData) return const SizedBox.shrink();
                 return Column(
-                  children: const [
-                    LdcBalanceCard(compact: true),
-                    SizedBox(height: 24),
+                  children: [
+                    LdcBalanceCard(
+                      compact: true,
+                      onReauthorize: () => _reauthorizeLdc(),
+                    ),
+                    const SizedBox(height: 24),
                   ],
                 );
               },
@@ -281,12 +321,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
             Consumer(
               builder: (context, ref, _) {
-                final cdkUserInfo = ref.watch(cdkUserInfoProvider).value;
-                if (cdkUserInfo == null) return const SizedBox.shrink();
+                final cdkState = ref.watch(cdkUserInfoProvider);
+                final hasError = cdkState.hasError && !cdkState.hasValue;
+                final hasData = cdkState.value != null;
+                if (!hasError && !hasData) return const SizedBox.shrink();
                 return Column(
-                  children: const [
-                    CdkBalanceCard(compact: true),
-                    SizedBox(height: 24),
+                  children: [
+                    CdkBalanceCard(
+                      compact: true,
+                      onReauthorize: () => _reauthorizeCdk(),
+                    ),
+                    const SizedBox(height: 24),
                   ],
                 );
               },
