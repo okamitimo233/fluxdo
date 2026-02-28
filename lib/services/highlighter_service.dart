@@ -176,6 +176,11 @@ class HighlighterService {
   final _cache = <String, List<HighlightToken>>{};
   static const _maxCacheSize = 50;
 
+  // 并发限制器：避免大量代码块同时创建 ReceivePort 等待结果
+  int _activeRequests = 0;
+  static const _maxConcurrentRequests = 3;
+  final _pendingQueue = <Completer<void>>[];
+
   // 预加载的字体 TextStyle
   TextStyle? _firaCodeStyle;
 
@@ -207,7 +212,7 @@ class HighlighterService {
     _cache[key] = tokens;
   }
 
-  /// 异步获取高亮 tokens
+  /// 异步获取高亮 tokens（带并发限制）
   Future<List<HighlightToken>> highlightAsync(String code, {String? language}) async {
     final key = _cacheKey(code, language);
     if (_cache.containsKey(key)) {
@@ -217,12 +222,27 @@ class HighlighterService {
       return tokens;
     }
 
-    final normalizedLang = _normalizeLanguage(language, code);
-    final tokenMaps = await _HighlightWorker.instance.highlight(code, normalizedLang, _commonLanguages);
-    final tokens = tokenMaps.map((m) => HighlightToken.fromMap(m)).toList();
+    // 并发限制：超过上限时排队等待
+    if (_activeRequests >= _maxConcurrentRequests) {
+      final completer = Completer<void>();
+      _pendingQueue.add(completer);
+      await completer.future;
+    }
+    _activeRequests++;
 
-    _addToCache(key, tokens);
-    return tokens;
+    try {
+      final normalizedLang = _normalizeLanguage(language, code);
+      final tokenMaps = await _HighlightWorker.instance.highlight(code, normalizedLang, _commonLanguages);
+      final tokens = tokenMaps.map((m) => HighlightToken.fromMap(m)).toList();
+
+      _addToCache(key, tokens);
+      return tokens;
+    } finally {
+      _activeRequests--;
+      if (_pendingQueue.isNotEmpty) {
+        _pendingQueue.removeAt(0).complete();
+      }
+    }
   }
 
   /// 将 tokens 转换为 TextSpan

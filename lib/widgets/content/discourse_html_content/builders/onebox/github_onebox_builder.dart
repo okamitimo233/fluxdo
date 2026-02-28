@@ -429,6 +429,18 @@ class GithubOneboxBuilder {
     required dynamic element,
     List<LinkCount>? linkCounts,
   }) {
+    // 检测是否为评论型 onebox
+    final commentIcon = element.querySelector('.github-icon-container');
+    final iconTitle = commentIcon?.attributes['title'] ?? '';
+    if (iconTitle == 'Comment') {
+      return buildComment(
+        context: context,
+        theme: theme,
+        element: element,
+        linkCounts: linkCounts,
+      );
+    }
+
     final url = extractUrl(element);
 
     // 提取标题
@@ -563,6 +575,18 @@ class GithubOneboxBuilder {
     required dynamic element,
     List<LinkCount>? linkCounts,
   }) {
+    // 检测是否为 PR/Issue 评论型 onebox
+    final commentIcon = element.querySelector('.github-icon-container');
+    final iconTitle = commentIcon?.attributes['title'] ?? '';
+    if (iconTitle == 'Comment') {
+      return buildComment(
+        context: context,
+        theme: theme,
+        element: element,
+        linkCounts: linkCounts,
+      );
+    }
+
     final url = extractUrl(element);
 
     // 提取标题
@@ -710,6 +734,140 @@ class GithubOneboxBuilder {
               style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 构建 GitHub 评论卡片（PR/Issue 下的评论）
+  static Widget buildComment({
+    required BuildContext context,
+    required ThemeData theme,
+    required dynamic element,
+    List<LinkCount>? linkCounts,
+  }) {
+    final url = extractUrl(element);
+
+    // 提取点击数
+    final clickCount = extractClickCountFromOnebox(element, linkCounts: linkCounts);
+
+    // 提取评论者信息 - h4 内第一个 a 是评论者
+    final h4Element = element.querySelector('h4');
+    final commentAuthorLink = h4Element?.querySelector('a');
+    final authorName = commentAuthorLink?.text?.trim() ?? '';
+    final authorAvatar = h4Element?.querySelector('img')?.attributes['src'] ?? '';
+
+    // 提取 PR/Issue 标题 - h4 内最后一个 a 是标题链接
+    final allLinks = h4Element?.querySelectorAll('a');
+    String prTitle = '';
+    if (allLinks != null && allLinks.length > 1) {
+      prTitle = allLinks.last.text?.trim() ?? '';
+    }
+
+    // 提取分支信息
+    final branchElements = element.querySelectorAll('.branches code');
+    String branches = '';
+    if (branchElements != null && branchElements.length >= 2) {
+      branches = '${branchElements.first.text?.trim()} ← ${branchElements.last.text?.trim()}';
+    } else if (branchElements != null && branchElements.length == 1) {
+      branches = branchElements.first.text?.trim() ?? '';
+    }
+
+    // 提取评论正文
+    final bodyElement = element.querySelector('.github-body-container');
+    final bodyText = bodyElement?.text?.trim() ?? '';
+
+    return OneboxContainer(
+      onTap: () => _launchUrl(context, url),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 评论者信息
+          Row(
+            children: [
+              if (authorAvatar.isNotEmpty) ...[
+                OneboxAvatar(
+                  imageUrl: authorAvatar,
+                  size: 24,
+                  borderRadius: 12,
+                ),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: authorName,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      TextSpan(
+                        text: ' 评论于',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              // 点击数
+              if (clickCount != null && clickCount.isNotEmpty)
+                OneboxClickCount(count: clickCount),
+            ],
+          ),
+          // PR 标题
+          if (prTitle.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              prTitle,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.primary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          // 分支信息
+          if (branches.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(
+                  Icons.call_split,
+                  size: 14,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    branches,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontFamily: 'monospace',
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          // 评论正文
+          if (bodyText.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              bodyText,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ],

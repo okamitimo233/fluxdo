@@ -138,10 +138,12 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
       // 预估代码区域高度：行高(13*1.5=19.5) * 行数 + padding(24)
       const lineHeight = 13.0 * 1.5;
       const verticalPadding = 24.0; // 12 + 12
-      // 截图模式下不限制高度，使用实际高度
+      final contentHeight = lineCount * lineHeight + verticalPadding;
+      // 短代码不需要垂直滚动
+      final needsVerticalScroll = contentHeight > 400;
       final estimatedHeight = widget.screenshotMode
-          ? lineCount * lineHeight + verticalPadding
-          : (lineCount * lineHeight + verticalPadding).clamp(0.0, 400.0);
+          ? contentHeight
+          : contentHeight.clamp(0.0, 400.0);
 
       // 构建代码 TextSpan
       final codeSpan = _tokens != null
@@ -204,6 +206,8 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
                   child: SingleChildScrollView(
                     controller: _vController,
                     scrollDirection: Axis.vertical,
+                    // 短代码禁止垂直滚动，避免预估高度与实际高度微小误差导致的滑动
+                    physics: needsVerticalScroll ? null : const NeverScrollableScrollPhysics(),
                     child: RawScrollbar(
                       controller: _hController,
                       thumbVisibility: false,
@@ -216,7 +220,7 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
                         scrollDirection: Axis.horizontal,
                         child: Padding(
                           padding: const EdgeInsets.all(12),
-                          child: SelectableText.rich(codeSpan),
+                          child: Text.rich(codeSpan, softWrap: false),
                         ),
                       ),
                     ),

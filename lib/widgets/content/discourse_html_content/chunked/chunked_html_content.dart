@@ -143,7 +143,7 @@ class _ChunkedHtmlContentState extends State<ChunkedHtmlContent> {
 
   @override
   Widget build(BuildContext context) {
-    // 不启用分块时，使用原有组件
+    // 不启用分块时，使用原有组件（传递已解析的画廊信息避免重复 DOM 解析）
     if (!_useChunking || _chunks == null) {
       return DiscourseHtmlContent(
         html: widget.html,
@@ -156,6 +156,9 @@ class _ChunkedHtmlContentState extends State<ChunkedHtmlContent> {
         onSelectionChanged: widget.onSelectionChanged,
         contextMenuBuilder: widget.contextMenuBuilder,
         onQuoteImage: widget.onQuoteImage,
+        galleryImages: _galleryImages,
+        spoilerImageUrls: _spoilerImageUrls,
+        revealedImageUrls: _revealedImageUrls,
       );
     }
 

@@ -116,6 +116,11 @@ class _DiscourseHtmlContentState extends ConsumerState<DiscourseHtmlContent> {
   List<LinkCount>? _cachedLinkCounts;
   bool? _cachedPanguSpacing;
 
+  /// 全局预处理 HTML 缓存（跨 State 实例共享）
+  /// 当帖子滑出再滑回时新 State 可直接命中，避免重复正则 + Pangu 处理
+  static final Map<int, String> _globalPreprocessCache = {};
+  static const int _maxGlobalCacheSize = 200;
+
   @override
   void initState() {
     super.initState();
@@ -146,6 +151,16 @@ class _DiscourseHtmlContentState extends ConsumerState<DiscourseHtmlContent> {
 
   /// 预处理 HTML：注入用户状态 emoji、链接点击次数，添加内联元素 padding
   String _preprocessHtml(String html, bool enablePanguSpacing) {
+    // 检查全局缓存
+    final globalKey = _computeGlobalCacheKey(html, enablePanguSpacing);
+    final globalCached = _globalPreprocessCache[globalKey];
+    if (globalCached != null) {
+      // LRU: 移到末尾
+      _globalPreprocessCache.remove(globalKey);
+      _globalPreprocessCache[globalKey] = globalCached;
+      return globalCached;
+    }
+
     var processedHtml = html;
 
     // 0. 将相对路径转换为绝对路径（修复新发帖子图片不显示的问题）
@@ -220,7 +235,39 @@ class _DiscourseHtmlContentState extends ConsumerState<DiscourseHtmlContent> {
       processedHtml = _pangu.spacingText(processedHtml);
     }
 
+    // 存入全局缓存
+    while (_globalPreprocessCache.length >= _maxGlobalCacheSize) {
+      _globalPreprocessCache.remove(_globalPreprocessCache.keys.first);
+    }
+    _globalPreprocessCache[globalKey] = processedHtml;
+
     return processedHtml;
+  }
+
+  /// 计算全局缓存 key（综合所有影响预处理结果的输入）
+  int _computeGlobalCacheKey(String html, bool enablePanguSpacing) {
+    var key = html.hashCode;
+    key = key * 37 + html.length;
+    key = key * 37 + (enablePanguSpacing ? 1 : 0);
+    // 是否注入链接点击数
+    final injectLinks = widget.linkCounts != null &&
+        (widget.fullHtml == null || widget.isChunkChild);
+    key = key * 37 + (injectLinks ? 1 : 0);
+    // mentionedUsers 的 statusEmoji 影响注入结果
+    if (widget.mentionedUsers != null) {
+      for (final u in widget.mentionedUsers!) {
+        key = key * 37 + u.username.hashCode;
+        key = key * 37 + (u.statusEmoji?.hashCode ?? 0);
+      }
+    }
+    // linkCounts 影响点击数注入
+    if (widget.linkCounts != null && injectLinks) {
+      for (final l in widget.linkCounts!) {
+        key = key * 37 + l.url.hashCode;
+        key = key * 37 + l.clicks;
+      }
+    }
+    return key;
   }
 
   /// 注入链接点击数到 HTML
@@ -407,16 +454,27 @@ class _DiscourseHtmlContentState extends ConsumerState<DiscourseHtmlContent> {
       },
     );
 
-    // 用 CombinedDecoratorOverlay 包裹（合并处理内联代码背景和 spoiler 粒子效果）
-    Widget result = CombinedDecoratorOverlay(
-      revealedSpoilers: _revealedSpoilers,
-      onReveal: (id) {
-        setState(() {
-          _revealedSpoilers.add(id);
-        });
-      },
-      child: htmlWidget,
-    );
+    // 检测是否需要内联装饰（code 背景 / spoiler 粒子）
+    // 快速字符串检测，避免对无 code/spoiler 的帖子创建 Ticker + 扫描 RenderTree
+    final needsOverlay = processedHtml.contains('<code>') ||
+        processedHtml.contains('"spoiler"') ||
+        processedHtml.contains('"spoiled"');
+
+    Widget result;
+    if (needsOverlay) {
+      // 用 CombinedDecoratorOverlay 包裹（合并处理内联代码背景和 spoiler 粒子效果）
+      result = CombinedDecoratorOverlay(
+        revealedSpoilers: _revealedSpoilers,
+        onReveal: (id) {
+          setState(() {
+            _revealedSpoilers.add(id);
+          });
+        },
+        child: htmlWidget,
+      );
+    } else {
+      result = htmlWidget;
+    }
 
     // 根据参数决定是否包裹 SelectionArea
     if (widget.enableSelectionArea) {

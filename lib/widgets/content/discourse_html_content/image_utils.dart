@@ -19,6 +19,10 @@ class GalleryInfo {
   /// spoiler 内的图片 URL 集合（揭示前不在画廊中显示）
   final Set<String> _spoilerImageUrls;
 
+  /// 全局 LRU 缓存，避免对同一 HTML 重复执行 DOM 解析
+  static final Map<(int, int), GalleryInfo> _cache = {};
+  static const int _maxCacheSize = 100;
+
   GalleryInfo._({
     required this.originalUrls,
     required Map<String, int> thumbnailToIndex,
@@ -50,7 +54,19 @@ class GalleryInfo {
 
   /// 从 HTML 提取画廊信息
   /// 收集所有 a.lightbox 内的图片（标记 spoiler 内的，揭示后才加入可见画廊）
+  /// 结果会被全局 LRU 缓存，相同 HTML 不会重复解析 DOM
   static GalleryInfo fromHtml(String html) {
+    final cacheKey = (html.hashCode, html.length);
+
+    // 检查缓存
+    final cached = _cache[cacheKey];
+    if (cached != null) {
+      // LRU: 移到末尾
+      _cache.remove(cacheKey);
+      _cache[cacheKey] = cached;
+      return cached;
+    }
+
     final List<String> originalUrls = [];
     final List<String?> filenames = [];
     final Map<String, int> thumbnailToIndex = {};
@@ -117,12 +133,20 @@ class GalleryInfo {
       thumbnailToIndex[originalUrl] = index;
     }
 
-    return GalleryInfo._(
+    final result = GalleryInfo._(
       originalUrls: originalUrls,
       thumbnailToIndex: thumbnailToIndex,
       filenames: filenames,
       spoilerImageUrls: spoilerImageUrls,
     );
+
+    // 存入全局 LRU 缓存
+    while (_cache.length >= _maxCacheSize) {
+      _cache.remove(_cache.keys.first);
+    }
+    _cache[cacheKey] = result;
+
+    return result;
   }
 
   /// 从外部传入的图片列表构建 GalleryInfo

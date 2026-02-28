@@ -218,60 +218,64 @@ class _CombinedDecoratorOverlayState extends State<CombinedDecoratorOverlay>
       }
 
       if (textLength > 0) {
-        try {
-          final boxes = paragraph.getBoxesForSelection(
-            TextSelection(baseOffset: charIndex, extentOffset: charIndex + textLength),
-          );
+        // 只对 code/spoiler 标记的 span 调用 getBoxesForSelection
+        // 非标记 span 跳过，避免对大量普通文本做昂贵的布局计算
+        if (isCode || inSpoiler) {
+          try {
+            final boxes = paragraph.getBoxesForSelection(
+              TextSelection(baseOffset: charIndex, extentOffset: charIndex + textLength),
+            );
 
-          // 收集 code rects
-          if (isCode) {
-            final rects = <Rect>[];
-            for (final box in boxes) {
-              final rect = Rect.fromLTRB(
-                offset.dx + box.left,
-                offset.dy + box.top,
-                offset.dx + box.right,
-                offset.dy + box.bottom,
-              );
-              if (rect.width > 0 && rect.height > 0) {
-                rects.add(rect);
-              }
-            }
-            if (rects.isNotEmpty) {
-              codeGroups.add(rects);
-            }
-          }
-
-          // 收集 spoiler rects
-          if (inSpoiler) {
-            const codeHPadding = 3.5;
-            const codeVPadding = 1.5;
-
-            for (final box in boxes) {
-              var rect = Rect.fromLTRB(
-                offset.dx + box.left,
-                offset.dy + box.top,
-                offset.dx + box.right,
-                offset.dy + box.bottom,
-              );
-
-              // 如果同时是 code，扩展范围以覆盖 code 背景的 padding
-              if (isCode) {
-                rect = Rect.fromLTRB(
-                  rect.left - codeHPadding,
-                  rect.top - codeVPadding,
-                  rect.right + codeHPadding,
-                  rect.bottom + codeVPadding,
+            // 收集 code rects
+            if (isCode) {
+              final rects = <Rect>[];
+              for (final box in boxes) {
+                final rect = Rect.fromLTRB(
+                  offset.dx + box.left,
+                  offset.dy + box.top,
+                  offset.dx + box.right,
+                  offset.dy + box.bottom,
                 );
+                if (rect.width > 0 && rect.height > 0) {
+                  rects.add(rect);
+                }
               }
-
-              if (rect.width > 0 && rect.height > 0) {
-                spoilerRects.add(_TempRect(rect: rect, groupId: spoilerId!));
+              if (rects.isNotEmpty) {
+                codeGroups.add(rects);
               }
             }
+
+            // 收集 spoiler rects
+            if (inSpoiler) {
+              const codeHPadding = 3.5;
+              const codeVPadding = 1.5;
+
+              for (final box in boxes) {
+                var rect = Rect.fromLTRB(
+                  offset.dx + box.left,
+                  offset.dy + box.top,
+                  offset.dx + box.right,
+                  offset.dy + box.bottom,
+                );
+
+                // 如果同时是 code，扩展范围以覆盖 code 背景的 padding
+                if (isCode) {
+                  rect = Rect.fromLTRB(
+                    rect.left - codeHPadding,
+                    rect.top - codeVPadding,
+                    rect.right + codeHPadding,
+                    rect.bottom + codeVPadding,
+                  );
+                }
+
+                if (rect.width > 0 && rect.height > 0) {
+                  spoilerRects.add(_TempRect(rect: rect, groupId: spoilerId!));
+                }
+              }
+            }
+          } catch (e) {
+            // 忽略错误
           }
-        } catch (e) {
-          // 忽略错误
         }
       }
 
@@ -345,6 +349,11 @@ class _CombinedDecoratorOverlayState extends State<CombinedDecoratorOverlay>
     final hasCodeBackground = _codeGroups.isNotEmpty;
     final hasSpoilerOverlay = activeGroups.isNotEmpty;
 
+    // 没有任何装饰层时，直接返回子组件，避免 Stack 开销
+    if (!hasCodeBackground && !hasSpoilerOverlay) {
+      return widget.child;
+    }
+
     return GestureDetector(
       onTapDown: hasSpoilerOverlay ? (details) => _handleTap(details.localPosition) : null,
       behavior: HitTestBehavior.translucent,
@@ -355,18 +364,10 @@ class _CombinedDecoratorOverlayState extends State<CombinedDecoratorOverlay>
             Positioned.fill(
               child: IgnorePointer(
                 child: ClipRect(
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.0, end: 1.0),
-                    duration: const Duration(milliseconds: 150),
-                    builder: (context, opacity, child) => Opacity(
-                      opacity: opacity,
-                      child: child,
-                    ),
-                    child: CustomPaint(
-                      painter: InlineCodePainter(
-                        groups: _codeGroups,
-                        isDark: isDark,
-                      ),
+                  child: CustomPaint(
+                    painter: InlineCodePainter(
+                      groups: _codeGroups,
+                      isDark: isDark,
                     ),
                   ),
                 ),

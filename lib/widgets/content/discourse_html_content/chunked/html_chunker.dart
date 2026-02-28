@@ -10,6 +10,7 @@ class HtmlChunker {
     'pre',
     'aside',
     'blockquote',
+    'details',
     'hr',
     'h1',
     'h2',
@@ -27,6 +28,9 @@ class HtmlChunker {
 
   /// 需要特殊处理的类名
   static const _specialClasses = {'spoiler', 'spoiled'};
+
+  /// div 元素中需要独立成块的类名
+  static const _blockDivClasses = {'md-table'};
 
   /// 最大段落合并字符数（增大以减少块数量，降低 HtmlWidget 实例开销）
   static const _maxMergeLength = 2000;
@@ -140,8 +144,15 @@ class HtmlChunker {
     // 标签名匹配
     if (_blockTags.contains(tagName)) return true;
 
-    // div 元素检查特殊类名
-    if (tagName == 'div' || tagName == 'span') {
+    // div 元素检查特殊类名和块级类名
+    if (tagName == 'div') {
+      final classes = element.classes;
+      if (classes.any((c) => _specialClasses.contains(c))) return true;
+      if (classes.any((c) => _blockDivClasses.contains(c))) return true;
+    }
+
+    // span 元素检查特殊类名
+    if (tagName == 'span') {
       final classes = element.classes;
       if (classes.any((c) => _specialClasses.contains(c))) return true;
     }
@@ -159,6 +170,8 @@ class HtmlChunker {
         return HtmlChunkType.codeBlock;
       case 'blockquote':
         return HtmlChunkType.blockquote;
+      case 'details':
+        return HtmlChunkType.details;
       case 'hr':
         return HtmlChunkType.divider;
       case 'ul':
@@ -168,6 +181,9 @@ class HtmlChunker {
       case 'aside':
         if (element.classes.contains('quote')) return HtmlChunkType.quoteCard;
         if (element.classes.contains('onebox')) return HtmlChunkType.onebox;
+        return HtmlChunkType.paragraph;
+      case 'div':
+        if (element.classes.contains('md-table')) return HtmlChunkType.table;
         return HtmlChunkType.paragraph;
       default:
         if (tagName.startsWith('h') && tagName.length == 2) {

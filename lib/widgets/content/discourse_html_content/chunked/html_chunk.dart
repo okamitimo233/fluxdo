@@ -10,6 +10,7 @@ enum HtmlChunkType {
   heading, // 标题 <h1>-<h6>
   list, // 列表 <ul>/<ol>
   divider, // 分割线 <hr>
+  details, // 折叠详情 <details>
 }
 
 /// HTML 块数据
