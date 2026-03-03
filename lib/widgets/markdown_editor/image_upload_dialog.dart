@@ -2,12 +2,13 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/toast_service.dart';
+import 'image_compression_strategy.dart';
 import 'image_editor_i18n_zh.dart';
 
 /// 图片上传确认弹框结果
@@ -37,7 +38,10 @@ class ImageUploadDialog extends StatefulWidget {
 }
 
 class _ImageUploadDialogState extends State<ImageUploadDialog> {
+  static const _qualityPreferenceKey = 'markdown_editor.image_upload_quality';
+
   late String _currentImagePath;
+  late ImageCompressionStrategy _compressionStrategy;
   int _quality = 85;
   int? _originalSize;
   int? _estimatedSize;
@@ -47,26 +51,38 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
   void initState() {
     super.initState();
     _currentImagePath = widget.imagePath;
-    _loadImageInfo();
+    _compressionStrategy = ImageCompressionStrategyFactory.fromPath(widget.imagePath);
+    _restoreQualityPreference();
+  }
+
+  Future<void> _restoreQualityPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedQuality = prefs.getInt(_qualityPreferenceKey);
+    if (!mounted) return;
+    if (savedQuality != null) {
+      setState(() {
+        _quality = savedQuality.clamp(10, 100).toInt();
+      });
+    }
+    await _loadImageInfo();
+  }
+
+  Future<void> _saveQualityPreference(int quality) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_qualityPreferenceKey, quality);
   }
 
   Future<void> _loadImageInfo() async {
     final file = File(_currentImagePath);
     if (await file.exists()) {
       final size = await file.length();
+      final estimatedSize = _compressionStrategy.estimateCompressedSize(size, _quality);
+      if (!mounted) return;
       setState(() {
         _originalSize = size;
-        _estimatedSize = _estimateCompressedSize(size, _quality);
+        _estimatedSize = estimatedSize;
       });
     }
-  }
-
-  int _estimateCompressedSize(int originalSize, int quality) {
-    // 简单估算：基于质量百分比的非线性压缩
-    // 实际压缩效果取决于图片内容
-    final ratio = quality / 100.0;
-    // 使用平方根使估算更接近实际
-    return (originalSize * ratio * ratio).round();
   }
 
   String _formatFileSize(int bytes) {
@@ -76,6 +92,11 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
   }
 
   Future<void> _editImage() async {
+    if (!_compressionStrategy.canEdit) {
+      ToastService.showError('${_compressionStrategy.displayName} 暂不支持编辑，否则会丢失动画');
+      return;
+    }
+
     final result = await Navigator.of(context).push<Uint8List>(
       MaterialPageRoute(
         builder: (context) => ProImageEditor.file(
@@ -87,8 +108,8 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
           ),
           configs: ProImageEditorConfigs(
             i18n: kImageEditorI18nZh,
-            imageGeneration: const ImageGenerationConfigs(
-              outputFormat: OutputFormat.jpg,
+            imageGeneration: ImageGenerationConfigs(
+              outputFormat: _editorOutputFormat,
               maxOutputSize: Size(1920, 1920),
             ),
           ),
@@ -101,44 +122,36 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
       final tempDir = await getTemporaryDirectory();
       final editedPath = p.join(
         tempDir.path,
-        'edited_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        'edited_${DateTime.now().millisecondsSinceEpoch}.${_editorExtension}',
       );
       await File(editedPath).writeAsBytes(result);
 
       setState(() {
         _currentImagePath = editedPath;
+        _compressionStrategy = ImageCompressionStrategyFactory.fromPath(editedPath);
       });
       await _loadImageInfo();
     }
   }
 
-  Future<String> _compressImage() async {
-    // 如果质量为 100，不压缩
-    if (_quality == 100) {
-      return _currentImagePath;
+  OutputFormat get _editorOutputFormat {
+    if (p.extension(_currentImagePath).toLowerCase() == '.png') {
+      return OutputFormat.png;
     }
+    return OutputFormat.jpg;
+  }
 
-    final tempDir = await getTemporaryDirectory();
-    final targetPath = p.join(
-      tempDir.path,
-      'compressed_${DateTime.now().millisecondsSinceEpoch}.jpg',
-    );
+  String get _editorExtension => _editorOutputFormat == OutputFormat.png ? 'png' : 'jpg';
 
-    final result = await FlutterImageCompress.compressAndGetFile(
-      _currentImagePath,
-      targetPath,
-      quality: _quality,
-      minWidth: 1920,
-      minHeight: 1920,
-    );
-
-    return result?.path ?? _currentImagePath;
+  Future<String> _compressImage() async {
+    return _compressionStrategy.compress(_currentImagePath, _quality);
   }
 
   Future<void> _submit() async {
     setState(() => _isProcessing = true);
 
     try {
+      await _saveQualityPreference(_quality);
       final compressedPath = await _compressImage();
 
       if (!mounted) return;
@@ -189,6 +202,17 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
             ),
             const SizedBox(height: 16),
 
+            if (!_compressionStrategy.supportsCompression)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  '${_compressionStrategy.displayName} 将保留原图上传，不执行客户端压缩。',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+              ),
+
             // 压缩质量滑块
             Row(
               children: [
@@ -200,19 +224,23 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
                     max: 100,
                     divisions: 18,
                     label: '$_quality%',
-                    onChanged: _isProcessing
+                    onChangeEnd: _isProcessing || !_compressionStrategy.supportsCompression
+                        ? null
+                        : (value) => _saveQualityPreference(value.round()),
+                    onChanged: _isProcessing || !_compressionStrategy.supportsCompression
                         ? null
                         : (value) {
-                            setState(() {
-                              _quality = value.round();
-                              if (_originalSize != null) {
-                                _estimatedSize = _estimateCompressedSize(
-                                  _originalSize!,
-                                  _quality,
-                                );
-                              }
-                            });
-                          },
+                          final nextQuality = value.round();
+                          setState(() {
+                            _quality = nextQuality;
+                            if (_originalSize != null) {
+                              _estimatedSize = _compressionStrategy.estimateCompressedSize(
+                                _originalSize!,
+                                nextQuality,
+                              );
+                            }
+                          });
+                        },
                   ),
                 ),
                 SizedBox(
@@ -245,7 +273,9 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
                         color: theme.colorScheme.outline,
                       ),
                     ),
-                    if (_quality < 100 && _estimatedSize != null) ...[
+                    if (_compressionStrategy.supportsCompression &&
+                        _quality < 100 &&
+                        _estimatedSize != null) ...[
                       const SizedBox(width: 8),
                       Icon(
                         Icons.arrow_forward,
@@ -269,9 +299,9 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
 
             // 编辑图片按钮
             OutlinedButton.icon(
-              onPressed: _isProcessing ? null : _editImage,
+              onPressed: _isProcessing || !_compressionStrategy.canEdit ? null : _editImage,
               icon: const Icon(Icons.edit),
-              label: const Text('编辑图片'),
+              label: Text(_compressionStrategy.canEdit ? '编辑图片' : '当前格式不支持编辑'),
             ),
           ],
         ),
