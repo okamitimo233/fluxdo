@@ -28,9 +28,7 @@ class _PreheatGateState extends State<PreheatGate> {
 
   Future<bool> _preload() async {
     try {
-      final minDelay = Future.delayed(const Duration(milliseconds: 1200));
-      final loadTask = PreloadedDataService().ensureLoaded();
-      await Future.wait([minDelay, loadTask]);
+      await PreloadedDataService().ensureLoaded();
 
       DiscourseService().getEnabledReactions();
       EmojiHandler().init();

@@ -79,6 +79,10 @@ Future<void> main() async {
     ProxySettingsService.instance.initialize(prefs),
   ]);
 
+  // 提前触发预加载数据请求，与 runApp 并行执行
+  // PreheatGate 中的 ensureLoaded() 会复用这个已在进行的请求
+  PreloadedDataService().ensureLoaded().ignore();
+
   // 注入 AI 模型管理包的消息提示实现
   AiToastDelegate.configure((message, {type = AiToastType.info}) {
     switch (type) {

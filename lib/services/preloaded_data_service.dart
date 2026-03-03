@@ -383,15 +383,8 @@ class PreloadedDataService {
       return;
     }
 
-    // 解码 HTML entities
-    final decoded = match.group(1)!
-        .replaceAll('&quot;', '"')
-        .replaceAll('&amp;', '&')
-        .replaceAll('&lt;', '<')
-        .replaceAll('&gt;', '>')
-        .replaceAll('&#39;', "'");
-
-    await _parsePreloadedDataString(decoded);
+    // HTML entity 解码已移入 Isolate 中统一处理
+    await _parsePreloadedDataString(match.group(1)!);
   }
 
   void _extractCsrfTokenFromHtml(String html) {
@@ -413,26 +406,17 @@ class PreloadedDataService {
 
   /// 解析预加载数据字符串
   Future<void> _parsePreloadedDataString(String dataString) async {
-    // 解码 HTML entities（WebView 返回的数据可能也需要解码）
-    final decoded = dataString
-        .replaceAll('&quot;', '"')
-        .replaceAll('&amp;', '&')
-        .replaceAll('&lt;', '<')
-        .replaceAll('&gt;', '>')
-        .replaceAll('&#39;', "'");
-
     try {
-      // 外层是 JSON 对象，key 是数据类型，value 是 JSON 字符串
-      final preloaded = await compute(_decodePreloadedJsonInIsolate, decoded);
+      // 在 Isolate 中完成 HTML entity 解码 + 外层/内层 JSON 解码
+      final preloaded = await compute(_decodePreloadedJsonInIsolate, dataString);
       if (preloaded == null) {
         debugPrint('[PreloadedData] 预加载 JSON 解析为空');
         return;
       }
 
-      // 解析 currentUser
+      // 解析 currentUser（已在 Isolate 中完成 jsonDecode）
       if (preloaded.containsKey('currentUser')) {
-        final currentUserJson = preloaded['currentUser'] as String;
-        _currentUser = jsonDecode(currentUserJson) as Map<String, dynamic>;
+        _currentUser = preloaded['currentUser'] as Map<String, dynamic>;
         debugPrint('[PreloadedData] currentUser 解析成功: id=${_currentUser?['id']}, '
             'unread_notifications=${_currentUser?['unread_notifications']}, '
             'all_unread=${_currentUser?['all_unread_notifications_count']}');
@@ -443,8 +427,7 @@ class PreloadedDataService {
 
       // 解析 siteSettings
       if (preloaded.containsKey('siteSettings')) {
-        final siteSettingsJson = preloaded['siteSettings'] as String;
-        _siteSettings = jsonDecode(siteSettingsJson) as Map<String, dynamic>;
+        _siteSettings = preloaded['siteSettings'] as Map<String, dynamic>;
 
         // 提取 reactions 配置
         final reactionsStr = _siteSettings?['discourse_reactions_enabled_reactions'] as String?;
@@ -456,31 +439,25 @@ class PreloadedDataService {
 
       // 解析 site（包含 categories、top_tags 等）
       if (preloaded.containsKey('site')) {
-        final siteJson = preloaded['site'] as String;
-        _site = jsonDecode(siteJson) as Map<String, dynamic>;
+        _site = preloaded['site'] as Map<String, dynamic>;
         debugPrint('[PreloadedData] site 解析成功, categories=${(_site?['categories'] as List?)?.length ?? 0}');
       }
 
       // 解析 topicTrackingStateMeta（MessageBus 频道初始 ID）
       if (preloaded.containsKey('topicTrackingStateMeta')) {
-        final metaJson = preloaded['topicTrackingStateMeta'] as String;
-        _topicTrackingStateMeta = jsonDecode(metaJson) as Map<String, dynamic>;
+        _topicTrackingStateMeta = preloaded['topicTrackingStateMeta'] as Map<String, dynamic>;
         debugPrint('[PreloadedData] topicTrackingStateMeta: $_topicTrackingStateMeta');
       }
 
       // 解析 topicTrackingStates（话题追踪状态）
       if (preloaded.containsKey('topicTrackingStates')) {
-        final statesJson = preloaded['topicTrackingStates'] as String;
-        final statesList = jsonDecode(statesJson) as List;
-        _topicTrackingStates = statesList.cast<Map<String, dynamic>>();
+        _topicTrackingStates = (preloaded['topicTrackingStates'] as List).cast<Map<String, dynamic>>();
         debugPrint('[PreloadedData] topicTrackingStates: ${_topicTrackingStates?.length ?? 0} items');
       }
 
       // 解析 customEmoji（自定义 emoji）
       if (preloaded.containsKey('customEmoji')) {
-        final emojiJson = preloaded['customEmoji'] as String;
-        final emojiList = jsonDecode(emojiJson) as List;
-        _customEmoji = emojiList.cast<Map<String, dynamic>>();
+        _customEmoji = (preloaded['customEmoji'] as List).cast<Map<String, dynamic>>();
         debugPrint('[PreloadedData] customEmoji: ${_customEmoji?.length ?? 0} items');
       }
 
@@ -578,15 +555,13 @@ class PreloadedDataService {
 
   void _parseTopicListResponseAsync(Map<String, dynamic> data) {
     _topicListResponseCompleter ??= Completer<TopicListResponse?>();
-    Future(() {
-      try {
-        _cachedTopicListResponse = TopicListResponse.fromJson(data);
-        debugPrint('[PreloadedData] TopicListResponse 异步缓存成功');
-        _topicListResponseCompleter?.complete(_cachedTopicListResponse);
-      } catch (e) {
-        debugPrint('[PreloadedData] 异步解析 TopicListResponse 失败: $e');
-        _topicListResponseCompleter?.complete(null);
-      }
+    compute(_parseTopicListInIsolate, data).then((result) {
+      _cachedTopicListResponse = result;
+      debugPrint('[PreloadedData] TopicListResponse 异步缓存成功');
+      _topicListResponseCompleter?.complete(result);
+    }).catchError((e) {
+      debugPrint('[PreloadedData] 异步解析 TopicListResponse 失败: $e');
+      _topicListResponseCompleter?.complete(null);
     });
   }
 }
@@ -603,12 +578,39 @@ Map<String, dynamic>? _decodeTopicListInIsolate(String rawJson) {
 }
 
 Map<String, dynamic>? _decodePreloadedJsonInIsolate(String rawJson) {
-  final decoded = jsonDecode(rawJson);
+  // HTML entity 解码
+  final unescaped = rawJson
+      .replaceAll('&quot;', '"')
+      .replaceAll('&amp;', '&')
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&#39;', "'");
+
+  final decoded = jsonDecode(unescaped);
+  final Map<String, dynamic> result;
   if (decoded is Map<String, dynamic>) {
-    return decoded;
+    result = decoded;
+  } else if (decoded is Map) {
+    result = decoded.cast<String, dynamic>();
+  } else {
+    return null;
   }
-  if (decoded is Map) {
-    return decoded.cast<String, dynamic>();
+
+  // 内层 value 也是 JSON 字符串，一并在 Isolate 中解码
+  // 避免回到主线程后多次 jsonDecode 阻塞 UI
+  for (final key in result.keys.toList()) {
+    final value = result[key];
+    if (value is String) {
+      try {
+        result[key] = jsonDecode(value);
+      } catch (_) {
+        // 非 JSON 字符串，保持原值
+      }
+    }
   }
-  return null;
+
+  return result;
 }
+
+TopicListResponse _parseTopicListInIsolate(Map<String, dynamic> json) =>
+    TopicListResponse.fromJson(json);
