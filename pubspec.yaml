@@ -1,7 +1,7 @@
 name: fluxdo
 description: "A new Flutter project."
 publish_to: 'none'
-version: 0.1.37+2026030223
+version: 0.1.38+2026030400
 
 environment:
   sdk: ^3.10.4
@@ -91,6 +91,7 @@ flutter:
     - assets/logo.svg
     - assets/images/
     - assets/certs/
+
 
 
 
