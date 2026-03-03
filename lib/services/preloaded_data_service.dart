@@ -34,6 +34,8 @@ class PreloadedDataService {
   List<Map<String, dynamic>>? _customEmoji;  // 自定义 emoji
   List<Map<String, dynamic>>? _topicTrackingStates;  // 话题追踪状态
   List<String>? _enabledReactions;
+  String? _sharedSessionKey;  // MessageBus 跨域认证 key
+  String? _longPollingBaseUrl;  // MessageBus 独立域名
   bool _loaded = false;
   bool _loading = false;
 
@@ -229,6 +231,12 @@ class PreloadedDataService {
     return _enabledReactions ?? ['heart', '+1', 'laughing', 'open_mouth'];
   }
 
+  /// 获取 MessageBus 跨域认证 key（仅独立域名时有值）
+  String? get sharedSessionKey => _sharedSessionKey;
+
+  /// 获取 MessageBus 长轮询 base URL（独立域名，如 https://ping.linux.do）
+  String? get longPollingBaseUrl => _longPollingBaseUrl;
+
   /// 获取 MessageBus 频道的初始 message ID
   /// 返回格式: {'/latest': 6855147, '/new': 104155, ...}
   Future<Map<String, dynamic>?> getTopicTrackingStateMeta() async {
@@ -312,6 +320,8 @@ class PreloadedDataService {
     _topicTrackingStates = null;
     _enabledReactions = null;
     _topicTrackingStateMeta = null;
+    _sharedSessionKey = null;
+    _longPollingBaseUrl = null;
     await _loadPreloadedData();
   }
 
@@ -328,6 +338,8 @@ class PreloadedDataService {
     _topicTrackingStates = null;
     _topicTrackingStateMeta = null;
     _enabledReactions = null;
+    _sharedSessionKey = null;
+    _longPollingBaseUrl = null;
   }
 
   /// 确保数据已加载
@@ -376,6 +388,7 @@ class PreloadedDataService {
   /// 从 HTML 中解析 data-preloaded 属性
   Future<void> _parsePreloadedDataFromHtml(String html) async {
     _extractCsrfTokenFromHtml(html);
+    _extractSharedSessionKeyFromHtml(html);
     // 提取 data-preloaded 属性内容
     final match = RegExp(r'data-preloaded="([^"]*)"').firstMatch(html);
     if (match == null) {
@@ -402,6 +415,24 @@ class PreloadedDataService {
         .replaceAll('&gt;', '>')
         .replaceAll('&#39;', "'");
     _cookieSync.setCsrfToken(decoded);
+  }
+
+  /// 从 HTML 中提取 shared_session_key（MessageBus 跨域认证）
+  void _extractSharedSessionKeyFromHtml(String html) {
+    final match = RegExp(
+      "<meta[^>]+name=[\"']shared_session_key[\"'][^>]+content=[\"']([^\"']+)[\"']",
+      caseSensitive: false,
+    ).firstMatch(html);
+    if (match == null) return;
+    final raw = match.group(1);
+    if (raw == null || raw.isEmpty) return;
+    _sharedSessionKey = raw
+        .replaceAll('&quot;', '"')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&#39;', "'");
+    debugPrint('[PreloadedData] sharedSessionKey 提取成功');
   }
 
   /// 解析预加载数据字符串
@@ -434,6 +465,15 @@ class PreloadedDataService {
         if (reactionsStr != null && reactionsStr.isNotEmpty) {
           _enabledReactions = reactionsStr.split('|');
           debugPrint('[PreloadedData] reactions: $_enabledReactions');
+        }
+
+        // 提取 MessageBus 长轮询独立域名
+        final pollingUrl = _siteSettings?['long_polling_base_url'] as String?;
+        if (pollingUrl != null && pollingUrl.isNotEmpty && pollingUrl != '/') {
+          _longPollingBaseUrl = pollingUrl.endsWith('/')
+              ? pollingUrl.substring(0, pollingUrl.length - 1)
+              : pollingUrl;
+          debugPrint('[PreloadedData] longPollingBaseUrl: $_longPollingBaseUrl');
         }
       }
 

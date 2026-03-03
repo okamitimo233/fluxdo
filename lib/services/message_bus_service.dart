@@ -48,11 +48,11 @@ class MessageBusService {
   static final MessageBusService _instance = MessageBusService._internal();
   factory MessageBusService() => _instance;
 
-  final Dio _dio;
+  Dio _dio;
 
   final Map<String, _ChannelSubscription> _subscriptions = {};
   final String _clientId;
-  
+
   bool _isPolling = false;
   bool _shouldStop = false;
   bool _backgroundMode = false; // 后台模式：使用更长的轮询间隔
@@ -60,6 +60,10 @@ class MessageBusService {
   int _failureCount = 0;
   static const int _maxBackoffSeconds = 30;
   static const Duration _backgroundPollInterval = Duration(seconds: 60);
+
+  // MessageBus 独立域名配置
+  String? _baseUrl;  // 独立域名（如 https://ping.linux.do），null 表示用主站
+  String? _sharedSessionKey;  // 跨域认证 key
 
   // 消息流（用于全局监听）
   final _messageController = StreamController<MessageBusMessage>.broadcast();
@@ -76,6 +80,36 @@ class MessageBusService {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
         );
+
+  /// 配置 MessageBus 独立域名（登录后从预加载数据获取）
+  void configure({String? baseUrl, String? sharedSessionKey}) {
+    final changed = _baseUrl != baseUrl || _sharedSessionKey != sharedSessionKey;
+    _baseUrl = baseUrl;
+    _sharedSessionKey = sharedSessionKey;
+
+    if (changed && baseUrl != null) {
+      // 独立域名需要重建 Dio（不同 baseUrl）
+      _dio = DiscourseDio.create(
+        receiveTimeout: const Duration(seconds: 60),
+        defaultHeaders: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        baseUrl: baseUrl,
+      );
+      debugPrint('[MessageBus] 配置独立域名: $baseUrl');
+    } else if (changed && baseUrl == null) {
+      // 恢复主站
+      _dio = DiscourseDio.create(
+        receiveTimeout: const Duration(seconds: 60),
+        defaultHeaders: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      );
+      debugPrint('[MessageBus] 恢复主站轮询');
+    }
+  }
 
   /// 订阅频道
   void subscribe(String channel, MessageBusCallback callback, {int lastMessageId = -1}) {
@@ -194,6 +228,14 @@ class MessageBusService {
         debugPrint('[MessageBus] 发起轮询: $payload');
 
         // 使用流式响应 + CancelToken
+        final extraHeaders = <String, dynamic>{};
+        if (_sharedSessionKey != null) {
+          extraHeaders['X-Shared-Session-Key'] = _sharedSessionKey;
+        }
+        if (_baseUrl != null) {
+          extraHeaders['X-Silence-Logger'] = 'true';
+        }
+
         final response = await _dio.post<ResponseBody>(
           '/message-bus/$_clientId/poll',
           data: payload,
@@ -201,6 +243,7 @@ class MessageBusService {
           options: Options(
             contentType: Headers.formUrlEncodedContentType,
             responseType: ResponseType.stream,
+            headers: extraHeaders.isNotEmpty ? extraHeaders : null,
             extra: {'isSilent': true},
           ),
         );

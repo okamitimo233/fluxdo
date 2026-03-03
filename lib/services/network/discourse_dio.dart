@@ -19,9 +19,10 @@ class DiscourseDio {
     Duration connectTimeout = const Duration(seconds: 30),
     Duration receiveTimeout = const Duration(seconds: 30),
     Map<String, dynamic>? defaultHeaders,
+    String? baseUrl,
   }) {
     final dio = Dio(BaseOptions(
-      baseUrl: AppConstants.baseUrl,
+      baseUrl: baseUrl ?? AppConstants.baseUrl,
       connectTimeout: connectTimeout,
       receiveTimeout: receiveTimeout,
       headers: defaultHeaders,

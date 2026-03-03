@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
@@ -15,6 +16,8 @@ const String kNotificationPollTask = 'com.fluxdo.notificationPoll';
 /// SharedPreferences 键名
 const String _kUserId = 'bg_notification_user_id';
 const String _kLastMessageId = 'bg_notification_last_message_id';
+const String _kLongPollingBaseUrl = 'bg_long_polling_base_url';
+const String _kSharedSessionKey = 'bg_shared_session_key';
 
 /// iOS 后台拉取回调（顶层函数，由 workmanager 在独立 Isolate 中调用）
 @pragma('vm:entry-point')
@@ -38,6 +41,10 @@ void callbackDispatcher() {
       final lastMessageId = prefs.getInt(_kLastMessageId) ?? -1;
       final channel = '/notification-alert/$userId';
 
+      // 读取 MessageBus 独立域名配置
+      final longPollingBaseUrl = prefs.getString(_kLongPollingBaseUrl);
+      final sharedSessionKey = prefs.getString(_kSharedSessionKey);
+
       // 3. 创建临时 Dio，短超时单次轮询
       final dio = DiscourseDio.create(
         receiveTimeout: const Duration(seconds: 10),
@@ -45,14 +52,26 @@ void callbackDispatcher() {
           'Accept': 'application/json',
           'Content-Type': 'application/x-www-form-urlencoded',
         },
+        baseUrl: longPollingBaseUrl,
       );
 
       // 生成简单的 clientId
       final clientId = 'ios_bg_${DateTime.now().millisecondsSinceEpoch}';
 
+      final extraHeaders = <String, dynamic>{};
+      if (sharedSessionKey != null) {
+        extraHeaders['X-Shared-Session-Key'] = sharedSessionKey;
+      }
+      if (longPollingBaseUrl != null) {
+        extraHeaders['X-Silence-Logger'] = 'true';
+      }
+
       final response = await dio.post<String>(
         '/message-bus/$clientId/poll',
         data: {channel: lastMessageId.toString()},
+        options: extraHeaders.isNotEmpty
+            ? Options(headers: extraHeaders)
+            : null,
       );
 
       if (response.data == null || response.data!.isEmpty) {
@@ -137,4 +156,22 @@ Future<void> saveBackgroundUserId(int userId) async {
 Future<void> saveBackgroundLastMessageId(int lastMessageId) async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.setInt(_kLastMessageId, lastMessageId);
+}
+
+/// 保存 MessageBus 独立域名配置到 SharedPreferences（主 Isolate 调用）
+Future<void> saveBackgroundMessageBusConfig({
+  String? longPollingBaseUrl,
+  String? sharedSessionKey,
+}) async {
+  final prefs = await SharedPreferences.getInstance();
+  if (longPollingBaseUrl != null) {
+    await prefs.setString(_kLongPollingBaseUrl, longPollingBaseUrl);
+  } else {
+    await prefs.remove(_kLongPollingBaseUrl);
+  }
+  if (sharedSessionKey != null) {
+    await prefs.setString(_kSharedSessionKey, sharedSessionKey);
+  } else {
+    await prefs.remove(_kSharedSessionKey);
+  }
 }

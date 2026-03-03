@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/message_bus_service.dart';
+import '../../services/preloaded_data_service.dart';
+import '../../services/background/ios_background_fetch.dart';
 import '../discourse_providers.dart';
 import 'message_bus_service_provider.dart';
 
@@ -35,7 +37,20 @@ class MessageBusInitNotifier extends Notifier<void> {
       debugPrint('[MessageBusInit] 用户未登录，跳过订阅');
       return;
     }
-    
+
+    // 配置 MessageBus 独立域名（从预加载数据获取）
+    final preloaded = PreloadedDataService();
+    messageBus.configure(
+      baseUrl: preloaded.longPollingBaseUrl,
+      sharedSessionKey: preloaded.sharedSessionKey,
+    );
+
+    // 同步保存到 SharedPreferences 供 iOS 后台任务使用
+    saveBackgroundMessageBusConfig(
+      longPollingBaseUrl: preloaded.longPollingBaseUrl,
+      sharedSessionKey: preloaded.sharedSessionKey,
+    );
+
     final meta = metaAsync.value;
     if (meta == null) {
       debugPrint('[MessageBusInit] topicTrackingStateMeta 未加载');
