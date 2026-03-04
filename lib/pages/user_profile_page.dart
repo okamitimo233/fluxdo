@@ -1937,11 +1937,9 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage>
     );
   }
 
-  /// 获取 emoji 图片 URL
+  /// 获取 emoji 图片 URL（未加载完成时返回空字符串，由 errorBuilder 处理）
   String _getEmojiUrl(String emojiName) {
-    final url = EmojiHandler().getEmojiUrl(emojiName);
-    if (url != null) return url;
-    return '${AppConstants.baseUrl}/images/emoji/twitter/$emojiName.png?v=12';
+    return EmojiHandler().getEmojiUrl(emojiName);
   }
 
   Widget _buildReactionItem(UserReaction reaction) {

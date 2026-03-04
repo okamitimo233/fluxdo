@@ -251,7 +251,11 @@ class PreloadedDataService {
     return _topicTrackingStates;
   }
 
-  /// 获取自定义 emoji 列表
+  /// 获取自定义 emoji 列表（同步访问，需确保已调用 ensureLoaded）
+  /// 返回格式: [{name: "emoji_name", url: "emoji_url"}, ...]
+  List<Map<String, dynamic>>? get customEmoji => _customEmoji;
+
+  /// 获取自定义 emoji 列表（异步版本，自动确保数据已加载）
   /// 返回格式: [{name: "emoji_name", url: "emoji_url"}, ...]
   Future<List<Map<String, dynamic>>?> getCustomEmoji() async {
     await _ensureLoaded();

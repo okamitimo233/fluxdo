@@ -34,7 +34,6 @@ import '../services/cdk_oauth_service.dart';
 import '../services/toast_service.dart';
 import '../utils/number_utils.dart';
 import '../services/emoji_handler.dart';
-import '../constants.dart';
 
 /// 个人页面
 class ProfilePage extends ConsumerStatefulWidget {
@@ -60,18 +59,30 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       if (mounted) {
         final current = ref.read(currentUserProvider).value;
         if (current != null) {
-          _refreshData();
+          _silentRefresh();
         }
       }
     });
   }
 
+  /// 静默刷新（不显示 loading 指示器）
+  Future<void> _silentRefresh() async {
+    if (!mounted) return;
+    try {
+      await Future.wait([
+        ref.read(currentUserProvider.notifier).refreshSilently(),
+        ref.read(userSummaryProvider.notifier).refresh(),
+      ]);
+    } catch (_) {}
+  }
+
+  /// 下拉刷新（显示 loading 指示器）
   Future<void> _refreshData() async {
     if (!mounted) return;
     setState(() => _isRefreshing = true);
     try {
       await Future.wait([
-        ref.read(currentUserProvider.notifier).refreshSilently(),
+        ref.read(currentUserProvider.notifier).refreshSilently(force: true),
         ref.read(userSummaryProvider.notifier).refresh(),
       ]);
     } finally {
@@ -258,19 +269,31 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             : null,
         centerTitle: false,
         actions: isLoggedIn ? [
-          // 刷新中 / 离线状态指示（固定占位，避免后方图标闪烁）
-          if (_isRefreshing || isOffline)
-            IconButton(
-              icon: _isRefreshing
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(Icons.cloud_off_rounded, color: theme.colorScheme.outline),
-              tooltip: _isRefreshing ? '正在刷新...' : '数据可能不是最新的，下拉刷新重试',
-              onPressed: null,
-            ),
+          // 状态指示（固定占位，避免后方图标闪烁）
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: _isRefreshing
+                ? const SizedBox(
+                    key: ValueKey('refreshing'),
+                    width: 48,
+                    height: 48,
+                    child: Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  )
+                : isOffline
+                    ? SizedBox(
+                        key: const ValueKey('offline'),
+                        width: 48,
+                        height: 48,
+                        child: Icon(Icons.cloud_off_rounded, color: theme.colorScheme.outline),
+                      )
+                    : const SizedBox(key: ValueKey('idle'), width: 0),
+          ),
           IconButton(
             icon: const Icon(Icons.manage_accounts_rounded),
             tooltip: '编辑资料',
@@ -915,8 +938,7 @@ Widget _buildStatusEmoji(UserStatus status) {
 
   if (isEmojiName) {
     final cleanName = emoji.replaceAll(':', '');
-    final emojiUrl = EmojiHandler().getEmojiUrl(cleanName) ??
-        '${AppConstants.baseUrl}/images/emoji/twitter/$cleanName.png?v=12';
+    final emojiUrl = EmojiHandler().getEmojiUrl(cleanName);
 
     return Image(
       image: emojiImageProvider(emojiUrl),

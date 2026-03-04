@@ -41,6 +41,7 @@ class _CreateTopicPageState extends ConsumerState<CreateTopicPage> {
   bool _showPreview = false;
   String? _templateContent;
   bool _isLoadingDraft = false;
+  bool _showEmojiPanel = false;
 
   final PageController _pageController = PageController();
   int _contentLength = 0;
@@ -400,10 +401,8 @@ class _CreateTopicPageState extends ConsumerState<CreateTopicPage> {
     // 获取站点配置的最小长度
     final minTitleLength = ref.watch(minTopicTitleLengthProvider).value ?? 15;
 
-    final showEmojiPanel = _editorKey.currentState?.showEmojiPanel ?? false;
-
     return PopScope(
-      canPop: !showEmojiPanel,
+      canPop: !_showEmojiPanel,
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
         if (didPop) return;
         _editorKey.currentState?.closeEmojiPanel();
@@ -565,6 +564,9 @@ class _CreateTopicPageState extends ConsumerState<CreateTopicPage> {
                               emojiPanelHeight: 350,
                               onTogglePreview: _togglePreview,
                               isPreview: _showPreview,
+                              onEmojiPanelChanged: (show) {
+                                setState(() => _showEmojiPanel = show);
+                              },
                               mentionDataSource: (term) => ref.read(discourseServiceProvider).searchUsers(
                                 term: term,
                                 categoryId: _selectedCategory?.id,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../constants.dart';
 import '../../../../models/topic.dart';
 import '../../../../pages/user_profile_page.dart';
 import '../../../../services/discourse/discourse_service.dart';
@@ -7,11 +6,9 @@ import '../../../../services/discourse_cache_manager.dart';
 import '../../../../services/emoji_handler.dart';
 import '../../../common/smart_avatar.dart';
 
-/// 获取 emoji 图片 URL
+/// 获取 emoji 图片 URL（未加载完成时返回空字符串，由 errorBuilder 处理）
 String _getEmojiUrl(String emojiName) {
-  final url = EmojiHandler().getEmojiUrl(emojiName);
-  if (url != null) return url;
-  return '${AppConstants.baseUrl}/images/emoji/twitter/$emojiName.png?v=12';
+  return EmojiHandler().getEmojiUrl(emojiName);
 }
 
 /// 回应人列表底部弹窗
@@ -260,6 +257,7 @@ class _PostReactionUsersSheetState extends State<PostReactionUsersSheet> {
                   image: emojiImageProvider(_getEmojiUrl(emojiId)),
                   width: 18,
                   height: 18,
+                  errorBuilder: (_, _, _) => const SizedBox(width: 18, height: 18),
                 ),
               const SizedBox(width: 4),
               Text(
@@ -356,6 +354,7 @@ class _PostReactionUsersSheetState extends State<PostReactionUsersSheet> {
                 image: emojiImageProvider(_getEmojiUrl(item.reactionId)),
                 width: 20,
                 height: 20,
+                errorBuilder: (_, _, _) => const SizedBox(width: 20, height: 20),
               ),
           ],
         ),

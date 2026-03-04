@@ -82,6 +82,7 @@ class CurrentUserNotifier extends AsyncNotifier<User?> {
   }
 
   /// 静默刷新，带冷却时间（默认 2 分钟内不重复请求）
+  /// 不提前 emit 中间状态，只在拿到结果后更新一次，避免多余 rebuild
   Future<void> refreshSilently({bool force = false}) async {
     if (!force && _lastRefreshTime != null &&
         DateTime.now().difference(_lastRefreshTime!) < _refreshCooldown) {
@@ -89,9 +90,6 @@ class CurrentUserNotifier extends AsyncNotifier<User?> {
     }
     final service = ref.read(discourseServiceProvider);
     final previous = state.value;
-    if (previous != null || state.hasValue) {
-      state = AsyncValue.data(previous);
-    }
     try {
       final user = await _loadUser(service);
       _lastRefreshTime = DateTime.now();

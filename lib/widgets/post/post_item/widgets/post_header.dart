@@ -11,11 +11,9 @@ import '../../../common/avatar_glow.dart';
 import '../../whisper_indicator.dart';
 import 'post_granted_badge.dart';
 
-/// 获取 emoji 图片 URL
+/// 获取 emoji 图片 URL（未加载完成时返回空字符串，由 errorBuilder 处理）
 String _getEmojiUrl(String emojiName) {
-  final url = EmojiHandler().getEmojiUrl(emojiName);
-  if (url != null) return url;
-  return '${AppConstants.baseUrl}/images/emoji/twitter/$emojiName.png?v=12';
+  return EmojiHandler().getEmojiUrl(emojiName);
 }
 
 /// 帖子头像组件（独立widget避免不必要的重建）

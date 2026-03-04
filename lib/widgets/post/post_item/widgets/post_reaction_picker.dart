@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../../constants.dart';
 import '../../../../models/topic.dart';
 import '../../../../services/discourse_cache_manager.dart';
 import '../../../../services/emoji_handler.dart';
 
-/// 获取 emoji 图片 URL
+/// 获取 emoji 图片 URL（未加载完成时返回空字符串，由 errorBuilder 处理）
 String _getEmojiUrl(String emojiName) {
-  final url = EmojiHandler().getEmojiUrl(emojiName);
-  if (url != null) return url;
-  return '${AppConstants.baseUrl}/images/emoji/twitter/$emojiName.png?v=12';
+  return EmojiHandler().getEmojiUrl(emojiName);
 }
 
 /// 回应选择器弹窗
