@@ -39,8 +39,10 @@ class _CategoryTopicsPageState extends ConsumerState<CategoryTopicsPage> {
   Object? _error;
   String? _parentSlug;
 
-  // 本地排序和标签状态（独立于首页，初始值从持久化偏好读取）
-  late TopicListFilter _currentSort;
+  // 本地筛选、排序和标签状态（独立于首页，初始值从持久化偏好读取）
+  late TopicListFilter _currentFilter;
+  TopicSortOrder _currentOrder = TopicSortOrder.defaultOrder;
+  bool _ascending = false;
   List<String> _selectedTags = [];
 
   static final _paginationHelper = PaginationHelpers.forTopics<Topic>(
@@ -50,7 +52,9 @@ class _CategoryTopicsPageState extends ConsumerState<CategoryTopicsPage> {
   @override
   void initState() {
     super.initState();
-    _currentSort = ref.read(topicSortProvider);
+    _currentFilter = ref.read(topicFilterProvider);
+    _currentOrder = ref.read(topicSortOrderProvider);
+    _ascending = ref.read(topicSortAscendingProvider);
     _scrollController.addListener(_onScroll);
     _resolveParentSlug();
     _loadTopics();
@@ -86,13 +90,15 @@ class _CategoryTopicsPageState extends ConsumerState<CategoryTopicsPage> {
     try {
       final service = ref.read(discourseServiceProvider);
       final response = await service.getFilteredTopics(
-        filter: _currentSort.filterName,
+        filter: _currentFilter.filterName,
         categoryId: widget.category.id,
         categorySlug: widget.category.slug,
         parentCategorySlug: _parentSlug,
         tags: _selectedTags.isNotEmpty ? _selectedTags : null,
-        period: _currentSort.period,
+        period: _currentFilter.period,
         page: 0,
+        order: _currentOrder.apiValue,
+        ascending: _currentOrder != TopicSortOrder.defaultOrder ? _ascending : null,
       );
 
       final result = _paginationHelper.processRefresh(
@@ -122,13 +128,15 @@ class _CategoryTopicsPageState extends ConsumerState<CategoryTopicsPage> {
     try {
       final service = ref.read(discourseServiceProvider);
       final response = await service.getFilteredTopics(
-        filter: _currentSort.filterName,
+        filter: _currentFilter.filterName,
         categoryId: widget.category.id,
         categorySlug: widget.category.slug,
         parentCategorySlug: _parentSlug,
         tags: _selectedTags.isNotEmpty ? _selectedTags : null,
-        period: _currentSort.period,
+        period: _currentFilter.period,
         page: 0,
+        order: _currentOrder.apiValue,
+        ascending: _currentOrder != TopicSortOrder.defaultOrder ? _ascending : null,
       );
 
       final result = _paginationHelper.processRefresh(
@@ -154,13 +162,15 @@ class _CategoryTopicsPageState extends ConsumerState<CategoryTopicsPage> {
       final service = ref.read(discourseServiceProvider);
       final nextPage = _page + 1;
       final response = await service.getFilteredTopics(
-        filter: _currentSort.filterName,
+        filter: _currentFilter.filterName,
         categoryId: widget.category.id,
         categorySlug: widget.category.slug,
         parentCategorySlug: _parentSlug,
         tags: _selectedTags.isNotEmpty ? _selectedTags : null,
-        period: _currentSort.period,
+        period: _currentFilter.period,
         page: nextPage,
+        order: _currentOrder.apiValue,
+        ascending: _currentOrder != TopicSortOrder.defaultOrder ? _ascending : null,
       );
 
       final currentState = PaginationState(items: _topics);
@@ -186,10 +196,21 @@ class _CategoryTopicsPageState extends ConsumerState<CategoryTopicsPage> {
     }
   }
 
-  void _setSort(TopicListFilter sort) {
-    if (sort == _currentSort) return;
-    setState(() => _currentSort = sort);
-    ref.read(topicSortProvider.notifier).setSort(sort);
+  void _setFilter(TopicListFilter filter) {
+    if (filter == _currentFilter) return;
+    setState(() => _currentFilter = filter);
+    ref.read(topicFilterProvider.notifier).setFilter(filter);
+    _loadTopics();
+  }
+
+  void _setOrder(TopicSortOrder order) {
+    if (order == _currentOrder) return;
+    setState(() => _currentOrder = order);
+    _loadTopics();
+  }
+
+  void _toggleAscending() {
+    setState(() => _ascending = !_ascending);
     _loadTopics();
   }
 
@@ -323,11 +344,15 @@ class _CategoryTopicsPageState extends ConsumerState<CategoryTopicsPage> {
       ),
       body: Column(
         children: [
-          // 排序 + 标签栏
+          // 筛选 + 排序 + 标签栏
           SortAndTagsBar(
-            currentSort: _currentSort,
+            currentFilter: _currentFilter,
             isLoggedIn: isLoggedIn,
-            onSortChanged: _setSort,
+            onFilterChanged: _setFilter,
+            currentOrder: _currentOrder,
+            ascending: _ascending,
+            onOrderChanged: _setOrder,
+            onToggleAscending: _toggleAscending,
             selectedTags: _selectedTags,
             onTagRemoved: _removeTag,
             onAddTag: _openTagSelection,

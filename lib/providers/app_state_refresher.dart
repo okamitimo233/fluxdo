@@ -24,7 +24,9 @@ class AppStateRefresher {
   static Future<void> resetForLogout(WidgetRef ref) async {
     ref.read(currentUserProvider.notifier).clearCache();
     ref.read(userSummaryProvider.notifier).clearCache();
-    ref.read(topicSortProvider.notifier).setSort(TopicListFilter.latest);
+    ref.read(topicFilterProvider.notifier).setFilter(TopicListFilter.latest);
+    ref.read(topicSortOrderProvider.notifier).setOrder(TopicSortOrder.defaultOrder);
+    ref.read(topicSortAscendingProvider.notifier).setAscending(false);
     refreshAll(ref);
     // 清理各 tab 的标签筛选
     final pinnedIds = ref.read(pinnedCategoriesProvider);
@@ -64,19 +66,16 @@ class AppStateRefresher {
     // 当前 tab 立即 invalidate；非当前 tab 先释放 keepAlive，
     // 延迟到下一帧 widget 被销毁后再 invalidate，避免触发请求
     (ref) {
-      final currentSort = ref.read(topicSortProvider);
       final currentCategoryId = ref.read(currentTabCategoryIdProvider);
-      ref.invalidate(topicListProvider((currentSort, currentCategoryId)));
+      ref.invalidate(topicListProvider(currentCategoryId));
 
       ref.read(topicTabDeactivateSignal.notifier).state++;
 
       final pinnedIds = ref.read(pinnedCategoriesProvider);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        for (final sort in TopicListFilter.values) {
-          for (final categoryId in [null, ...pinnedIds]) {
-            if (sort == currentSort && categoryId == currentCategoryId) continue;
-            ref.invalidate(topicListProvider((sort, categoryId)));
-          }
+        for (final categoryId in [null, ...pinnedIds]) {
+          if (categoryId == currentCategoryId) continue;
+          ref.invalidate(topicListProvider(categoryId));
         }
       });
     },

@@ -2,8 +2,8 @@ part of 'discourse_service.dart';
 
 /// 话题相关
 mixin _TopicsMixin on _DiscourseServiceBase {
-  Future<TopicListResponse> getLatestTopics({int page = 0}) async {
-    if (page == 0) {
+  Future<TopicListResponse> getLatestTopics({int page = 0, String? order, bool? ascending}) async {
+    if (page == 0 && order == null) {
       final preloaded = PreloadedDataService();
       final preloadedList = await preloaded.getInitialTopicList();
       if (preloadedList != null) {
@@ -11,9 +11,14 @@ mixin _TopicsMixin on _DiscourseServiceBase {
       }
     }
 
+    final queryParams = <String, dynamic>{};
+    if (page > 0) queryParams['page'] = page;
+    if (order != null) queryParams['order'] = order;
+    if (ascending != null) queryParams['ascending'] = ascending.toString();
+
     final response = await _dio.get(
       '/latest.json',
-      queryParameters: page > 0 ? {'page': page} : null,
+      queryParameters: queryParams.isNotEmpty ? queryParams : null,
     );
     return TopicListResponse.fromJson(response.data);
   }
@@ -27,6 +32,8 @@ mixin _TopicsMixin on _DiscourseServiceBase {
     List<String>? tags,
     String? period,
     int page = 0,
+    String? order,
+    bool? ascending,
   }) async {
     String path;
     final queryParams = <String, dynamic>{};
@@ -37,6 +44,14 @@ mixin _TopicsMixin on _DiscourseServiceBase {
 
     if (period != null) {
       queryParams['period'] = period;
+    }
+
+    if (order != null) {
+      queryParams['order'] = order;
+    }
+
+    if (ascending != null) {
+      queryParams['ascending'] = ascending.toString();
     }
 
     if (categoryId != null && categorySlug != null) {
@@ -64,34 +79,54 @@ mixin _TopicsMixin on _DiscourseServiceBase {
     return TopicListResponse.fromJson(response.data);
   }
 
-  Future<TopicListResponse> getNewTopics({int page = 0}) async {
+  Future<TopicListResponse> getNewTopics({int page = 0, String? order, bool? ascending}) async {
+    final queryParams = <String, dynamic>{};
+    if (page > 0) queryParams['page'] = page;
+    if (order != null) queryParams['order'] = order;
+    if (ascending != null) queryParams['ascending'] = ascending.toString();
+
     final response = await _dio.get(
       '/new.json',
-      queryParameters: page > 0 ? {'page': page} : null,
+      queryParameters: queryParams.isNotEmpty ? queryParams : null,
     );
     return TopicListResponse.fromJson(response.data);
   }
 
-  Future<TopicListResponse> getUnreadTopics({int page = 0}) async {
+  Future<TopicListResponse> getUnreadTopics({int page = 0, String? order, bool? ascending}) async {
+    final queryParams = <String, dynamic>{};
+    if (page > 0) queryParams['page'] = page;
+    if (order != null) queryParams['order'] = order;
+    if (ascending != null) queryParams['ascending'] = ascending.toString();
+
     final response = await _dio.get(
       '/unread.json',
-      queryParameters: page > 0 ? {'page': page} : null,
+      queryParameters: queryParams.isNotEmpty ? queryParams : null,
     );
     return TopicListResponse.fromJson(response.data);
   }
 
-  Future<TopicListResponse> getUnseenTopics({int page = 0}) async {
+  Future<TopicListResponse> getUnseenTopics({int page = 0, String? order, bool? ascending}) async {
+    final queryParams = <String, dynamic>{};
+    if (page > 0) queryParams['page'] = page;
+    if (order != null) queryParams['order'] = order;
+    if (ascending != null) queryParams['ascending'] = ascending.toString();
+
     final response = await _dio.get(
       '/unseen.json',
-      queryParameters: page > 0 ? {'page': page} : null,
+      queryParameters: queryParams.isNotEmpty ? queryParams : null,
     );
     return TopicListResponse.fromJson(response.data);
   }
 
-  Future<TopicListResponse> getHotTopics({int page = 0}) async {
+  Future<TopicListResponse> getHotTopics({int page = 0, String? order, bool? ascending}) async {
+    final queryParams = <String, dynamic>{};
+    if (page > 0) queryParams['page'] = page;
+    if (order != null) queryParams['order'] = order;
+    if (ascending != null) queryParams['ascending'] = ascending.toString();
+
     final response = await _dio.get(
       '/hot.json',
-      queryParameters: page > 0 ? {'page': page} : null,
+      queryParameters: queryParams.isNotEmpty ? queryParams : null,
     );
     return TopicListResponse.fromJson(response.data);
   }

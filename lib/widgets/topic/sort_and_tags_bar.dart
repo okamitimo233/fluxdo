@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../providers/topic_list_provider.dart';
+import '../../providers/topic_sort_provider.dart';
 import '../common/topic_badges.dart';
-import 'sort_dropdown.dart';
+import 'filter_dropdown.dart';
 
-/// 排序选项定义
-const sortOptions = [
+/// 筛选选项定义
+const filterOptions = [
   (TopicListFilter.latest, '最新'),
   (TopicListFilter.newTopics, '新话题'),
   (TopicListFilter.unread, '未读完'),
@@ -13,21 +14,25 @@ const sortOptions = [
   (TopicListFilter.hot, '热门'),
 ];
 
-/// 获取排序模式的显示名称
-String sortLabel(TopicListFilter sort) {
-  for (final option in sortOptions) {
-    if (option.$1 == sort) return option.$2;
+/// 获取筛选模式的显示名称
+String filterLabel(TopicListFilter filter) {
+  for (final option in filterOptions) {
+    if (option.$1 == filter) return option.$2;
   }
   return '最新';
 }
 
-/// 排序下拉 + 标签 chips（固定在 Tab 和列表之间）
+/// 筛选下拉 + 排序下拉 + 标签 chips（固定在 Tab 和列表之间）
 ///
 /// 纯 callback-based，不再内部读写任何 provider。
 class SortAndTagsBar extends StatelessWidget {
-  final TopicListFilter currentSort;
+  final TopicListFilter currentFilter;
   final bool isLoggedIn;
-  final ValueChanged<TopicListFilter> onSortChanged;
+  final ValueChanged<TopicListFilter> onFilterChanged;
+  final TopicSortOrder currentOrder;
+  final bool ascending;
+  final ValueChanged<TopicSortOrder> onOrderChanged;
+  final VoidCallback onToggleAscending;
   final List<String> selectedTags;
   final ValueChanged<String> onTagRemoved;
   final VoidCallback onAddTag;
@@ -35,9 +40,13 @@ class SortAndTagsBar extends StatelessWidget {
 
   const SortAndTagsBar({
     super.key,
-    required this.currentSort,
+    required this.currentFilter,
     required this.isLoggedIn,
-    required this.onSortChanged,
+    required this.onFilterChanged,
+    required this.currentOrder,
+    required this.ascending,
+    required this.onOrderChanged,
+    required this.onToggleAscending,
     required this.selectedTags,
     required this.onTagRemoved,
     required this.onAddTag,
@@ -53,11 +62,19 @@ class SortAndTagsBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Row(
         children: [
-          // 排序下拉
-          SortDropdown(
-            currentSort: currentSort,
+          // 筛选下拉
+          FilterDropdown(
+            currentFilter: currentFilter,
             isLoggedIn: isLoggedIn,
-            onSortChanged: onSortChanged,
+            onFilterChanged: onFilterChanged,
+          ),
+          const SizedBox(width: 6),
+          // 排序下拉
+          OrderDropdown(
+            currentOrder: currentOrder,
+            ascending: ascending,
+            onOrderChanged: onOrderChanged,
+            onToggleAscending: onToggleAscending,
           ),
           const SizedBox(width: 8),
           // 标签区域

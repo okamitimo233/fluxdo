@@ -19,7 +19,6 @@ import '../../providers/preferences_provider.dart';
 import '../../providers/selected_topic_provider.dart';
 import '../../providers/discourse_providers.dart';
 import '../../providers/message_bus_providers.dart';
-import '../../providers/topic_sort_provider.dart';
 import '../../providers/pinned_categories_provider.dart';
 import '../../services/discourse/discourse_service.dart';
 import '../../services/screen_track.dart';
@@ -148,18 +147,11 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
       DiscourseService(),
       onTimingsSent: (topicId, postNumbers, highestSeen) {
         debugPrint('[TopicDetail] onTimingsSent callback triggered: topicId=$topicId, highestSeen=$highestSeen');
-        // 遍历当前排序 + 所有分类 tab，更新所有活跃的 provider 实例
-        final currentSort = ref.read(topicSortProvider);
+        // 遍历所有分类 tab，更新所有活跃的 provider 实例
         final pinnedIds = ref.read(pinnedCategoriesProvider);
         final categoryIds = [null, ...pinnedIds];
         for (final categoryId in categoryIds) {
-          ref.read(topicListProvider((currentSort, categoryId)).notifier).updateSeen(topicId, highestSeen);
-        }
-        // unread 列表也需要更新
-        if (currentSort != TopicListFilter.unread) {
-          for (final categoryId in categoryIds) {
-            ref.read(topicListProvider((TopicListFilter.unread, categoryId)).notifier).updateSeen(topicId, highestSeen);
-          }
+          ref.read(topicListProvider(categoryId).notifier).updateSeen(topicId, highestSeen);
         }
         // 更新会话已读状态，触发 PostItem 消除未读圆点
         ref.read(topicSessionProvider(topicId).notifier).markAsRead(postNumbers);

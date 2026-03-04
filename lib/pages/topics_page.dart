@@ -19,7 +19,7 @@ import '../models/search_filter.dart';
 import '../widgets/common/notification_icon_button.dart';
 import '../widgets/topic/topic_list_skeleton.dart';
 import '../widgets/topic/sort_and_tags_bar.dart';
-import '../widgets/topic/sort_dropdown.dart';
+import '../widgets/topic/filter_dropdown.dart';
 import '../widgets/topic/topic_item_builder.dart';
 import '../widgets/topic/topic_notification_button.dart';
 import '../widgets/topic/category_tab_manager_sheet.dart';
@@ -149,7 +149,7 @@ class _TopicsPageState extends ConsumerState<TopicsPage> with TickerProviderStat
       try {
         await Future.wait([
           ref.read(currentUserProvider.future),
-          ref.read(topicListProvider((TopicListFilter.latest, null)).future),
+          ref.read(topicListProvider(null).future),
         ]).timeout(const Duration(seconds: 10));
       } catch (_) {}
 
@@ -273,11 +273,11 @@ class _TopicsPageState extends ConsumerState<TopicsPage> with TickerProviderStat
   /// 构建排序栏右侧的按钮
   /// - 新/未读排序且已登录时：显示忽略按钮
   /// - 分类 Tab 且已登录时：显示分类通知按钮
-  Widget? _buildTrailing(Category? category, bool isLoggedIn, TopicListFilter currentSort) {
-    // 新/未读排序时显示忽略按钮
-    if (isLoggedIn && (currentSort == TopicListFilter.newTopics || currentSort == TopicListFilter.unread)) {
+  Widget? _buildTrailing(Category? category, bool isLoggedIn, TopicListFilter currentFilter) {
+    // 新/未读筛选时显示忽略按钮
+    if (isLoggedIn && (currentFilter == TopicListFilter.newTopics || currentFilter == TopicListFilter.unread)) {
       return _DismissButton(
-        onPressed: () => _showDismissConfirmDialog(currentSort),
+        onPressed: () => _showDismissConfirmDialog(currentFilter),
       );
     }
 
@@ -317,8 +317,8 @@ class _TopicsPageState extends ConsumerState<TopicsPage> with TickerProviderStat
     );
   }
 
-  void _showDismissConfirmDialog(TopicListFilter currentSort) {
-    final label = currentSort == TopicListFilter.newTopics ? '新话题' : '未读话题';
+  void _showDismissConfirmDialog(TopicListFilter currentFilter) {
+    final label = currentFilter == TopicListFilter.newTopics ? '新话题' : '未读话题';
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -342,11 +342,9 @@ class _TopicsPageState extends ConsumerState<TopicsPage> with TickerProviderStat
   }
 
   Future<void> _doDismiss() async {
-    final currentSort = ref.read(topicSortProvider);
     final categoryId = _currentCategoryId();
-    final providerKey = (currentSort, categoryId);
     try {
-      await ref.read(topicListProvider(providerKey).notifier).dismissAll();
+      await ref.read(topicListProvider(categoryId).notifier).dismissAll();
     } catch (e) {
       if (mounted) {
         ToastService.showError('操作失败：$e');
@@ -366,7 +364,7 @@ class _TopicsPageState extends ConsumerState<TopicsPage> with TickerProviderStat
     final pinnedIds = visibleIds != null
         ? allPinnedIds.where((id) => visibleIds.contains(id)).toList()
         : allPinnedIds;
-    final currentSort = ref.watch(topicSortProvider);
+    final currentFilter = ref.watch(topicFilterProvider);
 
     _syncTabsIfNeeded(pinnedIds);
 
@@ -416,11 +414,11 @@ class _TopicsPageState extends ConsumerState<TopicsPage> with TickerProviderStat
                 pinnedIds: pinnedIds,
                 categoryMap: categoryMap ?? {},
                 isLoggedIn: isLoggedIn,
-                currentSort: currentSort,
+                currentFilter: currentFilter,
                 currentTags: currentTags,
                 currentCategory: currentCategory,
-                onSortChanged: (sort) {
-                  ref.read(topicSortProvider.notifier).setSort(sort);
+                onFilterChanged: (filter) {
+                  ref.read(topicFilterProvider.notifier).setFilter(filter);
                 },
                 onTagRemoved: (tag) {
                   final tags = ref.read(tabTagsProvider(currentCategoryId));
@@ -454,7 +452,7 @@ class _TopicsPageState extends ConsumerState<TopicsPage> with TickerProviderStat
                   );
                 },
                 onDebugTopicId: () => _showTopicIdDialog(context),
-                trailing: _buildTrailing(currentCategory, isLoggedIn, currentSort),
+                trailing: _buildTrailing(currentCategory, isLoggedIn, currentFilter),
               ),
             ),
           ],
@@ -579,10 +577,10 @@ class _TopicsHeaderDelegate extends SliverPersistentHeaderDelegate {
   final List<int> pinnedIds;
   final Map<int, Category> categoryMap;
   final bool isLoggedIn;
-  final TopicListFilter currentSort;
+  final TopicListFilter currentFilter;
   final List<String> currentTags;
   final Category? currentCategory;
-  final ValueChanged<TopicListFilter> onSortChanged;
+  final ValueChanged<TopicListFilter> onFilterChanged;
   final ValueChanged<String> onTagRemoved;
   final VoidCallback onAddTag;
   final ValueChanged<int> onTabTap;
@@ -597,10 +595,10 @@ class _TopicsHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.pinnedIds,
     required this.categoryMap,
     required this.isLoggedIn,
-    required this.currentSort,
+    required this.currentFilter,
     required this.currentTags,
     required this.currentCategory,
-    required this.onSortChanged,
+    required this.onFilterChanged,
     required this.onTagRemoved,
     required this.onAddTag,
     required this.onTabTap,
@@ -623,7 +621,7 @@ class _TopicsHeaderDelegate extends SliverPersistentHeaderDelegate {
         pinnedIds != oldDelegate.pinnedIds ||
         categoryMap != oldDelegate.categoryMap ||
         isLoggedIn != oldDelegate.isLoggedIn ||
-        currentSort != oldDelegate.currentSort ||
+        currentFilter != oldDelegate.currentFilter ||
         currentTags != oldDelegate.currentTags ||
         currentCategory != oldDelegate.currentCategory ||
         trailing != oldDelegate.trailing;
@@ -732,15 +730,15 @@ class _TopicsHeaderDelegate extends SliverPersistentHeaderDelegate {
                     ),
                   ),
                 ),
-                // 排序栏隐藏时，渐显排序快捷按钮
+                // 筛选/排序栏隐藏时，渐显筛选快捷按钮
                 if (sortProgress > 0)
                   Opacity(
                     opacity: sortProgress,
-                    child: SortDropdown(
-                      currentSort: currentSort,
+                    child: FilterDropdown(
+                      currentFilter: currentFilter,
                       isLoggedIn: isLoggedIn,
-                      onSortChanged: onSortChanged,
-                      style: SortDropdownStyle.compact,
+                      onFilterChanged: onFilterChanged,
+                      style: DropdownStyle.compact,
                     ),
                   ),
                 // 分类浏览按钮
@@ -756,7 +754,7 @@ class _TopicsHeaderDelegate extends SliverPersistentHeaderDelegate {
               ],
             ),
           ),
-          // 排序+标签栏（完全折叠后跳过子树构建）
+          // 筛选+排序+标签栏（完全折叠后跳过子树构建）
           if (sortProgress < 1.0)
             ClipRect(
               child: Align(
@@ -764,14 +762,25 @@ class _TopicsHeaderDelegate extends SliverPersistentHeaderDelegate {
                 heightFactor: 1.0 - sortProgress,
                 child: Opacity(
                   opacity: 1.0 - sortProgress,
-                  child: SortAndTagsBar(
-                    currentSort: currentSort,
-                    isLoggedIn: isLoggedIn,
-                    onSortChanged: onSortChanged,
-                    selectedTags: currentTags,
-                    onTagRemoved: onTagRemoved,
-                    onAddTag: onAddTag,
-                    trailing: trailing,
+                  // 用 Consumer 局部读取排序状态，避免整个 header delegate 因排序变化而重建
+                  child: Consumer(
+                    builder: (context, ref, _) {
+                      final order = ref.watch(topicSortOrderProvider);
+                      final ascending = ref.watch(topicSortAscendingProvider);
+                      return SortAndTagsBar(
+                        currentFilter: currentFilter,
+                        isLoggedIn: isLoggedIn,
+                        onFilterChanged: onFilterChanged,
+                        currentOrder: order,
+                        ascending: ascending,
+                        onOrderChanged: (o) => ref.read(topicSortOrderProvider.notifier).setOrder(o),
+                        onToggleAscending: () => ref.read(topicSortAscendingProvider.notifier).toggle(),
+                        selectedTags: currentTags,
+                        onTagRemoved: onTagRemoved,
+                        onAddTag: onAddTag,
+                        trailing: trailing,
+                      );
+                    },
                   ),
                 ),
               ),
@@ -793,7 +802,7 @@ class _TopicsHeaderDelegate extends SliverPersistentHeaderDelegate {
 
 // ─── TopicList ───
 
-/// 话题列表（每个 tab 一个实例，根据 categoryId + topicSortProvider 获取数据）
+/// 话题列表（每个 tab 一个实例，根据 categoryId + topicFilterProvider 获取数据）
 class _TopicList extends ConsumerStatefulWidget {
   final VoidCallback onLoginRequired;
   final int? categoryId;
@@ -877,9 +886,9 @@ class _TopicListState extends ConsumerState<_TopicList>
       }
     });
 
-    final currentSort = ref.watch(topicSortProvider);
+    final currentFilter = ref.watch(topicFilterProvider);
     final selectedTopicId = ref.watch(selectedTopicProvider).topicId;
-    final providerKey = (currentSort, widget.categoryId);
+    final providerKey = widget.categoryId;
     final topicsAsync = ref.watch(topicListProvider(providerKey));
 
     return topicsAsync.when(
@@ -907,7 +916,7 @@ class _TopicListState extends ConsumerState<_TopicList>
         }
 
         final incomingState = ref.watch(latestChannelProvider);
-        final hasNewTopics = currentSort == TopicListFilter.latest
+        final hasNewTopics = currentFilter == TopicListFilter.latest
             && incomingState.hasIncomingForCategory(widget.categoryId);
         final newTopicCount = incomingState.incomingCountForCategory(widget.categoryId);
         final newTopicOffset = hasNewTopics ? 1 : 0;
@@ -919,7 +928,7 @@ class _TopicListState extends ConsumerState<_TopicList>
               // ignore: unused_result
               await ref.refresh(topicListProvider(providerKey).future);
             } catch (_) {}
-            if (currentSort == TopicListFilter.latest) {
+            if (currentFilter == TopicListFilter.latest) {
               ref.read(latestChannelProvider.notifier).clearNewTopicsForCategory(widget.categoryId);
             }
           },
@@ -987,7 +996,7 @@ class _TopicListState extends ConsumerState<_TopicList>
     );
   }
 
-  Widget _buildNewTopicIndicator(BuildContext context, int count, (TopicListFilter, int?) providerKey) {
+  Widget _buildNewTopicIndicator(BuildContext context, int count, int? providerKey) {
     final scrollController = PrimaryScrollController.maybeOf(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1002,7 +1011,7 @@ class _TopicListState extends ConsumerState<_TopicList>
             });
             try {
               await ref.read(topicListProvider(providerKey).notifier).silentRefresh();
-              ref.read(latestChannelProvider.notifier).clearNewTopicsForCategory(providerKey.$2);
+              ref.read(latestChannelProvider.notifier).clearNewTopicsForCategory(providerKey);
 
               if (mounted) {
                 scrollController?.animateTo(

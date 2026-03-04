@@ -156,9 +156,8 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen> {
       )),
     );
     if (topicId != null && context.mounted) {
-      // 刷新当前排序模式的列表
-      final currentSort = ref.read(topicSortProvider);
-      ref.invalidate(topicListProvider((currentSort, null)));
+      // 刷新当前 tab 的列表
+      ref.invalidate(topicListProvider(null));
       // 在 Master-Detail 模式下，选中新话题
       ref.read(selectedTopicProvider.notifier).select(topicId: topicId);
     }
