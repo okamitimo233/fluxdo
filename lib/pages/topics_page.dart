@@ -29,6 +29,7 @@ import '../widgets/layout/master_detail_layout.dart';
 import '../widgets/common/error_view.dart';
 import '../widgets/common/loading_dialog.dart';
 import '../widgets/common/fading_edge_scroll_view.dart';
+import '../widgets/offline_indicator.dart';
 import '../services/toast_service.dart';
 
 class ScrollToTopNotifier extends StateNotifier<int> {
@@ -487,18 +488,25 @@ class _TopicsPageState extends ConsumerState<TopicsPage> with TickerProviderStat
               ),
             ),
           ],
-          body: TabBarView(
-            controller: _tabController,
+          body: Column(
             children: [
-              ExtendedVisibilityDetector(
-                uniqueKey: const Key('tab_all'),
-                child: _buildTabPage(null),
-              ),
-              for (int i = 0; i < pinnedIds.length; i++)
-                ExtendedVisibilityDetector(
-                  uniqueKey: Key('tab_${pinnedIds[i]}'),
-                  child: _buildTabPage(pinnedIds[i]),
+              const OfflineIndicator(),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    ExtendedVisibilityDetector(
+                      uniqueKey: const Key('tab_all'),
+                      child: _buildTabPage(null),
+                    ),
+                    for (int i = 0; i < pinnedIds.length; i++)
+                      ExtendedVisibilityDetector(
+                        uniqueKey: Key('tab_${pinnedIds[i]}'),
+                        child: _buildTabPage(pinnedIds[i]),
+                      ),
+                  ],
                 ),
+              ),
             ],
           ),
         ),

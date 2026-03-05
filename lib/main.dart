@@ -33,10 +33,12 @@ import 'services/update_checker_helper.dart';
 import 'services/deep_link_service.dart';
 import 'services/background/background_notification_service.dart';
 import 'services/message_bus_service.dart';
+import 'services/connectivity_service.dart';
 import 'services/log/json_file_handler.dart';
 import 'services/log/logger_utils.dart';
 import 'models/user.dart';
 import 'constants.dart';
+import 'providers/connectivity_provider.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ai_model_manager/ai_model_manager.dart';
@@ -286,6 +288,7 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
   ProviderSubscription<void>? _messageBusSub;
   ProviderSubscription<void>? _notificationChannelSub;
   ProviderSubscription<void>? _notificationAlertChannelSub;
+  ProviderSubscription<AsyncValue<bool>>? _connectivitySub;
   bool _messageBusInitialized = false;
   int? _lastTappedIndex;
   DateTime? _lastTapTime;
@@ -314,6 +317,21 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
     _authErrorSub = ref.listenManual<AsyncValue<String>>(authErrorProvider, (_, next) {
       next.whenData((message) => _handleAuthError(message));
     });
+
+    // 初始化连通性检测服务
+    ConnectivityService().init();
+
+    // 全局监听连接状态变化，弹 Toast 通知用户
+    _connectivitySub = ref.listenManual<AsyncValue<bool>>(isConnectedProvider, (prev, next) {
+      final wasConnected = prev?.value ?? true;
+      final isNow = next.value;
+      if (isNow == false && wasConnected) {
+        ToastService.showError('网络连接已断开');
+      } else if (isNow == true && prev?.value == false) {
+        ToastService.showSuccess('网络已恢复');
+      }
+    });
+
     _authStateSub = ref.listenManual<AsyncValue<void>>(authStateProvider, (_, next) {
       next.whenData((_) {
         if (mounted) {
@@ -390,6 +408,7 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
     _messageBusSub?.close();
     _notificationChannelSub?.close();
     _notificationAlertChannelSub?.close();
+    _connectivitySub?.close();
     super.dispose();
   }
 
@@ -413,6 +432,8 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
         BackgroundNotificationService().disable();
         MessageBusService().exitBackgroundMode();
         ref.invalidate(notificationListProvider);
+        // 回到前台时主动检查连通性（等同 Discourse 的 visibilitychange）
+        ConnectivityService().check();
       });
     }
   }

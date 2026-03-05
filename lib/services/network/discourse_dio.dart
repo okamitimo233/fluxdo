@@ -23,6 +23,8 @@ class DiscourseDio {
     Map<String, dynamic>? defaultHeaders,
     String? baseUrl,
     int? maxConcurrent = 6,
+    bool enableRetry = true,
+    bool enableCfChallenge = true,
   }) {
     final dio = Dio(BaseOptions(
       baseUrl: baseUrl ?? AppConstants.baseUrl,
@@ -53,17 +55,19 @@ class DiscourseDio {
     dio.interceptors.add(CronetFallbackInterceptor(dio));
 
     // 5. 重试拦截器 (dio_smart_retry)
-    dio.interceptors.add(RetryInterceptor(
-      dio: dio,
-      logPrint: (msg) => debugPrint('[Dio Retry] $msg'),
-      retries: 0, // TODO: 调试完成后改回 3
-      retryDelays: const [
-        Duration(seconds: 1),
-        Duration(seconds: 2),
-        Duration(seconds: 4),
-      ],
-      retryableExtraStatuses: {429, 502, 503, 504},
-    ));
+    if (enableRetry) {
+      dio.interceptors.add(RetryInterceptor(
+        dio: dio,
+        logPrint: (msg) => debugPrint('[Dio Retry] $msg'),
+        retries: 0, // TODO: 调试完成后改回 3
+        retryDelays: const [
+          Duration(seconds: 1),
+          Duration(seconds: 2),
+          Duration(seconds: 4),
+        ],
+        retryableExtraStatuses: {429, 502, 503, 504},
+      ));
+    }
 
     // 6. 请求头拦截器
     dio.interceptors.add(RequestHeaderInterceptor(CookieSyncService()));
@@ -75,10 +79,12 @@ class DiscourseDio {
     dio.interceptors.add(ErrorInterceptor());
 
     // 9. CF 验证拦截器
-    dio.interceptors.add(CfChallengeInterceptor(
-      dio: dio,
-      cookieJarService: cookieJarService,
-    ));
+    if (enableCfChallenge) {
+      dio.interceptors.add(CfChallengeInterceptor(
+        dio: dio,
+        cookieJarService: cookieJarService,
+      ));
+    }
 
     // 10. 网络日志拦截器（最后一个，记录最终结果）
     dio.interceptors.add(NetworkLogInterceptor());
