@@ -56,6 +56,7 @@ class AppStateRefresher {
     (ref) => ref.invalidate(bookmarksProvider),
     (ref) => ref.invalidate(myTopicsProvider),
     (ref) => ref.invalidate(topicTrackingStateMetaProvider),
+    (ref) => ref.invalidate(topicTrackingStateProvider),
     (ref) => ref.invalidate(notificationCountStateProvider),
     (ref) => ref.invalidate(notificationChannelProvider),
     (ref) => ref.invalidate(notificationAlertChannelProvider),

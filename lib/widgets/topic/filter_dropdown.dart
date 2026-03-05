@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/topic_list_provider.dart';
 import '../../providers/topic_sort_provider.dart';
+import '../../providers/message_bus/topic_tracking_providers.dart';
 import 'sort_and_tags_bar.dart';
 
 /// 下拉样式
@@ -13,7 +15,7 @@ enum DropdownStyle {
 }
 
 /// 筛选下拉公共组件（原 SortDropdown）
-class FilterDropdown extends StatelessWidget {
+class FilterDropdown extends ConsumerWidget {
   final TopicListFilter currentFilter;
   final bool isLoggedIn;
   final ValueChanged<TopicListFilter> onFilterChanged;
@@ -28,8 +30,31 @@ class FilterDropdown extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+
+    // 读取追踪状态计数
+    final trackingNotifier = ref.watch(topicTrackingStateProvider.notifier);
+    final categoryId = ref.watch(currentTabCategoryIdProvider);
+    // watch state 本身以触发 rebuild
+    ref.watch(topicTrackingStateProvider);
+    final newCount = isLoggedIn ? trackingNotifier.countNew(categoryId: categoryId) : 0;
+    final unreadCount = isLoggedIn ? trackingNotifier.countUnread(categoryId: categoryId) : 0;
+
+    /// 获取筛选选项的显示文本（带计数）
+    String optionLabel(TopicListFilter filter, String baseLabel) {
+      final count = _countForFilter(filter, newCount, unreadCount);
+      if (count > 0) return '$baseLabel ($count)';
+      return baseLabel;
+    }
+
+    /// 获取当前筛选按钮的显示文本（带计数）
+    String buttonLabel() {
+      final base = filterLabel(currentFilter);
+      final count = _countForFilter(currentFilter, newCount, unreadCount);
+      if (count > 0) return '$base ($count)';
+      return base;
+    }
 
     return PopupMenuButton<TopicListFilter>(
       onSelected: onFilterChanged,
@@ -48,19 +73,31 @@ class FilterDropdown extends StatelessWidget {
                       else
                         const SizedBox(width: 16),
                       const SizedBox(width: 8),
-                      Text(option.$2),
+                      Text(optionLabel(option.$1, option.$2)),
                     ],
                   ),
                 ))
             .toList();
       },
       child: style == DropdownStyle.compact
-          ? _buildCompactChild(colorScheme)
-          : _buildNormalChild(colorScheme),
+          ? _buildCompactChild(colorScheme, buttonLabel())
+          : _buildNormalChild(colorScheme, buttonLabel()),
     );
   }
 
-  Widget _buildNormalChild(ColorScheme colorScheme) {
+  /// 根据筛选类型返回对应计数
+  static int _countForFilter(TopicListFilter filter, int newCount, int unreadCount) {
+    switch (filter) {
+      case TopicListFilter.newTopics:
+        return newCount;
+      case TopicListFilter.unread:
+        return unreadCount;
+      default:
+        return 0;
+    }
+  }
+
+  Widget _buildNormalChild(ColorScheme colorScheme, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -71,7 +108,7 @@ class FilterDropdown extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            filterLabel(currentFilter),
+            label,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
@@ -85,7 +122,7 @@ class FilterDropdown extends StatelessWidget {
     );
   }
 
-  Widget _buildCompactChild(ColorScheme colorScheme) {
+  Widget _buildCompactChild(ColorScheme colorScheme, String label) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       child: Row(
@@ -94,7 +131,7 @@ class FilterDropdown extends StatelessWidget {
           Icon(Icons.filter_list, size: 18, color: colorScheme.onSurfaceVariant),
           const SizedBox(width: 2),
           Text(
-            filterLabel(currentFilter),
+            label,
             style: TextStyle(
               fontSize: 12,
               color: colorScheme.onSurfaceVariant,

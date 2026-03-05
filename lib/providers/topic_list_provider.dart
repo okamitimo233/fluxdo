@@ -7,6 +7,7 @@ import '../utils/pagination_helper.dart';
 import 'core_providers.dart';
 import 'category_provider.dart';
 import 'topic_sort_provider.dart';
+import 'message_bus/topic_tracking_providers.dart';
 
 enum TopicListFilter {
   latest,
@@ -371,8 +372,14 @@ class TopicListNotifier extends AsyncNotifier<List<Topic>> {
     final filter = _currentFilter;
     if (filter == TopicListFilter.newTopics) {
       await service.dismissNewTopics(categoryId: _categoryId);
+      // 同步更新追踪状态计数
+      ref.read(topicTrackingStateProvider.notifier)
+          .dismissNewTopics(categoryId: _categoryId);
     } else if (filter == TopicListFilter.unread) {
       await service.dismissUnreadTopics(categoryId: _categoryId);
+      // 同步更新追踪状态计数
+      ref.read(topicTrackingStateProvider.notifier)
+          .dismissUnreadTopics(categoryId: _categoryId);
     }
     state = const AsyncValue.data([]);
     _hasMore = false;
@@ -421,6 +428,10 @@ class TopicListNotifier extends AsyncNotifier<List<Topic>> {
     final newList = [...topics];
     newList[index] = updated;
     state = AsyncValue.data(newList);
+
+    // 同步更新追踪状态计数（阅读后减少 new/unread 计数）
+    ref.read(topicTrackingStateProvider.notifier)
+        .updateTopicRead(topicId, highestSeen, topic.highestPostNumber);
   }
 }
 

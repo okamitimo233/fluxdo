@@ -12,6 +12,307 @@ final topicTrackingStateMetaProvider = FutureProvider<Map<String, dynamic>?>((re
   return service.getPreloadedTopicTrackingMeta();
 });
 
+// ─── 话题追踪状态（对齐 Discourse 网页版 topic-tracking-state.js）───
+
+/// 单个话题的追踪状态
+class TrackedTopicState {
+  final int topicId;
+  final int? lastReadPostNumber;  // null = 未读过（NEW）
+  final int highestPostNumber;
+  final int? categoryId;
+  final int notificationLevel;  // 0=MUTED, 1=REGULAR, 2=TRACKING, 3=WATCHING
+  final bool createdInNewPeriod;
+  final bool isSeen;
+
+  const TrackedTopicState({
+    required this.topicId,
+    this.lastReadPostNumber,
+    required this.highestPostNumber,
+    this.categoryId,
+    this.notificationLevel = 1,
+    this.createdInNewPeriod = false,
+    this.isSeen = false,
+  });
+
+  TrackedTopicState copyWith({
+    int? lastReadPostNumber,
+    bool clearLastRead = false,
+    int? highestPostNumber,
+    int? categoryId,
+    int? notificationLevel,
+    bool? createdInNewPeriod,
+    bool? isSeen,
+  }) {
+    return TrackedTopicState(
+      topicId: topicId,
+      lastReadPostNumber: clearLastRead ? null : (lastReadPostNumber ?? this.lastReadPostNumber),
+      highestPostNumber: highestPostNumber ?? this.highestPostNumber,
+      categoryId: categoryId ?? this.categoryId,
+      notificationLevel: notificationLevel ?? this.notificationLevel,
+      createdInNewPeriod: createdInNewPeriod ?? this.createdInNewPeriod,
+      isSeen: isSeen ?? this.isSeen,
+    );
+  }
+
+  /// 从预加载数据的 JSON 构建
+  ///
+  /// 注意：Discourse 预加载数据中没有 created_in_new_period 字段，
+  /// 该值在网页版由客户端根据 created_at 计算。
+  /// 但服务端 SQL 已过滤：last_read_post_number 为 null 的话题
+  /// 一定是在用户 treat_as_new_topic_start_date 之后创建的，
+  /// 所以此处当 last_read_post_number 为 null 时默认 createdInNewPeriod=true。
+  factory TrackedTopicState.fromJson(Map<String, dynamic> json) {
+    final lastRead = json['last_read_post_number'] as int?;
+    return TrackedTopicState(
+      topicId: json['topic_id'] as int,
+      lastReadPostNumber: lastRead,
+      highestPostNumber: (json['highest_post_number'] as int?) ?? 1,
+      categoryId: json['category_id'] as int?,
+      notificationLevel: (json['notification_level'] as int?) ?? 1,
+      // 服务端已按 new_since 过滤，未读过的话题一定在新话题期限内
+      createdInNewPeriod: json['created_in_new_period'] as bool? ?? (lastRead == null),
+      isSeen: json['is_seen'] as bool? ?? false,
+    );
+  }
+}
+
+/// 全局话题追踪状态 Notifier
+/// 对齐 Discourse 网页版的 topic-tracking-state.js
+class TopicTrackingStateNotifier extends Notifier<Map<int, TrackedTopicState>> {
+
+  @override
+  Map<int, TrackedTopicState> build() {
+    // 从预加载数据初始化
+    final preloaded = PreloadedDataService();
+    final states = preloaded.topicTrackingStatesSync;
+    if (states != null) {
+      final map = <int, TrackedTopicState>{};
+      for (final json in states) {
+        final tracked = TrackedTopicState.fromJson(json);
+        map[tracked.topicId] = tracked;
+      }
+      // 调试：打印首条数据的字段和计数
+      if (states.isNotEmpty) {
+        debugPrint('[TopicTrackingState] 首条原始数据 keys: ${states.first.keys.toList()}');
+        debugPrint('[TopicTrackingState] 首条原始数据: ${states.first}');
+      }
+      final newCount = map.values.where((s) => _isNew(s)).length;
+      final unreadCount = map.values.where((s) => _isUnread(s)).length;
+      debugPrint('[TopicTrackingState] 从预加载数据初始化 ${map.length} 条追踪状态, new=$newCount, unread=$unreadCount');
+      return map;
+    }
+    return {};
+  }
+
+  /// 统计 NEW 话题数量（对齐网页版 countNew）
+  int countNew({int? categoryId}) {
+    return state.values.where((s) {
+      if (categoryId != null && s.categoryId != categoryId) return false;
+      return _isNew(s);
+    }).length;
+  }
+
+  /// 统计 UNREAD 话题数量（对齐网页版 countUnread）
+  int countUnread({int? categoryId}) {
+    return state.values.where((s) {
+      if (categoryId != null && s.categoryId != categoryId) return false;
+      return _isUnread(s);
+    }).length;
+  }
+
+  /// 判断是否为 NEW 话题（对齐网页版 isNew）
+  /// 条件：未读过 + 在新话题期限内创建 +
+  ///   (非静音且未看过 或 TRACKING 及以上)
+  bool _isNew(TrackedTopicState s) {
+    return s.lastReadPostNumber == null &&
+        s.createdInNewPeriod &&
+        ((s.notificationLevel != 0 && !s.isSeen) ||
+            s.notificationLevel >= 2);
+  }
+
+  /// 判断是否为 UNREAD 话题（对齐网页版 isUnread）
+  /// 条件：已读过 + 有新帖子 + TRACKING 或以上
+  bool _isUnread(TrackedTopicState s) {
+    return s.lastReadPostNumber != null &&
+        s.lastReadPostNumber! < s.highestPostNumber &&
+        s.notificationLevel >= 2;
+  }
+
+  /// 处理 MessageBus 频道消息，更新追踪状态
+  /// 对齐 Discourse JS topic-tracking-state.js 的 _processChannelPayload
+  void processChannelPayload(MessageBusMessage message) {
+    final data = message.data;
+    if (data is! Map<String, dynamic>) return;
+
+    final messageType = data['message_type'] as String?;
+    debugPrint('[TopicTrackingState] 处理消息: type=$messageType, channel=${message.channel}, data=$data');
+
+    // dismiss_new / dismiss_new_posts 单独处理
+    if (messageType == 'dismiss_new') {
+      _handleDismissNew(data);
+      return;
+    }
+    if (messageType == 'dismiss_new_posts') {
+      _handleDismissNewPosts(data);
+      return;
+    }
+
+    // new_topic / unread / read 统一处理（对齐网页版）
+    if (messageType == 'new_topic' || messageType == 'unread' || messageType == 'read') {
+      final topicId = data['topic_id'] as int?;
+      if (topicId == null) return;
+
+      final existing = state[topicId];
+
+      // 合并 payload 到已有 state（对齐 deepMerge(old, data.payload)）
+      final payload = data['payload'] as Map<String, dynamic>? ?? {};
+
+      // 对于 unread 消息，补全缺失字段（对齐网页版推断逻辑）
+      final highest = (payload['highest_post_number'] as int?) ?? existing?.highestPostNumber ?? 1;
+      int? lastRead = payload['last_read_post_number'] as int?;
+      int? notifLevel = payload['notification_level'] as int?;
+
+      if (messageType == 'unread') {
+        // /unread 频道的 payload 不含 last_read_post_number 和 notification_level
+        // 推断：大概落后 1 个帖子，通知级别至少是 TRACKING
+        lastRead ??= existing?.lastReadPostNumber ?? (highest - 1);
+        notifLevel ??= existing?.notificationLevel ?? 2; // TRACKING
+      } else {
+        lastRead ??= existing?.lastReadPostNumber;
+        notifLevel ??= existing?.notificationLevel ?? 1;
+      }
+
+      final categoryId = (payload['category_id'] as int?) ?? existing?.categoryId;
+      final createdInNewPeriod = payload['created_in_new_period'] as bool?
+          ?? existing?.createdInNewPeriod
+          ?? (lastRead == null); // 未读过则视为新话题
+      final isSeen = existing?.isSeen ?? false;
+
+      state = {
+        ...state,
+        topicId: TrackedTopicState(
+          topicId: topicId,
+          lastReadPostNumber: lastRead,
+          highestPostNumber: highest,
+          categoryId: categoryId,
+          notificationLevel: notifLevel,
+          createdInNewPeriod: createdInNewPeriod,
+          isSeen: isSeen,
+        ),
+      };
+      return;
+    }
+  }
+
+  /// 批量忽略新话题：设置 isSeen=true
+  void _handleDismissNew(Map<String, dynamic> data) {
+    final payload = data['payload'] as Map<String, dynamic>?;
+    final topicIds = payload?['topic_ids'] as List?;
+    if (topicIds == null || topicIds.isEmpty) {
+      // 没有指定 topicIds，按分类忽略所有
+      final categoryId = payload?['category_id'] as int?;
+      final newState = Map<int, TrackedTopicState>.from(state);
+      for (final entry in newState.entries) {
+        if (_isNew(entry.value)) {
+          if (categoryId == null || entry.value.categoryId == categoryId) {
+            newState[entry.key] = entry.value.copyWith(isSeen: true);
+          }
+        }
+      }
+      state = newState;
+    } else {
+      final ids = topicIds.cast<int>().toSet();
+      final newState = Map<int, TrackedTopicState>.from(state);
+      for (final id in ids) {
+        final existing = newState[id];
+        if (existing != null) {
+          newState[id] = existing.copyWith(isSeen: true);
+        }
+      }
+      state = newState;
+    }
+  }
+
+  /// 批量忽略未读帖子：将 lastReadPostNumber 设为 highestPostNumber
+  void _handleDismissNewPosts(Map<String, dynamic> data) {
+    final payload = data['payload'] as Map<String, dynamic>?;
+    final topicIds = payload?['topic_ids'] as List?;
+    if (topicIds == null || topicIds.isEmpty) {
+      // 按分类忽略所有
+      final categoryId = payload?['category_id'] as int?;
+      final newState = Map<int, TrackedTopicState>.from(state);
+      for (final entry in newState.entries) {
+        if (_isUnread(entry.value)) {
+          if (categoryId == null || entry.value.categoryId == categoryId) {
+            newState[entry.key] = entry.value.copyWith(
+              lastReadPostNumber: entry.value.highestPostNumber,
+            );
+          }
+        }
+      }
+      state = newState;
+    } else {
+      final ids = topicIds.cast<int>().toSet();
+      final newState = Map<int, TrackedTopicState>.from(state);
+      for (final id in ids) {
+        final existing = newState[id];
+        if (existing != null && _isUnread(existing)) {
+          newState[id] = existing.copyWith(
+            lastReadPostNumber: existing.highestPostNumber,
+          );
+        }
+      }
+      state = newState;
+    }
+  }
+
+  /// 本地阅读话题后更新追踪状态（减少 new/unread 计数）
+  void updateTopicRead(int topicId, int lastReadPostNumber, int highestPostNumber) {
+    final existing = state[topicId];
+    if (existing != null) {
+      final updated = existing.copyWith(
+        lastReadPostNumber: lastReadPostNumber,
+        highestPostNumber: highestPostNumber,
+        isSeen: true,
+      );
+      state = {...state, topicId: updated};
+    }
+  }
+
+  /// 忽略所有新话题（本地调用，用于 dismissAll 同步）
+  void dismissNewTopics({int? categoryId}) {
+    final newState = Map<int, TrackedTopicState>.from(state);
+    for (final entry in newState.entries) {
+      if (_isNew(entry.value)) {
+        if (categoryId == null || entry.value.categoryId == categoryId) {
+          newState[entry.key] = entry.value.copyWith(isSeen: true);
+        }
+      }
+    }
+    state = newState;
+  }
+
+  /// 忽略所有未读帖子（本地调用，用于 dismissAll 同步）
+  void dismissUnreadTopics({int? categoryId}) {
+    final newState = Map<int, TrackedTopicState>.from(state);
+    for (final entry in newState.entries) {
+      if (_isUnread(entry.value)) {
+        if (categoryId == null || entry.value.categoryId == categoryId) {
+          newState[entry.key] = entry.value.copyWith(
+            lastReadPostNumber: entry.value.highestPostNumber,
+          );
+        }
+      }
+    }
+    state = newState;
+  }
+}
+
+final topicTrackingStateProvider =
+    NotifierProvider<TopicTrackingStateNotifier, Map<int, TrackedTopicState>>(
+  TopicTrackingStateNotifier.new,
+);
+
 /// MessageBus 初始化 Notifier
 /// 统一管理所有频道的批量订阅，避免串行等待
 class MessageBusInitNotifier extends Notifier<void> {
@@ -67,7 +368,8 @@ class MessageBusInitNotifier extends Notifier<void> {
 
       void onTopicTracking(MessageBusMessage message) {
         debugPrint('[TopicTracking] 收到消息: ${message.channel} #${message.messageId}');
-        // TODO: 根据频道类型更新对应的话题列表
+        // 转发给 TopicTrackingStateNotifier 更新追踪计数
+        ref.read(topicTrackingStateProvider.notifier).processChannelPayload(message);
       }
 
       _allCallbacks[channel] = onTopicTracking;
@@ -173,6 +475,9 @@ class LatestChannelNotifier extends Notifier<TopicListIncomingState> {
       }
 
       debugPrint('[LatestChannel] incoming +1: type=$messageType, topicId=$topicId, category=$topicCategoryId');
+
+      // 同步转发给 TopicTrackingStateNotifier 更新 new/unread 计数
+      ref.read(topicTrackingStateProvider.notifier).processChannelPayload(message);
 
       // 即时更新（与网页版一致，无防抖）
       state = TopicListIncomingState(
