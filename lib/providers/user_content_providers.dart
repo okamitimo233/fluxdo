@@ -12,12 +12,15 @@ final _topicPaginationHelper = PaginationHelpers.forTopics<Topic>(
 class BrowsingHistoryNotifier extends AsyncNotifier<List<Topic>> {
   int _page = 0;
   bool _hasMore = true;
+  bool _isLoadMoreFailed = false;
   bool get hasMore => _hasMore;
+  bool get isLoadMoreFailed => _isLoadMoreFailed;
 
   @override
   Future<List<Topic>> build() async {
     _page = 0;
     _hasMore = true;
+    _isLoadMoreFailed = false;
     final service = ref.read(discourseServiceProvider);
     final response = await service.getBrowsingHistory(page: 0);
 
@@ -29,6 +32,7 @@ class BrowsingHistoryNotifier extends AsyncNotifier<List<Topic>> {
   }
 
   Future<void> refresh() async {
+    _isLoadMoreFailed = false;
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       _page = 0;
@@ -45,12 +49,13 @@ class BrowsingHistoryNotifier extends AsyncNotifier<List<Topic>> {
   }
 
   Future<void> loadMore() async {
+    if (_isLoadMoreFailed) return;
     if (!_hasMore || state.isLoading) return;
 
     // ignore: invalid_use_of_internal_member
     state = const AsyncLoading<List<Topic>>().copyWithPrevious(state);
 
-    state = await AsyncValue.guard(() async {
+    final result = await AsyncValue.guard(() async {
       final currentList = state.requireValue;
       final nextPage = _page + 1;
 
@@ -58,17 +63,28 @@ class BrowsingHistoryNotifier extends AsyncNotifier<List<Topic>> {
       final response = await service.getBrowsingHistory(page: nextPage);
 
       final currentState = PaginationState(items: currentList);
-      final result = _topicPaginationHelper.processLoadMore(
+      final paginationResult = _topicPaginationHelper.processLoadMore(
         currentState,
         PaginationResult(items: response.topics, moreUrl: response.moreTopicsUrl),
       );
 
-      _hasMore = result.hasMore;
-      if (result.items.length > currentList.length) {
+      _hasMore = paginationResult.hasMore;
+      if (paginationResult.items.length > currentList.length) {
         _page = nextPage;
       }
-      return result.items;
+      return paginationResult.items;
     });
+    if (result.hasError) {
+      _isLoadMoreFailed = true;
+      state = AsyncValue.data(state.requireValue);
+    } else {
+      state = result;
+    }
+  }
+
+  void retryLoadMore() {
+    _isLoadMoreFailed = false;
+    loadMore();
   }
 }
 
@@ -80,12 +96,15 @@ final browsingHistoryProvider = AsyncNotifierProvider.autoDispose<BrowsingHistor
 class BookmarksNotifier extends AsyncNotifier<List<Topic>> {
   int _page = 0;
   bool _hasMore = true;
+  bool _isLoadMoreFailed = false;
   bool get hasMore => _hasMore;
+  bool get isLoadMoreFailed => _isLoadMoreFailed;
 
   @override
   Future<List<Topic>> build() async {
     _page = 0;
     _hasMore = true;
+    _isLoadMoreFailed = false;
     final service = ref.read(discourseServiceProvider);
     final response = await service.getUserBookmarks(page: 0);
 
@@ -97,6 +116,7 @@ class BookmarksNotifier extends AsyncNotifier<List<Topic>> {
   }
 
   Future<void> refresh() async {
+    _isLoadMoreFailed = false;
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       _page = 0;
@@ -113,12 +133,13 @@ class BookmarksNotifier extends AsyncNotifier<List<Topic>> {
   }
 
   Future<void> loadMore() async {
+    if (_isLoadMoreFailed) return;
     if (!_hasMore || state.isLoading) return;
 
     // ignore: invalid_use_of_internal_member
     state = const AsyncLoading<List<Topic>>().copyWithPrevious(state);
 
-    state = await AsyncValue.guard(() async {
+    final result = await AsyncValue.guard(() async {
       final currentList = state.requireValue;
       final nextPage = _page + 1;
 
@@ -126,17 +147,28 @@ class BookmarksNotifier extends AsyncNotifier<List<Topic>> {
       final response = await service.getUserBookmarks(page: nextPage);
 
       final currentState = PaginationState(items: currentList);
-      final result = _topicPaginationHelper.processLoadMore(
+      final paginationResult = _topicPaginationHelper.processLoadMore(
         currentState,
         PaginationResult(items: response.topics, moreUrl: response.moreTopicsUrl),
       );
 
-      _hasMore = result.hasMore;
-      if (result.items.length > currentList.length) {
+      _hasMore = paginationResult.hasMore;
+      if (paginationResult.items.length > currentList.length) {
         _page = nextPage;
       }
-      return result.items;
+      return paginationResult.items;
     });
+    if (result.hasError) {
+      _isLoadMoreFailed = true;
+      state = AsyncValue.data(state.requireValue);
+    } else {
+      state = result;
+    }
+  }
+
+  void retryLoadMore() {
+    _isLoadMoreFailed = false;
+    loadMore();
   }
 }
 
@@ -148,12 +180,15 @@ final bookmarksProvider = AsyncNotifierProvider.autoDispose<BookmarksNotifier, L
 class MyTopicsNotifier extends AsyncNotifier<List<Topic>> {
   int _page = 0;
   bool _hasMore = true;
+  bool _isLoadMoreFailed = false;
   bool get hasMore => _hasMore;
+  bool get isLoadMoreFailed => _isLoadMoreFailed;
 
   @override
   Future<List<Topic>> build() async {
     _page = 0;
     _hasMore = true;
+    _isLoadMoreFailed = false;
     final service = ref.read(discourseServiceProvider);
     final response = await service.getUserCreatedTopics(page: 0);
 
@@ -165,6 +200,7 @@ class MyTopicsNotifier extends AsyncNotifier<List<Topic>> {
   }
 
   Future<void> refresh() async {
+    _isLoadMoreFailed = false;
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       _page = 0;
@@ -181,12 +217,13 @@ class MyTopicsNotifier extends AsyncNotifier<List<Topic>> {
   }
 
   Future<void> loadMore() async {
+    if (_isLoadMoreFailed) return;
     if (!_hasMore || state.isLoading) return;
 
     // ignore: invalid_use_of_internal_member
     state = const AsyncLoading<List<Topic>>().copyWithPrevious(state);
 
-    state = await AsyncValue.guard(() async {
+    final result = await AsyncValue.guard(() async {
       final currentList = state.requireValue;
       final nextPage = _page + 1;
 
@@ -194,17 +231,28 @@ class MyTopicsNotifier extends AsyncNotifier<List<Topic>> {
       final response = await service.getUserCreatedTopics(page: nextPage);
 
       final currentState = PaginationState(items: currentList);
-      final result = _topicPaginationHelper.processLoadMore(
+      final paginationResult = _topicPaginationHelper.processLoadMore(
         currentState,
         PaginationResult(items: response.topics, moreUrl: response.moreTopicsUrl),
       );
 
-      _hasMore = result.hasMore;
-      if (result.items.length > currentList.length) {
+      _hasMore = paginationResult.hasMore;
+      if (paginationResult.items.length > currentList.length) {
         _page = nextPage;
       }
-      return result.items;
+      return paginationResult.items;
     });
+    if (result.hasError) {
+      _isLoadMoreFailed = true;
+      state = AsyncValue.data(state.requireValue);
+    } else {
+      state = result;
+    }
+  }
+
+  void retryLoadMore() {
+    _isLoadMoreFailed = false;
+    loadMore();
   }
 }
 

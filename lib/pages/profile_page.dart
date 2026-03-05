@@ -116,10 +116,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     if (result == true && mounted) {
       LoadingDialog.show(context, message: '加载数据...');
 
-      // 刷新所有状态
       AppStateRefresher.refreshAll(ref);
 
-      // 等待关键数据加载完成
       try {
         await Future.wait([
           ref.read(currentUserProvider.future),

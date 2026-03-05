@@ -43,6 +43,8 @@ class TopicDetailNotifier extends AsyncNotifier<TopicDetail> {
   bool _hasMoreBefore = true;
   bool _isLoadingPrevious = false;
   bool _isLoadingMore = false;
+  bool _isLoadMoreFailed = false;
+  bool _isLoadPreviousFailed = false;
   String? _filter;  // 当前过滤模式（如 'summary' 表示热门回复）
   String? _usernameFilter;  // 当前用户名过滤（如只看题主）
 
@@ -50,6 +52,8 @@ class TopicDetailNotifier extends AsyncNotifier<TopicDetail> {
   bool get hasMoreBefore => _hasMoreBefore;
   bool get isLoadingPrevious => _isLoadingPrevious;
   bool get isLoadingMore => _isLoadingMore;
+  bool get isLoadMoreFailed => _isLoadMoreFailed;
+  bool get isLoadPreviousFailed => _isLoadPreviousFailed;
   bool get isSummaryMode => _filter == 'summary';
   bool get isAuthorOnlyMode => _usernameFilter != null;
   bool get _isFilteredMode => _filter != null || _usernameFilter != null;
@@ -119,6 +123,8 @@ class TopicDetailNotifier extends AsyncNotifier<TopicDetail> {
 
     _hasMoreAfter = true;
     _hasMoreBefore = true;
+    _isLoadMoreFailed = false;
+    _isLoadPreviousFailed = false;
     final service = ref.read(discourseServiceProvider);
     final detail = await service.getTopicDetail(arg.topicId, postNumber: arg.postNumber, trackVisit: true);
 

@@ -8,7 +8,10 @@ library;
 export 'core_providers.dart';
 
 // 话题列表相关
-export 'topic_list_provider.dart';
+export 'topic_list/topic_list_provider.dart';
+export 'topic_list/filter_provider.dart';
+export 'topic_list/sort_provider.dart';
+export 'topic_list/tab_state_provider.dart';
 
 // 话题详情相关
 export 'topic_detail_provider.dart';

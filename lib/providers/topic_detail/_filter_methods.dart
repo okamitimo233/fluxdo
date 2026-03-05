@@ -35,6 +35,8 @@ extension FilterMethods on TopicDetailNotifier {
     state = const AsyncValue.loading();
     _hasMoreAfter = true;
     _hasMoreBefore = true;
+    _isLoadMoreFailed = false;
+    _isLoadPreviousFailed = false;
 
     await Future.delayed(Duration.zero);
 
@@ -60,6 +62,8 @@ extension FilterMethods on TopicDetailNotifier {
     state = const AsyncValue.loading();
     _hasMoreAfter = true;
     _hasMoreBefore = true;
+    _isLoadMoreFailed = false;
+    _isLoadPreviousFailed = false;
 
     final result = await AsyncValue.guard(() async {
       final service = ref.read(discourseServiceProvider);
@@ -75,6 +79,7 @@ extension FilterMethods on TopicDetailNotifier {
 
   /// 过滤模式下根据 stream ID 加载更多帖子
   Future<void> _loadMoreByStreamIds() async {
+    if (_isLoadMoreFailed) return; // 失败后需手动重试
     _isLoadingMore = true;
 
     try {
@@ -126,7 +131,12 @@ extension FilterMethods on TopicDetailNotifier {
         );
       });
       if (!ref.mounted) return;
-      state = result;
+      if (result.hasError) {
+        _isLoadMoreFailed = true;
+        state = AsyncValue.data(state.requireValue);
+      } else {
+        state = result;
+      }
     } finally {
       _isLoadingMore = false;
     }
@@ -134,6 +144,7 @@ extension FilterMethods on TopicDetailNotifier {
 
   /// 过滤模式下根据 stream ID 加载更早的帖子
   Future<void> _loadPreviousByStreamIds() async {
+    if (_isLoadPreviousFailed) return; // 失败后需手动重试
     _isLoadingPrevious = true;
 
     try {
@@ -183,7 +194,12 @@ extension FilterMethods on TopicDetailNotifier {
         );
       });
       if (!ref.mounted) return;
-      state = result;
+      if (result.hasError) {
+        _isLoadPreviousFailed = true;
+        state = AsyncValue.data(state.requireValue);
+      } else {
+        state = result;
+      }
     } finally {
       _isLoadingPrevious = false;
     }

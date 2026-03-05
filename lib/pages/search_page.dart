@@ -365,7 +365,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
   Future<void> _loadMore() async {
-    if (_isLoadingMore || !_hasMorePosts) return;
+    if (_isLoadingMore || !_hasMorePosts || _hasError) return;
 
     setState(() {
       _isLoadingMore = true;

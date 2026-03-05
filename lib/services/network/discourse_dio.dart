@@ -8,6 +8,7 @@ import 'cookie/app_cookie_manager.dart';
 import 'cookie/cookie_jar_service.dart';
 import 'cookie/cookie_sync_service.dart';
 import 'interceptors/cf_challenge_interceptor.dart';
+import 'interceptors/concurrency_interceptor.dart';
 import 'interceptors/cronet_fallback_interceptor.dart';
 import 'interceptors/error_interceptor.dart';
 import 'interceptors/network_log_interceptor.dart';
@@ -36,16 +37,19 @@ class DiscourseDio {
     // 1. 配置平台适配器
     configurePlatformAdapter(dio);
 
-    // 2. Cookie 管理
+    // 2. 并发限制（最多 6 个请求同时在飞，其余排队）
+    dio.interceptors.add(ConcurrencyInterceptor(maxConcurrent: 6));
+
+    // 3. Cookie 管理
     final cookieJarService = CookieJarService();
     if (cookieJarService.isInitialized) {
       dio.interceptors.add(AppCookieManager(cookieJarService.cookieJar));
     }
 
-    // 3. Cronet 降级拦截器（在重试拦截器之前）
+    // 4. Cronet 降级拦截器（在重试拦截器之前）
     dio.interceptors.add(CronetFallbackInterceptor(dio));
 
-    // 4. 重试拦截器 (dio_smart_retry)
+    // 5. 重试拦截器 (dio_smart_retry)
     dio.interceptors.add(RetryInterceptor(
       dio: dio,
       logPrint: (msg) => debugPrint('[Dio Retry] $msg'),
@@ -58,22 +62,22 @@ class DiscourseDio {
       retryableExtraStatuses: {429, 502, 503, 504},
     ));
 
-    // 4. 请求头拦截器
+    // 6. 请求头拦截器
     dio.interceptors.add(RequestHeaderInterceptor(CookieSyncService()));
 
-    // 5. 重定向拦截器
+    // 7. 重定向拦截器
     dio.interceptors.add(RedirectInterceptor(dio));
 
-    // 6. 错误拦截器
+    // 8. 错误拦截器
     dio.interceptors.add(ErrorInterceptor());
 
-    // 7. CF 验证拦截器
+    // 9. CF 验证拦截器
     dio.interceptors.add(CfChallengeInterceptor(
       dio: dio,
       cookieJarService: cookieJarService,
     ));
 
-    // 8. 网络日志拦截器（最后一个，记录最终结果）
+    // 10. 网络日志拦截器（最后一个，记录最终结果）
     dio.interceptors.add(NetworkLogInterceptor());
 
     return dio;

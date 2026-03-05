@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/topic_list_provider.dart';
-import '../../providers/topic_sort_provider.dart';
+import '../../providers/topic_list/filter_provider.dart';
+import '../../providers/topic_list/sort_provider.dart';
+import '../../providers/topic_list/tab_state_provider.dart';
 import '../../providers/message_bus/topic_tracking_providers.dart';
 import 'sort_and_tags_bar.dart';
 

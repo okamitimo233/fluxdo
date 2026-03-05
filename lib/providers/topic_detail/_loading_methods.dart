@@ -6,6 +6,7 @@ part of '../topic_detail_provider.dart';
 extension LoadingMethods on TopicDetailNotifier {
   /// 加载更早的帖子（向上滚动）
   Future<void> loadPrevious() async {
+    if (_isLoadPreviousFailed) return; // 失败后需手动重试
     if (_isFilteredMode) {
       if (!_hasMoreBefore || state.isLoading || _isLoadingPrevious) return;
       await _loadPreviousByStreamIds();
@@ -62,14 +63,27 @@ extension LoadingMethods on TopicDetailNotifier {
         );
       });
       if (!ref.mounted) return;
-      state = result;
+      if (result.hasError) {
+        _isLoadPreviousFailed = true;
+        // 恢复之前的数据状态，不让 UI 显示全局错误
+        state = AsyncValue.data(state.requireValue);
+      } else {
+        state = result;
+      }
     } finally {
       _isLoadingPrevious = false;
     }
   }
 
+  /// 手动重试加载更早的帖子
+  Future<void> retryLoadPrevious() async {
+    _isLoadPreviousFailed = false;
+    await loadPrevious();
+  }
+
   /// 加载更多回复（向下滚动）
   Future<void> loadMore() async {
+    if (_isLoadMoreFailed) return; // 失败后需手动重试
     if (!_hasMoreAfter || state.isLoading || _isLoadingMore) return;
 
     if (_isFilteredMode) {
@@ -126,10 +140,21 @@ extension LoadingMethods on TopicDetailNotifier {
         );
       });
       if (!ref.mounted) return;
-      state = result;
+      if (result.hasError) {
+        _isLoadMoreFailed = true;
+        state = AsyncValue.data(state.requireValue);
+      } else {
+        state = result;
+      }
     } finally {
       _isLoadingMore = false;
     }
+  }
+
+  /// 手动重试加载更多
+  Future<void> retryLoadMore() async {
+    _isLoadMoreFailed = false;
+    await loadMore();
   }
 
   /// 加载新回复（用于 MessageBus 实时更新）
@@ -224,6 +249,8 @@ extension LoadingMethods on TopicDetailNotifier {
     state = const AsyncValue.loading();
     _hasMoreAfter = true;
     _hasMoreBefore = true;
+    _isLoadMoreFailed = false;
+    _isLoadPreviousFailed = false;
 
     await Future.delayed(Duration.zero);
 
@@ -247,6 +274,8 @@ extension LoadingMethods on TopicDetailNotifier {
   /// 刷新当前话题详情（保持列表可见）
   Future<void> refreshWithPostNumber(int postNumber) async {
     if (state.isLoading) return;
+    _isLoadMoreFailed = false;
+    _isLoadPreviousFailed = false;
 
     // ignore: invalid_use_of_internal_member
     state = const AsyncLoading<TopicDetail>().copyWithPrevious(state);

@@ -35,6 +35,10 @@ class TopicPostList extends StatefulWidget {
   final bool hasMoreAfter;
   final bool isLoadingPrevious;
   final bool isLoadingMore;
+  final bool isLoadMoreFailed;
+  final bool isLoadPreviousFailed;
+  final VoidCallback? onRetryLoadMore;
+  final VoidCallback? onRetryLoadPrevious;
   final int centerPostIndex;
   final int? dividerPostIndex;
   final void Function(int postNumber) onFirstVisiblePostChanged;
@@ -71,6 +75,10 @@ class TopicPostList extends StatefulWidget {
     required this.hasMoreAfter,
     required this.isLoadingPrevious,
     required this.isLoadingMore,
+    this.isLoadMoreFailed = false,
+    this.isLoadPreviousFailed = false,
+    this.onRetryLoadMore,
+    this.onRetryLoadPrevious,
     required this.centerPostIndex,
     required this.dividerPostIndex,
     required this.onFirstVisiblePostChanged,
@@ -131,6 +139,10 @@ class _TopicPostListState extends State<TopicPostList> {
   bool get hasMoreAfter => widget.hasMoreAfter;
   bool get isLoadingPrevious => widget.isLoadingPrevious;
   bool get isLoadingMore => widget.isLoadingMore;
+  bool get isLoadMoreFailed => widget.isLoadMoreFailed;
+  bool get isLoadPreviousFailed => widget.isLoadPreviousFailed;
+  VoidCallback? get onRetryLoadMore => widget.onRetryLoadMore;
+  VoidCallback? get onRetryLoadPrevious => widget.onRetryLoadPrevious;
   int get centerPostIndex => widget.centerPostIndex;
   int? get dividerPostIndex => widget.dividerPostIndex;
   void Function(int postNumber) get onJumpToPost => widget.onJumpToPost;
@@ -424,8 +436,12 @@ class _TopicPostListState extends State<TopicPostList> {
           cacheExtent: 500,
           physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
           slivers: [
-          // 向上加载骨架屏
-          if (hasMoreBefore && isLoadingPrevious)
+          // 向上加载骨架屏 / 失败重试
+          if (hasMoreBefore && isLoadPreviousFailed)
+            SliverToBoxAdapter(
+              child: _LoadFailedRetry(onRetry: onRetryLoadPrevious),
+            )
+          else if (hasMoreBefore && isLoadingPrevious)
             LoadingSkeletonSliver(
               itemCount: loadMoreSkeletonCount,
               wrapContent: _wrapContent,
@@ -514,8 +530,12 @@ class _TopicPostListState extends State<TopicPostList> {
               ),
             ),
 
-          // 底部加载骨架屏
-          if (hasMoreAfter && isLoadingMore)
+          // 底部加载骨架屏 / 失败重试
+          if (hasMoreAfter && isLoadMoreFailed)
+            SliverToBoxAdapter(
+              child: _LoadFailedRetry(onRetry: onRetryLoadMore),
+            )
+          else if (hasMoreAfter && isLoadingMore)
             LoadingSkeletonSliver(
               itemCount: loadMoreSkeletonCount,
               wrapContent: _wrapContent,
@@ -834,6 +854,40 @@ class _GapIndicatorState extends State<_GapIndicator> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 加载失败时的重试提示
+class _LoadFailedRetry extends StatelessWidget {
+  final VoidCallback? onRetry;
+
+  const _LoadFailedRetry({this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      child: Center(
+        child: GestureDetector(
+          onTap: onRetry,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.refresh, size: 16, color: theme.colorScheme.primary),
+              const SizedBox(width: 6),
+              Text(
+                '加载失败，点击重试',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

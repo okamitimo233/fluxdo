@@ -11,7 +11,6 @@ import '../providers/discourse_providers.dart';
 import '../providers/message_bus_providers.dart';
 import '../providers/selected_topic_provider.dart';
 import '../providers/pinned_categories_provider.dart';
-import '../providers/topic_sort_provider.dart';
 import 'webview_login_page.dart';
 import 'topic_detail_page/topic_detail_page.dart';
 import 'search_page.dart';
@@ -89,6 +88,7 @@ class _TopicsPageState extends ConsumerState<TopicsPage> with TickerProviderStat
   final ScrollController _outerScrollController = ScrollController();
   AnimationController? _snapAnim;
   bool _isSnapping = false;
+  bool _invalidateScheduled = false;
 
   @override
   void initState() {
@@ -108,13 +108,37 @@ class _TopicsPageState extends ConsumerState<TopicsPage> with TickerProviderStat
     super.dispose();
   }
 
+  /// 全局筛选/排序变化时：刷新当前 tab，释放并清除非活跃 tab 数据
+  /// 使用微任务去抖，避免多个参数连续变化时重复请求（如登出时重置筛选+排序+方向）
+  void _invalidateTopicTabs(List<int> pinnedIds) {
+    if (_invalidateScheduled) return;
+    _invalidateScheduled = true;
+    Future.microtask(() {
+      _invalidateScheduled = false;
+      if (!mounted) return;
+      final currentCategoryId = _currentCategoryId(pinnedIds);
+      // 当前活跃 tab：调用 refresh() 显式设置纯 loading 状态，确保骨架屏显示
+      ref.read(topicListProvider(currentCategoryId).notifier).refresh();
+      // 非活跃 tab：先释放 keepAlive，延迟到 widget 销毁后再 invalidate
+      ref.read(topicTabDeactivateSignal.notifier).state++;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        for (final categoryId in [null, ...pinnedIds]) {
+          if (categoryId == currentCategoryId) continue;
+          ref.invalidate(topicListProvider(categoryId));
+        }
+      });
+    });
+  }
+
   void _handleTabChange() {
     if (_tabController.indexIsChanging) return;
     if (_currentTabIndex == _tabController.index) return;
     setState(() {
       _currentTabIndex = _tabController.index;
     });
-    ref.read(currentTabCategoryIdProvider.notifier).state = _currentCategoryId();
+    final categoryId = _currentCategoryId();
+    ref.read(currentTabCategoryIdProvider.notifier).state = categoryId;
   }
 
   /// 检测 pinnedCategories 变化，重建 TabController
@@ -371,6 +395,13 @@ class _TopicsPageState extends ConsumerState<TopicsPage> with TickerProviderStat
     final currentCategoryId = _currentCategoryId(pinnedIds);
     final currentTags = ref.watch(tabTagsProvider(currentCategoryId));
     final currentCategory = _getCurrentCategory(pinnedIds, categoryMap);
+
+    // 监听全局筛选/排序变化：刷新当前 tab，清除非活跃 tab 数据
+    // 所有全局参数统一聚合在 topicListGlobalParamsSignal 中，
+    // 未来新增参数只需在信号 provider 中添加 ref.watch
+    ref.listen(topicListGlobalParamsSignal, (_, __) {
+      _invalidateTopicTabs(pinnedIds);
+    });
 
     // 监听滚动到顶部的通知
     ref.listen(scrollToTopProvider, (previous, next) {
@@ -843,6 +874,12 @@ class _TopicListState extends ConsumerState<_TopicList>
     );
   }
 
+  /// 清除当前 tab 的高亮和"新话题"计数
+  void _clearIncomingState() {
+    _highlightedTopicIds.clear();
+    ref.read(latestChannelProvider.notifier).clearNewTopicsForCategory(widget.categoryId);
+  }
+
   void _openTopic(Topic topic) {
     final canShowDetailPane = MasterDetailLayout.canShowBothPanesFor(context);
 
@@ -879,6 +916,14 @@ class _TopicListState extends ConsumerState<_TopicList>
       }
     });
 
+    // 监听当前 tab 的标签过滤变化，refresh 当前 tab provider
+    ref.listen(tabTagsProvider(widget.categoryId), (prev, next) {
+      if (prev != next) {
+        ref.read(topicListProvider(widget.categoryId).notifier).refresh();
+        _clearIncomingState();
+      }
+    });
+
     // 监听 refreshAll 的失活信号，非当前 tab 释放 keepAlive
     ref.listen(topicTabDeactivateSignal, (_, __) {
       final currentCategoryId = ref.read(currentTabCategoryIdProvider);
@@ -888,27 +933,12 @@ class _TopicListState extends ConsumerState<_TopicList>
       }
     });
 
-    final currentFilter = ref.watch(topicFilterProvider);
     final selectedTopicId = ref.watch(selectedTopicProvider).topicId;
     final providerKey = widget.categoryId;
 
-    // 排序/筛选变化时清除高亮和 incoming 状态
-    ref.listen(topicSortOrderProvider, (prev, next) {
-      if (prev != next) {
-        _highlightedTopicIds.clear();
-        ref.read(latestChannelProvider.notifier).clearNewTopicsForCategory(widget.categoryId);
-      }
-    });
-    ref.listen(topicSortAscendingProvider, (prev, next) {
-      if (prev != next) {
-        _highlightedTopicIds.clear();
-        ref.read(latestChannelProvider.notifier).clearNewTopicsForCategory(widget.categoryId);
-      }
-    });
-    ref.listen(topicFilterProvider, (prev, next) {
-      if (prev != next) {
-        _highlightedTopicIds.clear();
-      }
+    // 全局筛选/排序变化时清除高亮和 incoming 状态
+    ref.listen(topicListGlobalParamsSignal, (_, __) {
+      _clearIncomingState();
     });
 
     final topicsAsync = ref.watch(topicListProvider(providerKey));
@@ -938,6 +968,7 @@ class _TopicListState extends ConsumerState<_TopicList>
         }
 
         final incomingState = ref.watch(latestChannelProvider);
+        final currentFilter = ref.read(topicFilterProvider);
         final hasNewTopics = currentFilter == TopicListFilter.latest
             && incomingState.hasIncomingForCategory(widget.categoryId);
         final newTopicCount = incomingState.incomingCountForCategory(widget.categoryId);
@@ -950,7 +981,7 @@ class _TopicListState extends ConsumerState<_TopicList>
               // ignore: unused_result
               await ref.refresh(topicListProvider(providerKey).future);
             } catch (_) {}
-            if (currentFilter == TopicListFilter.latest) {
+            if (ref.read(topicFilterProvider) == TopicListFilter.latest) {
               ref.read(latestChannelProvider.notifier).clearNewTopicsForCategory(widget.categoryId);
             }
           },
@@ -975,12 +1006,28 @@ class _TopicListState extends ConsumerState<_TopicList>
 
                   final topicIndex = index - newTopicOffset;
                   if (topicIndex >= topics.length) {
+                    final notifier = ref.watch(topicListProvider(providerKey).notifier);
                     return Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Center(
-                        child: ref.watch(topicListProvider(providerKey).notifier).hasMore
-                            ? const CircularProgressIndicator()
-                            : const Text('没有更多了', style: TextStyle(color: Colors.grey)),
+                        child: notifier.isLoadMoreFailed
+                            ? GestureDetector(
+                                onTap: () => notifier.retryLoadMore(),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.refresh, size: 16, color: Theme.of(context).colorScheme.primary),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '加载失败，点击重试',
+                                      style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.primary),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : notifier.hasMore
+                                ? const CircularProgressIndicator()
+                                : const Text('没有更多了', style: TextStyle(color: Colors.grey)),
                       ),
                     );
                   }

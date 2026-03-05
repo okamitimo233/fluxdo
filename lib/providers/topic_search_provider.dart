@@ -126,7 +126,7 @@ class TopicSearchNotifier extends StateNotifier<TopicSearchState> {
 
   /// 加载更多结果
   Future<void> loadMore() async {
-    if (state.isLoading || !state.hasMore || state.query.isEmpty) return;
+    if (state.isLoading || !state.hasMore || state.query.isEmpty || state.error != null) return;
 
     final nextPage = state.page + 1;
     state = state.copyWith(isLoading: true, page: nextPage);

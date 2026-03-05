@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../providers/topic_list_provider.dart';
-import '../../providers/topic_sort_provider.dart';
+import '../../providers/topic_list/filter_provider.dart';
+import '../../providers/topic_list/sort_provider.dart';
 import '../common/topic_badges.dart';
 import 'filter_dropdown.dart';
 
