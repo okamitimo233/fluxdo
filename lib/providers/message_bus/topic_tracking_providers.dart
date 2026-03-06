@@ -435,6 +435,8 @@ class LatestChannelNotifier extends Notifier<TopicListIncomingState> {
 
   @override
   TopicListIncomingState build() {
+    // 确保 MessageBus 已 configure（域名配置），避免用主站域名轮询
+    ref.watch(messageBusInitProvider);
     final messageBus = ref.watch(messageBusServiceProvider);
 
     // 构建静音分类 ID 集合（对齐网页版 muted_category_ids + indirectly_muted_category_ids）

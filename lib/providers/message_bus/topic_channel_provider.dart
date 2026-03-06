@@ -6,6 +6,7 @@ import '../../utils/time_utils.dart';
 import '../discourse_providers.dart';
 import 'message_bus_service_provider.dart';
 import 'models.dart';
+import 'topic_tracking_providers.dart';
 
 
 /// 话题频道监听器
@@ -16,6 +17,8 @@ class TopicChannelNotifier extends Notifier<TopicChannelState> {
   
   @override
   TopicChannelState build() {
+    // 确保 MessageBus 已 configure（域名配置），避免用主站域名轮询
+    ref.watch(messageBusInitProvider);
     final messageBus = ref.watch(messageBusServiceProvider);
     final service = ref.watch(discourseServiceProvider);
     final topicChannel = '/topic/$topicId';

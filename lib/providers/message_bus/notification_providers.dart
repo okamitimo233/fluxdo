@@ -6,6 +6,7 @@ import '../../models/notification.dart';
 import '../discourse_providers.dart';
 import 'models.dart';
 import 'message_bus_service_provider.dart';
+import 'topic_tracking_providers.dart';
 
 /// 通知计数 Notifier
 /// 优先使用 MessageBus 推送的计数，初始值从 currentUser 获取
@@ -65,6 +66,8 @@ class NotificationChannelNotifier extends Notifier<void> {
 
   @override
   void build() {
+    // 确保 MessageBus 已 configure（域名配置），避免用主站域名轮询
+    ref.watch(messageBusInitProvider);
     final messageBus = ref.watch(messageBusServiceProvider);
     final currentUser = ref.watch(currentUserProvider).value;
     
@@ -170,9 +173,11 @@ final notificationChannelProvider = NotifierProvider<NotificationChannelNotifier
 class NotificationAlertChannelNotifier extends Notifier<void> {
   String? _subscribedChannel;
   MessageBusCallback? _callback;
-  
+
   @override
   void build() {
+    // 确保 MessageBus 已 configure（域名配置），避免用主站域名轮询
+    ref.watch(messageBusInitProvider);
     final messageBus = ref.watch(messageBusServiceProvider);
     final currentUser = ref.watch(currentUserProvider).value;
     
