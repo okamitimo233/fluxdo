@@ -185,6 +185,7 @@ class _AppLogsPageState extends State<AppLogsPage> {
         : null;
     final timestamp = entry['timestamp']?.toString() ?? '';
     final tag = entry['tag']?.toString();
+    final appVersion = entry['appVersion']?.toString();
 
     showDialog(
       context: context,
@@ -203,6 +204,7 @@ class _AppLogsPageState extends State<AppLogsPage> {
                 final detail = StringBuffer()
                   ..writeln('时间: $timestamp')
                   ..writeln('级别: $level');
+                if (appVersion != null) detail.writeln('版本: $appVersion');
                 if (tag != null) detail.writeln('标签: $tag');
                 detail.writeln('消息: $message');
                 if (error != null && error != message) {
@@ -227,6 +229,7 @@ class _AppLogsPageState extends State<AppLogsPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildDetailField('时间', timestamp),
+              if (appVersion != null) _buildDetailField('版本', appVersion),
               _buildDetailField('消息', message),
               if (error != null && error != message)
                 _buildDetailField('错误', error),

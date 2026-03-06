@@ -35,6 +35,7 @@ import 'services/background/background_notification_service.dart';
 import 'services/message_bus_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/log/json_file_handler.dart';
+import 'services/log/log_writer.dart';
 import 'services/log/logger_utils.dart';
 import 'models/user.dart';
 import 'constants.dart';
@@ -66,6 +67,7 @@ Future<void> main() async {
   final futures = <Future<dynamic>>[
     SharedPreferences.getInstance(),
     AppConstants.initUserAgent(),
+    LogWriter.init(),
     ProxyCertificate.initialize(),
     CookieJarService().initialize(),
     CookieSyncService().init(),

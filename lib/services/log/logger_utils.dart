@@ -4,6 +4,10 @@ import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../constants.dart';
+import '../network/adapters/cronet_fallback_service.dart';
+import '../network/doh/network_settings_service.dart';
+import '../network/proxy/proxy_settings_service.dart';
 import 'log_writer.dart';
 
 /// 日志文件管理工具
@@ -63,6 +67,18 @@ class LoggerUtils {
         buf.writeln('设备: ${info.computerName}');
       }
     } catch (_) {}
+
+    // WebView 版本
+    final webViewVersion = _parseWebViewVersion();
+    if (webViewVersion != null) {
+      buf.writeln('WebView: $webViewVersion');
+    }
+
+    // 网络配置信息
+    final networkConfig = _getNetworkConfigLines();
+    for (final line in networkConfig) {
+      buf.writeln(line);
+    }
 
     return buf.toString().trimRight();
   }
@@ -131,10 +147,94 @@ class LoggerUtils {
       } else {
         device = {'_header': 'device_info', 'platform': Platform.operatingSystem};
       }
+
+      // WebView 版本
+      final webViewVersion = _parseWebViewVersion();
+      if (webViewVersion != null) {
+        device['webViewVersion'] = webViewVersion;
+      }
+
+      // 网络配置信息
+      device.addAll(_getNetworkConfigMap());
+
       buf.writeln(jsonEncode(device));
     } catch (_) {}
 
     return buf.toString();
+  }
+
+  /// 从缓存的 User-Agent 中解析 WebView/浏览器引擎版本
+  static String? _parseWebViewVersion() {
+    final ua = AppConstants.userAgent;
+    // Chrome/xxx.x.x.x（Android WebView 和桌面端）
+    final chromeMatch = RegExp(r'Chrome/([\d.]+)').firstMatch(ua);
+    if (chromeMatch != null) return 'Chrome/${chromeMatch.group(1)}';
+    // Safari/xxx（iOS WKWebView）
+    final safariMatch = RegExp(r'Version/([\d.]+).*Safari').firstMatch(ua);
+    if (safariMatch != null) return 'Safari/${safariMatch.group(1)}';
+    return null;
+  }
+
+  /// 获取网络配置的可读文本行（用于复制设备信息）
+  static List<String> _getNetworkConfigLines() {
+    final lines = <String>[];
+
+    // 适配器
+    final cronet = CronetFallbackService.instance;
+    lines.add('适配器: ${cronet.hasFallenBack ? 'Dart IO' : 'Cronet'}');
+
+    // DOH 配置
+    final doh = NetworkSettingsService.instance.current;
+    if (doh.dohEnabled) {
+      final serverName = _findDohServerName(doh.selectedServerUrl);
+      final parts = <String>[serverName];
+      if (doh.preferIPv6) parts.add('IPv6');
+      lines.add('DOH: ${parts.join(', ')}');
+    } else {
+      lines.add('DOH: 关闭');
+    }
+
+    // HTTP 代理
+    final proxy = ProxySettingsService.instance.current;
+    if (proxy.isValid) {
+      lines.add('代理: ${proxy.host}:${proxy.port}');
+    } else {
+      lines.add('代理: 关闭');
+    }
+
+    return lines;
+  }
+
+  /// 获取网络配置的 Map（用于分享日志头）
+  static Map<String, dynamic> _getNetworkConfigMap() {
+    final map = <String, dynamic>{};
+
+    final cronet = CronetFallbackService.instance;
+    map['adapter'] = cronet.hasFallenBack ? 'Dart IO' : 'Cronet';
+
+    final doh = NetworkSettingsService.instance.current;
+    map['dohEnabled'] = doh.dohEnabled;
+    if (doh.dohEnabled) {
+      map['dohServer'] = doh.selectedServerUrl;
+      map['preferIPv6'] = doh.preferIPv6;
+    }
+
+    final proxy = ProxySettingsService.instance.current;
+    map['proxyEnabled'] = proxy.isValid;
+    if (proxy.isValid) {
+      map['proxyHost'] = '${proxy.host}:${proxy.port}';
+    }
+
+    return map;
+  }
+
+  /// 根据 DOH 服务器 URL 查找名称
+  static String _findDohServerName(String url) {
+    final servers = NetworkSettingsService.instance.servers;
+    for (final server in servers) {
+      if (server.url == url) return server.name;
+    }
+    return url;
   }
 
   /// 读取并解析 JSONL，逆序返回（最新在前）

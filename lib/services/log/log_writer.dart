@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// 统一日志写入器，所有日志通过此类写入同一个 JSONL 文件
@@ -8,6 +9,17 @@ class LogWriter {
   LogWriter._();
 
   static final LogWriter instance = LogWriter._();
+
+  /// 缓存的应用版本号，初始化后自动注入到每条日志
+  static String? _appVersion;
+
+  /// 初始化应用版本号（应用启动时调用一次）
+  static Future<void> init() async {
+    try {
+      final pkg = await PackageInfo.fromPlatform();
+      _appVersion = '${pkg.version}+${pkg.buildNumber}';
+    } catch (_) {}
+  }
 
   /// 最大文件大小 2MB
   static const int _maxFileSize = 2 * 1024 * 1024;
@@ -21,8 +33,11 @@ class LogWriter {
   /// 用 Future 链串行化写入，避免并发冲突
   Future<void> _writeChain = Future.value();
 
-  /// 写入一条日志条目
+  /// 写入一条日志条目，自动注入 appVersion
   void write(Map<String, dynamic> entry) {
+    if (_appVersion != null) {
+      entry['appVersion'] = _appVersion;
+    }
     final line = '${jsonEncode(entry)}\n';
     _writeChain = _writeChain.then((_) => _writeLine(line));
   }
