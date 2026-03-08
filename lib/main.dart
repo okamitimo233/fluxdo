@@ -28,6 +28,7 @@ import 'services/network/doh/network_settings_service.dart';
 import 'services/network/proxy/proxy_settings_service.dart';
 import 'services/network/doh_proxy/proxy_certificate.dart';
 import 'services/cf_challenge_logger.dart';
+import 'services/cf_clearance_refresh_service.dart';
 import 'services/update_service.dart';
 import 'services/update_checker_helper.dart';
 import 'services/deep_link_service.dart';
@@ -433,6 +434,7 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
       _resumeDebounceTimer?.cancel();
       _resumeDebounceTimer = null;
       _enterBackground();
+      CfClearanceRefreshService().pause();
     } else if (state == AppLifecycleState.resumed) {
       // 延迟执行，避免系统配置变更（主题切换等）触发的假 resume
       _resumeDebounceTimer?.cancel();
@@ -445,6 +447,8 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
         ref.invalidate(notificationListProvider);
         // 回到前台时主动检查连通性（等同 Discourse 的 visibilitychange）
         ConnectivityService().check();
+        // 恢复 cf_clearance 自动续期监控
+        CfClearanceRefreshService().resume();
       });
     }
   }

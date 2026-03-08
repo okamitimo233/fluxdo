@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../cf_challenge_service.dart';
 import '../../cf_challenge_logger.dart';
+import '../../cf_clearance_refresh_service.dart';
 import '../cookie/cookie_jar_service.dart';
 import '../exceptions/api_exception.dart';
 
@@ -33,6 +34,11 @@ class CfChallengeInterceptor extends Interceptor {
     if (statusCode == 403 &&
         CfChallengeService.isCfChallenge(data) &&
         !skipCfChallenge) {
+      // 备选提取 sitekey（从 403 响应体中）
+      CfClearanceRefreshService().extractAndUpdateSitekey(data.toString());
+      // 403 说明 cf_clearance 已失效，停止自动续期（避免与手动验证冲突）
+      CfClearanceRefreshService().stop();
+
       final requestUrl = err.requestOptions.uri.toString();
       debugPrint('[Dio] CF Challenge detected, showing manual verify...');
       CfChallengeLogger.logInterceptorDetected(url: requestUrl, statusCode: statusCode!);

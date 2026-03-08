@@ -309,12 +309,15 @@ class CookieJarService {
         final value = CookieValueCodec.decode(cookie.value);
         final String? domain;
         if (isApple) {
-          // Apple: domain 必须非 null 且带前导点，否则 setCookie 静默失败
+          // Apple: setCookie 的 domain 必须非 null，否则静默失败
           // （flutter_inappwebview #338，b272dbf）。
+          // domain cookie（有 domain 属性）：加前导点，匹配所有子域名；
+          // host-only cookie（无 domain 属性）：使用不带前导点的主机名，
+          //   仅精确匹配该主机，避免 _t 等认证 cookie 泄漏到子域名。
           if (cookie.domain != null) {
             domain = cookie.domain!.startsWith('.') ? cookie.domain : '.${cookie.domain}';
           } else {
-            domain = '.$sourceHost';
+            domain = sourceHost;
           }
         } else {
           // Android: 保持原值（与 0.1.28 一致），

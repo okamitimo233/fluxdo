@@ -12,6 +12,7 @@ import 'network/cookie/cookie_jar_service.dart';
 import 'cf_challenge_service.dart';
 import 'auth_log_service.dart';
 import 'auth_verify_service.dart';
+import 'cf_clearance_refresh_service.dart';
 
 /// 预加载数据服务
 /// 从首页 HTML 的 data-preloaded 属性中提取数据，避免额外 API 请求
@@ -383,6 +384,8 @@ class PreloadedDataService {
       await _parsePreloadedDataFromHtml(html);
       debugPrint('[PreloadedData] 数据加载成功');
       _loaded = true;
+      // 预热完成，sitekey 已提取，启动 cf_clearance 自动续期
+      CfClearanceRefreshService().start();
     } catch (e) {
       debugPrint('[PreloadedData] 加载失败: $e');
       rethrow;
@@ -395,6 +398,7 @@ class PreloadedDataService {
   Future<void> _parsePreloadedDataFromHtml(String html) async {
     _extractCsrfTokenFromHtml(html);
     _extractSharedSessionKeyFromHtml(html);
+    _extractTurnstileSitekeyFromHtml(html);
     // 提取 data-preloaded 属性内容
     final match = RegExp(r'data-preloaded="([^"]*)"').firstMatch(html);
     if (match == null) {
@@ -439,6 +443,16 @@ class PreloadedDataService {
         .replaceAll('&gt;', '>')
         .replaceAll('&#39;', "'");
     debugPrint('[PreloadedData] sharedSessionKey 提取成功');
+  }
+
+  /// 从 HTML 中提取 Turnstile sitekey（cf_clearance 自动续期用）
+  void _extractTurnstileSitekeyFromHtml(String html) {
+    final match = RegExp(r'data-sitekey="([0-9a-zA-Zx_-]+)"').firstMatch(html);
+    if (match == null) return;
+    final sitekey = match.group(1);
+    if (sitekey != null && sitekey.isNotEmpty) {
+      CfClearanceRefreshService().updateSitekey(sitekey);
+    }
   }
 
   /// 解析预加载数据字符串
