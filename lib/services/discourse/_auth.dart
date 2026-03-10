@@ -34,6 +34,7 @@ mixin _AuthMixin on _DiscourseServiceBase {
 
         final loggedOut = response.headers.value('discourse-logged-out');
         if (!skipAuthCheck && loggedOut != null && loggedOut.isNotEmpty && !_isLoggingOut) {
+          final jarTToken = await _cookieJar.getTToken();
           await AuthLogService().logAuthInvalid(
             source: 'response_header',
             reason: 'discourse-logged-out',
@@ -42,7 +43,9 @@ mixin _AuthMixin on _DiscourseServiceBase {
               'url': response.requestOptions.uri.toString(),
               'statusCode': response.statusCode,
               'responseHeaders': response.headers.map.map((k, v) => MapEntry(k, v.join(', '))),
-              'requestHeaders': response.requestOptions.headers,
+              'jarHasToken': jarTToken != null && jarTToken.isNotEmpty,
+              'jarTokenLength': jarTToken?.length,
+              'memHasToken': _tToken != null && _tToken!.isNotEmpty,
             },
           );
           await _handleAuthInvalid(
@@ -74,6 +77,7 @@ mixin _AuthMixin on _DiscourseServiceBase {
 
         final loggedOut = error.response?.headers.value('discourse-logged-out');
         if (!skipAuthCheck && loggedOut != null && loggedOut.isNotEmpty && !_isLoggingOut) {
+          final jarTToken = await _cookieJar.getTToken();
           await AuthLogService().logAuthInvalid(
             source: 'error_response_header',
             reason: 'discourse-logged-out',
@@ -82,8 +86,10 @@ mixin _AuthMixin on _DiscourseServiceBase {
               'url': error.requestOptions.uri.toString(),
               'statusCode': error.response?.statusCode,
               'responseHeaders': error.response?.headers.map.map((k, v) => MapEntry(k, v.join(', '))),
-              'requestHeaders': error.requestOptions.headers,
               'errorMessage': error.message,
+              'jarHasToken': jarTToken != null && jarTToken.isNotEmpty,
+              'jarTokenLength': jarTToken?.length,
+              'memHasToken': _tToken != null && _tToken!.isNotEmpty,
             },
           );
           await _handleAuthInvalid(
@@ -95,6 +101,7 @@ mixin _AuthMixin on _DiscourseServiceBase {
         }
 
         if (!skipAuthCheck && data is Map && data['error_type'] == 'not_logged_in') {
+          final jarTToken = await _cookieJar.getTToken();
           await AuthLogService().logAuthInvalid(
             source: 'error_response',
             reason: data['error_type']?.toString() ?? 'not_logged_in',
@@ -104,8 +111,10 @@ mixin _AuthMixin on _DiscourseServiceBase {
               'statusCode': error.response?.statusCode,
               'errors': data['errors'],
               'responseHeaders': error.response?.headers.map.map((k, v) => MapEntry(k, v.join(', '))),
-              'requestHeaders': error.requestOptions.headers,
               'errorMessage': error.message,
+              'jarHasToken': jarTToken != null && jarTToken.isNotEmpty,
+              'jarTokenLength': jarTToken?.length,
+              'memHasToken': _tToken != null && _tToken!.isNotEmpty,
             },
           );
           final message = (data['errors'] as List?)?.first?.toString() ?? '登录已失效，请重新登录';

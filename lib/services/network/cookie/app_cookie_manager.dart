@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
+import '../../log/log_writer.dart';
 import 'cookie_jar_service.dart';
 
 /// App-specific CookieManager.
@@ -157,6 +159,31 @@ class AppCookieManager extends Interceptor {
         .where((cookie) => cookie.isNotEmpty)
         .map((str) => Cookie.fromSetCookieValue(str))
         .toList();
+
+    // 诊断：记录 _t cookie 变更（仅元信息，不含实际值）
+    for (final cookie in cookies) {
+      if (cookie.name == '_t') {
+        final isExpired = cookie.expires != null &&
+            cookie.expires!.isBefore(DateTime.now());
+        final isDeletion =
+            cookie.value == 'del' || cookie.value.isEmpty || isExpired;
+        debugPrint('[CookieManager] _t ${isDeletion ? "DEL" : "SET"} '
+            'from ${response.requestOptions.method} ${response.requestOptions.uri.path} '
+            '(status=${response.statusCode}, len=${cookie.value.length})');
+        LogWriter.instance.write({
+          'timestamp': DateTime.now().toIso8601String(),
+          'level': isDeletion ? 'warning' : 'info',
+          'type': 'cookie_change',
+          'event': isDeletion ? 'token_cookie_deleted' : 'token_cookie_updated',
+          'message': isDeletion ? '_t cookie 被删除' : '_t cookie 被更新',
+          'valueLength': cookie.value.length,
+          'isExpired': isExpired,
+          'method': response.requestOptions.method,
+          'url': response.requestOptions.uri.path,
+          'statusCode': response.statusCode,
+        });
+      }
+    }
 
     // Save cookies for the original site.
     final originalUri = response.requestOptions.uri;
