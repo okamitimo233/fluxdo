@@ -84,7 +84,7 @@ extension LoadingMethods on TopicDetailNotifier {
   /// 加载更多回复（向下滚动）
   Future<void> loadMore() async {
     if (_isLoadMoreFailed) return; // 失败后需手动重试
-    if (!_hasMoreAfter || state.isLoading || _isLoadingMore) return;
+    if (!_hasMoreAfter || state.isLoading || _isLoadingMore || _isLoadingNewPosts) return;
 
     if (_isFilteredMode) {
       await _loadMoreByStreamIds();
