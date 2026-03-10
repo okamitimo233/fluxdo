@@ -197,6 +197,10 @@ class Topic {
 
   // 书签相关（从书签列表 API 获取）
   final int? bookmarkedPostNumber;  // 帖子书签对应的帖子编号（bookmarkable_type 为 Post 时有值）
+  final int? bookmarkId;            // 书签 ID（用于编辑/删除）
+  final String? bookmarkName;       // 书签备注名称
+  final DateTime? bookmarkReminderAt; // 书签提醒时间
+  final String? bookmarkableType;   // 书签类型（Post/Topic）
 
   // 已解决问题相关
   final bool hasAcceptedAnswer;    // 话题是否有被接受的答案
@@ -227,6 +231,10 @@ class Topic {
     this.lastReadPostNumber,
     this.highestPostNumber = 0,
     this.bookmarkedPostNumber,
+    this.bookmarkId,
+    this.bookmarkName,
+    this.bookmarkReminderAt,
+    this.bookmarkableType,
     this.hasAcceptedAnswer = false,
     this.canHaveAnswer = false,
   });
@@ -259,6 +267,10 @@ class Topic {
       lastReadPostNumber: json['last_read_post_number'] as int?,
       highestPostNumber: json['highest_post_number'] as int? ?? 0,
       bookmarkedPostNumber: json['_bookmarked_post_number'] as int?,
+      bookmarkId: json['_bookmark_id'] as int?,
+      bookmarkName: json['_bookmark_name'] as String?,
+      bookmarkReminderAt: TimeUtils.parseUtcTime(json['_bookmark_reminder_at'] as String?),
+      bookmarkableType: json['_bookmarkable_type'] as String?,
       hasAcceptedAnswer: json['has_accepted_answer'] as bool? ?? false,
       canHaveAnswer: json['can_have_answer'] as bool? ?? false,
     );
@@ -475,6 +487,8 @@ class Post {
   final bool canWiki;
   final bool bookmarked;
   final int? bookmarkId; // 书签 ID（用于删除书签）
+  final String? bookmarkName; // 书签名称
+  final DateTime? bookmarkReminderAt; // 书签提醒时间
   final bool read; // 是否已读
   final List<dynamic>? actionsSummary;
   final List<LinkCount>? linkCounts; // 链接点击统计
@@ -552,6 +566,8 @@ class Post {
     this.canWiki = false,
     this.bookmarked = false,
     this.bookmarkId,
+    this.bookmarkName,
+    this.bookmarkReminderAt,
     this.read = false,
     this.actionsSummary,
     this.linkCounts,
@@ -611,6 +627,10 @@ class Post {
       canWiki: json['can_wiki'] as bool? ?? false,
       bookmarked: json['bookmarked'] as bool? ?? false,
       bookmarkId: json['bookmark_id'] as int?,
+      bookmarkName: json['_bookmark_name'] as String?,
+      bookmarkReminderAt: json['_bookmark_reminder_at'] != null
+          ? TimeUtils.parseUtcTime(json['_bookmark_reminder_at'] as String?)
+          : null,
       read: json['read'] as bool? ?? false,
       actionsSummary: json['actions_summary'] as List<dynamic>?,
       linkCounts: (json['link_counts'] as List<dynamic>?)
@@ -688,6 +708,8 @@ class Post {
           replyCount == other.replyCount &&
           bookmarked == other.bookmarked &&
           bookmarkId == other.bookmarkId &&
+          bookmarkName == other.bookmarkName &&
+          bookmarkReminderAt == other.bookmarkReminderAt &&
           acceptedAnswer == other.acceptedAnswer &&
           canAcceptAnswer == other.canAcceptAnswer &&
           canUnacceptAnswer == other.canUnacceptAnswer &&
@@ -727,6 +749,10 @@ class Post {
     bool? canWiki,
     bool? bookmarked,
     int? bookmarkId,
+    String? bookmarkName,
+    DateTime? bookmarkReminderAt,
+    bool clearBookmarkName = false,
+    bool clearBookmarkReminderAt = false,
     bool? read,
     List<dynamic>? actionsSummary,
     List<LinkCount>? linkCounts,
@@ -783,6 +809,8 @@ class Post {
       canWiki: canWiki ?? this.canWiki,
       bookmarked: bookmarked ?? this.bookmarked,
       bookmarkId: bookmarkId ?? this.bookmarkId,
+      bookmarkName: clearBookmarkName ? null : (bookmarkName ?? this.bookmarkName),
+      bookmarkReminderAt: clearBookmarkReminderAt ? null : (bookmarkReminderAt ?? this.bookmarkReminderAt),
       read: read ?? this.read,
       actionsSummary: actionsSummary ?? this.actionsSummary,
       linkCounts: linkCounts ?? this.linkCounts,
@@ -1005,6 +1033,8 @@ class TopicDetail {
   // 话题书签相关
   final bool bookmarked;                // 话题是否已被书签（Topic 级别）
   final int? bookmarkId;                // 话题书签 ID（用于删除书签）
+  final String? bookmarkName;           // 书签名称
+  final DateTime? bookmarkReminderAt;   // 书签提醒时间
 
   // 已解决问题相关
   final bool hasAcceptedAnswer;         // 话题是否有被接受的答案
@@ -1040,12 +1070,14 @@ class TopicDetail {
     this.canEdit = false,
     this.bookmarked = false,
     this.bookmarkId,
+    this.bookmarkName,
+    this.bookmarkReminderAt,
     this.hasAcceptedAnswer = false,
     this.acceptedAnswerPostNumber,
   });
 
   factory TopicDetail.fromJson(Map<String, dynamic> json) {
-    final postStream = PostStream.fromJson(json['post_stream'] as Map<String, dynamic>);
+    var postStream = PostStream.fromJson(json['post_stream'] as Map<String, dynamic>);
 
     // 注入 topic 级别的 badges 数据到每个 post
     final rawPosts = (json['post_stream'] as Map<String, dynamic>)['posts'] as List<dynamic>?;
@@ -1071,18 +1103,49 @@ class TopicDetail {
       acceptedAnswerPostNumber = acceptedPost?.postNumber;
     }
 
-    // 解析话题级别书签：从 bookmarks 数组中找 bookmarkable_type == 'Topic' 的条目
+    // 解析书签数组：分别提取话题书签和帖子书签
     bool topicBookmarked = false;
     int? topicBookmarkId;
+    String? topicBookmarkName;
+    DateTime? topicBookmarkReminderAt;
+    // 帖子书签映射：bookmarkable_id -> bookmark data
+    final postBookmarks = <int, Map<String, dynamic>>{};
     final bookmarksList = json['bookmarks'] as List<dynamic>?;
     if (bookmarksList != null) {
       for (final b in bookmarksList) {
-        if (b is Map<String, dynamic> && b['bookmarkable_type'] == 'Topic') {
-          topicBookmarked = true;
-          topicBookmarkId = b['id'] as int?;
-          break;
+        if (b is Map<String, dynamic>) {
+          if (b['bookmarkable_type'] == 'Topic') {
+            topicBookmarked = true;
+            topicBookmarkId = b['id'] as int?;
+            final name = b['name'] as String?;
+            topicBookmarkName = (name != null && name.isNotEmpty) ? name : null;
+            topicBookmarkReminderAt = TimeUtils.parseUtcTime(b['reminder_at'] as String?);
+          } else if (b['bookmarkable_type'] == 'Post') {
+            final bookmarkableId = b['bookmarkable_id'] as int?;
+            if (bookmarkableId != null) {
+              postBookmarks[bookmarkableId] = b;
+            }
+          }
         }
       }
+    }
+
+    // 注入帖子书签数据到对应的 Post
+    if (postBookmarks.isNotEmpty) {
+      final updatedPosts = postStream.posts.map((post) {
+        final bm = postBookmarks[post.id];
+        if (bm != null) {
+          final bmName = bm['name'] as String?;
+          return post.copyWith(
+            bookmarked: true,
+            bookmarkId: bm['id'] as int?,
+            bookmarkName: (bmName != null && bmName.isNotEmpty) ? bmName : null,
+            bookmarkReminderAt: TimeUtils.parseUtcTime(bm['reminder_at'] as String?),
+          );
+        }
+        return post;
+      }).toList();
+      postStream = PostStream(posts: updatedPosts, stream: postStream.stream, gaps: postStream.gaps);
     }
 
     return TopicDetail(
@@ -1116,6 +1179,8 @@ class TopicDetail {
       canEdit: (json['details'] as Map<String, dynamic>?)?['can_edit'] as bool? ?? false,
       bookmarked: topicBookmarked,
       bookmarkId: topicBookmarkId,
+      bookmarkName: topicBookmarkName,
+      bookmarkReminderAt: topicBookmarkReminderAt,
       hasAcceptedAnswer: hasAcceptedAnswer,
       acceptedAnswerPostNumber: acceptedAnswerPostNumber,
     );
@@ -1150,6 +1215,10 @@ class TopicDetail {
     bool? bookmarked,
     int? bookmarkId,
     bool clearBookmarkId = false,
+    String? bookmarkName,
+    DateTime? bookmarkReminderAt,
+    bool clearBookmarkName = false,
+    bool clearBookmarkReminderAt = false,
     bool? hasAcceptedAnswer,
     int? acceptedAnswerPostNumber,
   }) {
@@ -1180,6 +1249,8 @@ class TopicDetail {
       canEdit: canEdit ?? this.canEdit,
       bookmarked: bookmarked ?? this.bookmarked,
       bookmarkId: clearBookmarkId ? null : (bookmarkId ?? this.bookmarkId),
+      bookmarkName: clearBookmarkName ? null : (bookmarkName ?? this.bookmarkName),
+      bookmarkReminderAt: clearBookmarkReminderAt ? null : (bookmarkReminderAt ?? this.bookmarkReminderAt),
       hasAcceptedAnswer: hasAcceptedAnswer ?? this.hasAcceptedAnswer,
       acceptedAnswerPostNumber: acceptedAnswerPostNumber ?? this.acceptedAnswerPostNumber,
     );
@@ -1249,9 +1320,23 @@ class TopicListResponse {
         moreTopicsUrl = userBookmarkList['more_bookmarks_url'] as String?;
         topicsJson = bookmarks.map((b) {
           final map = Map<String, dynamic>.from(b as Map);
+
+          // 提取书签元数据（必须在 id 被覆盖前取原始书签 ID）
+          map['_bookmark_id'] = map['id'];
+
           // 书签对象中的 id 是书签 ID，topic_id 才是主题 ID
           if (map.containsKey('topic_id')) {
             map['id'] = map['topic_id'];
+          }
+          final bmName = map['name'] as String?;
+          if (bmName != null && bmName.isNotEmpty) {
+            map['_bookmark_name'] = bmName;
+          }
+          if (map['reminder_at'] != null) {
+            map['_bookmark_reminder_at'] = map['reminder_at'];
+          }
+          if (map['bookmarkable_type'] != null) {
+            map['_bookmarkable_type'] = map['bookmarkable_type'];
           }
 
           // 帖子书签：保留 linked_post_number 供跳转使用

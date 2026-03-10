@@ -170,6 +170,56 @@ class BookmarksNotifier extends AsyncNotifier<List<Topic>> {
     _isLoadMoreFailed = false;
     loadMore();
   }
+
+  /// 从本地列表中移除指定书签（删除后调用）
+  void removeBookmarkById(int bookmarkId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(
+      current.where((t) => t.bookmarkId != bookmarkId).toList(),
+    );
+  }
+
+  /// 更新本地列表中指定书签的元数据
+  void updateBookmarkMeta(int bookmarkId, {String? name, DateTime? reminderAt, bool clearReminderAt = false}) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(current.map((t) {
+      if (t.bookmarkId != bookmarkId) return t;
+      return Topic(
+        id: t.id,
+        title: t.title,
+        slug: t.slug,
+        postsCount: t.postsCount,
+        replyCount: t.replyCount,
+        views: t.views,
+        likeCount: t.likeCount,
+        excerpt: t.excerpt,
+        createdAt: t.createdAt,
+        lastPostedAt: t.lastPostedAt,
+        lastPosterUsername: t.lastPosterUsername,
+        categoryId: t.categoryId,
+        pinned: t.pinned,
+        visible: t.visible,
+        closed: t.closed,
+        archived: t.archived,
+        tags: t.tags,
+        posters: t.posters,
+        unseen: t.unseen,
+        unread: t.unread,
+        newPosts: t.newPosts,
+        lastReadPostNumber: t.lastReadPostNumber,
+        highestPostNumber: t.highestPostNumber,
+        bookmarkedPostNumber: t.bookmarkedPostNumber,
+        bookmarkId: t.bookmarkId,
+        bookmarkName: name ?? t.bookmarkName,
+        bookmarkReminderAt: clearReminderAt ? null : (reminderAt ?? t.bookmarkReminderAt),
+        bookmarkableType: t.bookmarkableType,
+        hasAcceptedAnswer: t.hasAcceptedAnswer,
+        canHaveAnswer: t.canHaveAnswer,
+      );
+    }).toList());
+  }
 }
 
 final bookmarksProvider = AsyncNotifierProvider.autoDispose<BookmarksNotifier, List<Topic>>(() {

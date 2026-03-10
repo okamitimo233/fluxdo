@@ -13,6 +13,7 @@ import '../../../../../services/discourse/discourse_service.dart';
 import '../../../../../services/toast_service.dart';
 import '../../../post_links.dart';
 import '../post_action_bar.dart';
+import '../../../../bookmark/bookmark_edit_sheet.dart';
 import '../post_flag_sheet.dart';
 import '../post_reaction_picker.dart';
 import '../post_reaction_users_sheet.dart';
@@ -65,6 +66,8 @@ class _PostFooterSectionState extends ConsumerState<PostFooterSection> {
   bool _isLiking = false;
   bool _isBookmarked = false;
   int? _bookmarkId;
+  String? _bookmarkName;
+  DateTime? _bookmarkReminderAt;
   bool _isBookmarking = false;
   late List<PostReaction> _reactions;
   PostReaction? _currentUserReaction;
@@ -103,6 +106,8 @@ class _PostFooterSectionState extends ConsumerState<PostFooterSection> {
     _currentUserReaction = widget.post.currentUserReaction;
     _isBookmarked = widget.post.bookmarked;
     _bookmarkId = widget.post.bookmarkId;
+    _bookmarkName = widget.post.bookmarkName;
+    _bookmarkReminderAt = widget.post.bookmarkReminderAt;
     _isAcceptedAnswer = widget.post.acceptedAnswer;
   }
 

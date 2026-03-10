@@ -148,10 +148,14 @@ extension _PostFooterMenuActions on _PostFooterSectionState {
                         ? theme.colorScheme.primary
                         : theme.colorScheme.onSurface,
                   ),
-                  title: Text(_isBookmarked ? '取消书签' : '添加书签'),
+                  title: Text(_isBookmarked ? '编辑书签' : '添加书签'),
                   onTap: () {
                     Navigator.pop(ctx);
-                    _toggleBookmark();
+                    if (_isBookmarked) {
+                      _editBookmark();
+                    } else {
+                      _addBookmark();
+                    }
                   },
                 ),
               if (!isGuest)

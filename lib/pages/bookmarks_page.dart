@@ -1,14 +1,21 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/search_filter.dart';
 import '../models/topic.dart';
 import '../providers/discourse_providers.dart';
+import '../providers/preferences_provider.dart';
 import '../providers/user_content_search_provider.dart';
+import '../services/app_error_handler.dart';
+import '../services/discourse/discourse_service.dart';
+import '../services/toast_service.dart';
+import '../utils/time_utils.dart';
+import '../widgets/bookmark/bookmark_edit_sheet.dart';
 import '../widgets/search/searchable_app_bar.dart';
 import '../widgets/search/user_content_search_view.dart';
 import '../widgets/topic/topic_item_builder.dart';
 import '../widgets/topic/topic_list_skeleton.dart';
-import '../providers/preferences_provider.dart';
+import '../widgets/topic/topic_preview_dialog.dart';
 import '../widgets/common/error_view.dart';
 import 'topic_detail_page/topic_detail_page.dart';
 
@@ -113,6 +120,175 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
     );
   }
 
+  bool _hasBookmarkMeta(Topic topic) {
+    return topic.bookmarkName != null ||
+        topic.bookmarkReminderAt != null ||
+        topic.bookmarkableType != null;
+  }
+
+  Widget _buildBookmarkMeta(BuildContext context, Topic topic) {
+    final theme = Theme.of(context);
+    final isExpired = topic.bookmarkReminderAt != null &&
+        topic.bookmarkReminderAt!.isBefore(DateTime.now());
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        // 书签类型标识
+        if (topic.bookmarkableType != null)
+          _buildMetaTag(
+            theme,
+            icon: topic.bookmarkableType == 'Post'
+                ? Icons.comment_outlined
+                : Icons.topic_outlined,
+            text: topic.bookmarkableType == 'Post' ? '帖子书签' : '话题书签',
+          ),
+        // 书签名称
+        if (topic.bookmarkName != null && topic.bookmarkName!.isNotEmpty)
+          _buildMetaTag(
+            theme,
+            icon: Icons.label_outline,
+            text: topic.bookmarkName!,
+          ),
+        // 提醒时间
+        if (topic.bookmarkReminderAt != null)
+          _buildMetaTag(
+            theme,
+            icon: Icons.alarm,
+            text: isExpired
+                ? '提醒已过期'
+                : TimeUtils.formatDetailTime(topic.bookmarkReminderAt!),
+            isError: isExpired,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildMetaTag(
+    ThemeData theme, {
+    required IconData icon,
+    required String text,
+    bool isError = false,
+  }) {
+    final bgColor = isError
+        ? theme.colorScheme.errorContainer.withValues(alpha: 0.5)
+        : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6);
+    final fgColor = isError
+        ? theme.colorScheme.error
+        : theme.colorScheme.onSurfaceVariant;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: fgColor),
+          const SizedBox(width: 3),
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 11, color: fgColor, height: 1.3),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<PreviewAction> _buildPreviewActions(Topic topic) {
+    final theme = Theme.of(context);
+    final bookmarkId = topic.bookmarkId;
+    if (bookmarkId == null) return [];
+
+    return [
+      PreviewAction(
+        icon: Icons.edit_outlined,
+        label: '编辑书签',
+        color: theme.colorScheme.primary,
+        onTap: () => _editBookmark(topic),
+      ),
+      if (topic.bookmarkReminderAt != null)
+        PreviewAction(
+          icon: Icons.alarm_off,
+          label: '取消提醒',
+          onTap: () => _clearReminder(topic),
+        ),
+      PreviewAction(
+        icon: Icons.delete_outline,
+        label: '删除书签',
+        color: theme.colorScheme.error,
+        onTap: () => _deleteBookmark(topic),
+      ),
+    ];
+  }
+
+  Future<void> _editBookmark(Topic topic) async {
+    final bookmarkId = topic.bookmarkId;
+    if (bookmarkId == null) return;
+
+    final result = await BookmarkEditSheet.show(
+      context,
+      bookmarkId: bookmarkId,
+      initialName: topic.bookmarkName,
+      initialReminderAt: topic.bookmarkReminderAt,
+    );
+    if (result == null || !mounted) return;
+
+    final notifier = ref.read(bookmarksProvider.notifier);
+    if (result.deleted) {
+      notifier.removeBookmarkById(bookmarkId);
+    } else {
+      notifier.updateBookmarkMeta(
+        bookmarkId,
+        name: result.name,
+        reminderAt: result.reminderAt,
+        clearReminderAt: result.reminderAt == null,
+      );
+    }
+  }
+
+  Future<void> _clearReminder(Topic topic) async {
+    final bookmarkId = topic.bookmarkId;
+    if (bookmarkId == null) return;
+
+    try {
+      await DiscourseService().clearBookmarkReminder(bookmarkId);
+      if (!mounted) return;
+      ref.read(bookmarksProvider.notifier).updateBookmarkMeta(
+        bookmarkId,
+        clearReminderAt: true,
+      );
+      ToastService.showSuccess('已取消提醒');
+    } on DioException catch (_) {
+      // 网络错误已由 ErrorInterceptor 处理
+    } catch (e, s) {
+      AppErrorHandler.handleUnexpected(e, s);
+    }
+  }
+
+  Future<void> _deleteBookmark(Topic topic) async {
+    final bookmarkId = topic.bookmarkId;
+    if (bookmarkId == null) return;
+
+    try {
+      await DiscourseService().deleteBookmark(bookmarkId);
+      if (!mounted) return;
+      ref.read(bookmarksProvider.notifier).removeBookmarkById(bookmarkId);
+      ToastService.showSuccess('已删除书签');
+    } on DioException catch (_) {
+      // 网络错误已由 ErrorInterceptor 处理
+    } catch (e, s) {
+      AppErrorHandler.handleUnexpected(e, s);
+    }
+  }
+
   Widget _buildTopicList(AsyncValue<List<Topic>> bookmarksAsync) {
     return RefreshIndicator(
       onRefresh: _onRefresh,
@@ -187,6 +363,12 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
                 isSelected: false,
                 onTap: () => _onItemTap(topic),
                 enableLongPress: enableLongPress,
+                bottomWidget: _hasBookmarkMeta(topic)
+                    ? _buildBookmarkMeta(context, topic)
+                    : null,
+                previewActions: topic.bookmarkId != null
+                    ? _buildPreviewActions(topic)
+                    : null,
               );
             },
           );

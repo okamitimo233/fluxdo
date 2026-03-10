@@ -268,30 +268,53 @@ extension PostUpdateMethods on TopicDetailNotifier {
     ));
   }
 
-  /// 切换话题书签状态
-  Future<void> toggleTopicBookmark() async {
+  /// 添加话题书签
+  Future<int> addTopicBookmark() async {
+    final currentDetail = state.value;
+    if (currentDetail == null) throw Exception('话题详情为空');
+
+    final service = ref.read(discourseServiceProvider);
+    final newBookmarkId = await service.bookmarkTopic(currentDetail.id);
+    if (!ref.mounted) throw Exception('Provider 已销毁');
+
+    state = AsyncValue.data(currentDetail.copyWith(
+      bookmarked: true,
+      bookmarkId: newBookmarkId,
+    ));
+    return newBookmarkId;
+  }
+
+  /// 删除话题书签
+  Future<void> removeTopicBookmark() async {
     final currentDetail = state.value;
     if (currentDetail == null) return;
 
-    final service = ref.read(discourseServiceProvider);
+    final bookmarkId = currentDetail.bookmarkId;
+    if (bookmarkId == null) return;
 
-    if (currentDetail.bookmarked) {
-      final bookmarkId = currentDetail.bookmarkId;
-      if (bookmarkId == null) return;
-      await service.deleteBookmark(bookmarkId);
-      if (!ref.mounted) return;
-      state = AsyncValue.data(currentDetail.copyWith(
-        bookmarked: false,
-        clearBookmarkId: true,
-      ));
-    } else {
-      final newBookmarkId = await service.bookmarkTopic(currentDetail.id);
-      if (!ref.mounted) return;
-      state = AsyncValue.data(currentDetail.copyWith(
-        bookmarked: true,
-        bookmarkId: newBookmarkId,
-      ));
-    }
+    final service = ref.read(discourseServiceProvider);
+    await service.deleteBookmark(bookmarkId);
+    if (!ref.mounted) return;
+
+    state = AsyncValue.data(currentDetail.copyWith(
+      bookmarked: false,
+      clearBookmarkId: true,
+      clearBookmarkName: true,
+      clearBookmarkReminderAt: true,
+    ));
+  }
+
+  /// 更新话题书签元数据（本地状态）
+  void updateTopicBookmarkMeta({String? name, DateTime? reminderAt, bool clearName = false, bool clearReminderAt = false}) {
+    final currentDetail = state.value;
+    if (currentDetail == null) return;
+
+    state = AsyncValue.data(currentDetail.copyWith(
+      bookmarkName: name,
+      bookmarkReminderAt: reminderAt,
+      clearBookmarkName: clearName,
+      clearBookmarkReminderAt: clearReminderAt,
+    ));
   }
 
   /// 重新加载话题元数据（只更新元数据，不刷新帖子流）

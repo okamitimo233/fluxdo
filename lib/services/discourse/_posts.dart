@@ -169,7 +169,7 @@ mixin _PostsMixin on _DiscourseServiceBase {
   }
 
   /// 添加话题书签
-  Future<int> bookmarkTopic(int topicId, {String? name, DateTime? reminderAt}) async {
+  Future<int> bookmarkTopic(int topicId, {String? name, DateTime? reminderAt, int? autoDeletePreference}) async {
     try {
       final data = <String, dynamic>{
         'bookmarkable_id': topicId,
@@ -180,6 +180,9 @@ mixin _PostsMixin on _DiscourseServiceBase {
       }
       if (reminderAt != null) {
         data['reminder_at'] = reminderAt.toUtc().toIso8601String();
+      }
+      if (autoDeletePreference != null) {
+        data['auto_delete_preference'] = autoDeletePreference;
       }
 
       final response = await _dio.post(
@@ -199,7 +202,7 @@ mixin _PostsMixin on _DiscourseServiceBase {
   }
 
   /// 添加帖子书签
-  Future<int> bookmarkPost(int postId, {String? name, DateTime? reminderAt}) async {
+  Future<int> bookmarkPost(int postId, {String? name, DateTime? reminderAt, int? autoDeletePreference}) async {
     try {
       final data = <String, dynamic>{
         'bookmarkable_id': postId,
@@ -210,6 +213,9 @@ mixin _PostsMixin on _DiscourseServiceBase {
       }
       if (reminderAt != null) {
         data['reminder_at'] = reminderAt.toUtc().toIso8601String();
+      }
+      if (autoDeletePreference != null) {
+        data['auto_delete_preference'] = autoDeletePreference;
       }
 
       final response = await _dio.post(
@@ -223,6 +229,47 @@ mixin _PostsMixin on _DiscourseServiceBase {
         return respData['id'] as int;
       }
       throw Exception('添加书签失败：响应格式异常');
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  /// 更新书签
+  Future<void> updateBookmark(int bookmarkId, {String? name, DateTime? reminderAt, int? autoDeletePreference}) async {
+    try {
+      final data = <String, dynamic>{};
+      // name 传空字符串表示清除
+      if (name != null) {
+        data['name'] = name;
+      }
+      if (reminderAt != null) {
+        data['reminder_at'] = reminderAt.toUtc().toIso8601String();
+      }
+      if (autoDeletePreference != null) {
+        data['auto_delete_preference'] = autoDeletePreference;
+      }
+
+      await _dio.put(
+        '/bookmarks/$bookmarkId.json',
+        data: data,
+        options: Options(contentType: Headers.jsonContentType),
+      );
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  /// 清除书签提醒
+  Future<void> clearBookmarkReminder(int bookmarkId) async {
+    try {
+      await _dio.put(
+        '/bookmarks/bulk.json',
+        data: {
+          'bookmark_ids': [bookmarkId],
+          'operation': {'type': 'clear_reminder'},
+        },
+        options: Options(contentType: Headers.jsonContentType),
+      );
     } on DioException catch (e) {
       _throwApiError(e);
     }

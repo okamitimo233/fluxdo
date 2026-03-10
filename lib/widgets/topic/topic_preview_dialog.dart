@@ -20,15 +20,32 @@ import '../common/smart_avatar.dart';
 import '../common/topic_badges.dart';
 import '../content/discourse_html_content/discourse_html_content.dart';
 
+/// 预览弹窗中的操作项
+class PreviewAction {
+  final IconData icon;
+  final String label;
+  final Color? color;
+  final VoidCallback onTap;
+
+  const PreviewAction({
+    required this.icon,
+    required this.label,
+    this.color,
+    required this.onTap,
+  });
+}
+
 /// 话题预览弹窗 - 长按卡片时显示
 class TopicPreviewDialog extends ConsumerStatefulWidget {
   final Topic topic;
   final VoidCallback? onOpen;
+  final List<PreviewAction>? actions;
 
   const TopicPreviewDialog({
     super.key,
     required this.topic,
     this.onOpen,
+    this.actions,
   });
 
   @override
@@ -39,6 +56,7 @@ class TopicPreviewDialog extends ConsumerStatefulWidget {
     BuildContext context, {
     required Topic topic,
     VoidCallback? onOpen,
+    List<PreviewAction>? actions,
   }) {
     // 触觉反馈
     HapticFeedback.mediumImpact();
@@ -53,6 +71,7 @@ class TopicPreviewDialog extends ConsumerStatefulWidget {
         return TopicPreviewDialog(
           topic: topic,
           onOpen: onOpen,
+          actions: actions,
         );
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
@@ -126,76 +145,92 @@ class _TopicPreviewDialogState extends ConsumerState<TopicPreviewDialog> {
       logoUrl = parent?.uploadedLogo;
     }
 
+    final hasActions = widget.actions != null && widget.actions!.isNotEmpty;
+
     return Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: maxWidth.clamp(300, 500),
           maxHeight: maxHeight,
         ),
-        child: Material(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          clipBehavior: Clip.antiAlias,
-          elevation: 8,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 顶部装饰条
-              Container(
-                height: 4,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      theme.colorScheme.primaryContainer,
-                      theme.colorScheme.tertiaryContainer,
-                    ],
-                  ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 预览卡片
+            Flexible(
+              child: Material(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(20),
+                clipBehavior: Clip.antiAlias,
+                elevation: 8,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 顶部装饰条
+                    Container(
+                      height: 4,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            theme.colorScheme.primaryContainer,
+                            theme.colorScheme.tertiaryContainer,
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // 内容区域
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 标题
+                            _buildTitle(context, theme),
+
+                            const SizedBox(height: 12),
+
+                            // 楼主信息
+                            _buildAuthorInfo(context, theme),
+
+                            // 分类和标签
+                            if (category != null || topic.tags.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              _buildCategoryAndTags(context, theme, category, faIcon, logoUrl),
+                            ],
+
+                            // 主贴内容
+                            const SizedBox(height: 16),
+                            _buildPostContent(context, theme),
+
+                            const SizedBox(height: 16),
+
+                            // 参与者头像
+                            if (topic.posters.length > 1)
+                              _buildParticipants(context, theme),
+
+                            // 统计信息
+                            _buildStats(context, theme),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // 底部操作栏
+                    _buildActions(context, theme),
+                  ],
                 ),
               ),
+            ),
 
-              // 内容区域
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 标题
-                      _buildTitle(context, theme),
-
-                      const SizedBox(height: 12),
-
-                      // 楼主信息
-                      _buildAuthorInfo(context, theme),
-
-                      // 分类和标签
-                      if (category != null || topic.tags.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        _buildCategoryAndTags(context, theme, category, faIcon, logoUrl),
-                      ],
-
-                      // 主贴内容
-                      const SizedBox(height: 16),
-                      _buildPostContent(context, theme),
-
-                      const SizedBox(height: 16),
-
-                      // 参与者头像
-                      if (topic.posters.length > 1)
-                        _buildParticipants(context, theme),
-
-                      // 统计信息
-                      _buildStats(context, theme),
-                    ],
-                  ),
-                ),
-              ),
-
-              // 底部操作栏
-              _buildActions(context, theme),
+            // 卡片外的操作菜单
+            if (hasActions) ...[
+              const SizedBox(height: 8),
+              _buildCustomActions(context, theme),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -664,6 +699,49 @@ class _TopicPreviewDialogState extends ConsumerState<TopicPreviewDialog> {
             label: const Text('查看详情'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCustomActions(BuildContext context, ThemeData theme) {
+    return Material(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      elevation: 8,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: widget.actions!.asMap().entries.map((entry) {
+          final index = entry.key;
+          final action = entry.value;
+          final color = action.color ?? theme.colorScheme.onSurface;
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (index > 0)
+                Divider(height: 0.5, thickness: 0.5, color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+              InkWell(
+                onTap: () {
+                  Navigator.of(context).pop();
+                  action.onTap();
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Icon(action.icon, size: 20, color: color),
+                      const SizedBox(width: 12),
+                      Text(
+                        action.label,
+                        style: theme.textTheme.bodyMedium?.copyWith(color: color),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        }).toList(),
       ),
     );
   }

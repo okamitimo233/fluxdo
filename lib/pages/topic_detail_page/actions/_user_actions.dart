@@ -131,21 +131,60 @@ extension _UserActions on _TopicDetailPageState {
     }
   }
 
-  Future<void> _handleToggleBookmark(TopicDetailNotifier notifier) async {
+  Future<void> _handleBookmark(TopicDetailNotifier notifier) async {
     final detail = ref.read(topicDetailProvider(_params)).value;
     if (detail == null) return;
 
-    final wasBookmarked = detail.bookmarked;
-    try {
-      await notifier.toggleTopicBookmark();
-      if (mounted) {
-        ToastService.showSuccess(wasBookmarked ? '已取消书签' : '已添加书签');
+    if (detail.bookmarked) {
+      // 已书签 → 弹出编辑 BottomSheet
+      final bookmarkId = detail.bookmarkId;
+      if (bookmarkId == null) return;
+
+      final result = await BookmarkEditSheet.show(
+        context,
+        bookmarkId: bookmarkId,
+        initialName: detail.bookmarkName,
+        initialReminderAt: detail.bookmarkReminderAt,
+      );
+      if (result == null || !mounted) return;
+
+      if (result.deleted) {
+        // BookmarkEditSheet 已调用 API 删除，刷新元数据同步本地状态
+        notifier.reloadTopicMetadata();
+      } else {
+        notifier.updateTopicBookmarkMeta(
+          name: result.name,
+          reminderAt: result.reminderAt,
+        );
       }
-    } on DioException catch (e) {
-      // 网络错误已由 ErrorInterceptor 处理
-      debugPrint('[TopicDetail] 切换书签失败: $e');
-    } catch (e, s) {
-      AppErrorHandler.handleUnexpected(e, s);
+    } else {
+      // 未书签 → 创建书签，然后弹出编辑 BottomSheet
+      try {
+        final newBookmarkId = await notifier.addTopicBookmark();
+        if (!mounted) return;
+        ToastService.showSuccess('已添加书签');
+
+        // 弹出编辑 BottomSheet
+        final result = await BookmarkEditSheet.show(
+          context,
+          bookmarkId: newBookmarkId,
+        );
+        if (result == null || !mounted) return;
+
+        if (result.deleted) {
+          // BookmarkEditSheet 已调用 API 删除，刷新元数据同步本地状态
+          notifier.reloadTopicMetadata();
+        } else {
+          notifier.updateTopicBookmarkMeta(
+            name: result.name,
+            reminderAt: result.reminderAt,
+          );
+        }
+      } on DioException catch (e) {
+        debugPrint('[TopicDetail] 添加书签失败: $e');
+      } catch (e, s) {
+        AppErrorHandler.handleUnexpected(e, s);
+      }
     }
   }
 

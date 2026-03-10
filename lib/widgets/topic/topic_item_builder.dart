@@ -14,6 +14,8 @@ Widget buildTopicItem({
   required VoidCallback onTap,
   required bool enableLongPress,
   Color? highlightColor,
+  Widget? bottomWidget,
+  List<PreviewAction>? previewActions,
 }) {
   Widget child;
 
@@ -26,6 +28,7 @@ Widget buildTopicItem({
                 context,
                 topic: topic,
                 onOpen: onTap,
+                actions: previewActions,
               )
           : null,
       isSelected: isSelected,
@@ -40,10 +43,12 @@ Widget buildTopicItem({
                 context,
                 topic: topic,
                 onOpen: onTap,
+                actions: previewActions,
               )
           : null,
       isSelected: isSelected,
       highlightColor: highlightColor,
+      bottomWidget: bottomWidget,
     );
   }
 

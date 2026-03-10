@@ -20,6 +20,7 @@ class TopicCard extends ConsumerWidget {
   final VoidCallback? onLongPress;
   final bool isSelected;
   final Color? highlightColor;
+  final Widget? bottomWidget;
 
   const TopicCard({
     super.key,
@@ -28,6 +29,7 @@ class TopicCard extends ConsumerWidget {
     this.onLongPress,
     this.isSelected = false,
     this.highlightColor,
+    this.bottomWidget,
   });
 
   @override
@@ -71,168 +73,184 @@ class TopicCard extends ConsumerWidget {
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
-        child: Opacity(
-          opacity: isFullyRead ? 0.5 : 1.0,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 左侧：楼主头像
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: _buildOriginalPosterAvatar(context),
-                ),
-                const SizedBox(width: 10),
-                // 右侧：两行内容
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 第1行：标题 + 回复数/未读数
-                      Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Opacity(
+              opacity: isFullyRead ? 0.5 : 1.0,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 左侧：楼主头像
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: _buildOriginalPosterAvatar(context),
+                    ),
+                    const SizedBox(width: 10),
+                    // 右侧：两行内容
+                    Expanded(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Text.rich(
-                              TextSpan(
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.3,
-                                  color: isUnread
-                                      ? theme.colorScheme.onSurface
-                                      : theme.colorScheme.onSurfaceVariant,
-                                ),
-                                children: [
-                                  if (topic.closed)
-                                    WidgetSpan(
-                                      alignment: PlaceholderAlignment.middle,
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(right: 4),
-                                        child: Icon(
-                                          Icons.lock_outline,
-                                          size: 16,
-                                          color: isUnread
-                                              ? theme.colorScheme.onSurface
-                                              : theme.colorScheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                    ),
-                                  if (topic.hasAcceptedAnswer)
-                                    WidgetSpan(
-                                      alignment: PlaceholderAlignment.middle,
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(right: 4),
-                                        child: Icon(
-                                          Icons.check_box,
-                                          size: 16,
-                                          color: Colors.green,
-                                        ),
-                                      ),
-                                    )
-                                  else if (topic.canHaveAnswer)
-                                    WidgetSpan(
-                                      alignment: PlaceholderAlignment.middle,
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(right: 4),
-                                        child: Icon(
-                                          Icons.check_box_outline_blank,
-                                          size: 16,
-                                          color: theme.colorScheme.outline,
-                                        ),
-                                      ),
-                                    ),
-                                  ...EmojiText.buildEmojiSpans(context, topic.title, theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    height: 1.3,
-                                    color: isUnread
-                                        ? theme.colorScheme.onSurface
-                                        : theme.colorScheme.onSurfaceVariant,
-                                  )),
-                                  // 未读蓝点追加在标题末尾
-                                  if (topic.unseen)
-                                    WidgetSpan(
-                                      alignment: PlaceholderAlignment.middle,
-                                      child: Container(
-                                        margin: const EdgeInsets.only(left: 6),
-                                        width: 8,
-                                        height: 8,
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.primary,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          // 右上角：回复数或未读数
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: _buildReplyOrUnread(context),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 6),
-
-                      // 第2行：分类+标签（左） + 点赞+时间（右）
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 左侧：分类和标签
-                          Expanded(
-                            child: Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: [
-                                if (category != null)
-                                  CategoryBadge(
-                                    category: category,
-                                    faIcon: faIcon,
-                                    logoUrl: logoUrl,
-                                  ),
-                                ...topic.tags.map(
-                                  (tag) => TagBadge(name: tag.name),
-                                ),
-                              ],
-                            ),
-                          ),
-                          // 右侧：点赞 + 时间
+                          // 第1行：标题 + 回复数/未读数
                           Row(
-                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (topic.likeCount > 0) ...[
-                                _buildStat(context, Icons.favorite_border_rounded, topic.likeCount),
-                                const SizedBox(width: 6),
-                                Text(
-                                  '·',
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                              Expanded(
+                                child: Text.rich(
+                                  TextSpan(
+                                    style: theme.textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.3,
+                                      color: isUnread
+                                          ? theme.colorScheme.onSurface
+                                          : theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                    children: [
+                                      if (topic.closed)
+                                        WidgetSpan(
+                                          alignment: PlaceholderAlignment.middle,
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(right: 4),
+                                            child: Icon(
+                                              Icons.lock_outline,
+                                              size: 16,
+                                              color: isUnread
+                                                  ? theme.colorScheme.onSurface
+                                                  : theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                        ),
+                                      if (topic.hasAcceptedAnswer)
+                                        WidgetSpan(
+                                          alignment: PlaceholderAlignment.middle,
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(right: 4),
+                                            child: Icon(
+                                              Icons.check_box,
+                                              size: 16,
+                                              color: Colors.green,
+                                            ),
+                                          ),
+                                        )
+                                      else if (topic.canHaveAnswer)
+                                        WidgetSpan(
+                                          alignment: PlaceholderAlignment.middle,
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(right: 4),
+                                            child: Icon(
+                                              Icons.check_box_outline_blank,
+                                              size: 16,
+                                              color: theme.colorScheme.outline,
+                                            ),
+                                          ),
+                                        ),
+                                      ...EmojiText.buildEmojiSpans(context, topic.title, theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        height: 1.3,
+                                        color: isUnread
+                                            ? theme.colorScheme.onSurface
+                                            : theme.colorScheme.onSurfaceVariant,
+                                      )),
+                                      // 未读蓝点追加在标题末尾
+                                      if (topic.unseen)
+                                        WidgetSpan(
+                                          alignment: PlaceholderAlignment.middle,
+                                          child: Container(
+                                            margin: const EdgeInsets.only(left: 6),
+                                            width: 8,
+                                            height: 8,
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.primary,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(width: 6),
-                              ],
-                              RelativeTimeText(
-                                dateTime: topic.lastPostedAt,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                              ),
+                              const SizedBox(width: 8),
+                              // 右上角：回复数或未读数
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: _buildReplyOrUnread(context),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 6),
+
+                          // 第2行：分类+标签（左） + 点赞+时间（右）
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 左侧：分类和标签
+                              Expanded(
+                                child: Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: [
+                                    if (category != null)
+                                      CategoryBadge(
+                                        category: category,
+                                        faIcon: faIcon,
+                                        logoUrl: logoUrl,
+                                      ),
+                                    ...topic.tags.map(
+                                      (tag) => TagBadge(name: tag.name),
+                                    ),
+                                  ],
                                 ),
+                              ),
+                              // 右侧：点赞 + 时间
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (topic.likeCount > 0) ...[
+                                    _buildStat(context, Icons.favorite_border_rounded, topic.likeCount),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '·',
+                                      style: theme.textTheme.labelSmall?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                  ],
+                                  RelativeTimeText(
+                                    dateTime: topic.lastPostedAt,
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+            // 底部附属区域
+            if (bottomWidget != null)
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                ),
+                // 左侧 56 = 头像区 12+34+10，与主内容文字起始对齐
+                padding: const EdgeInsets.fromLTRB(56, 6, 14, 6),
+                child: bottomWidget!,
+              ),
+          ],
         ),
       ),
     );

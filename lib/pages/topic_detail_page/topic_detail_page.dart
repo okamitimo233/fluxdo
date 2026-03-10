@@ -41,6 +41,7 @@ import 'widgets/topic_detail_header.dart';
 import '../../widgets/layout/master_detail_layout.dart';
 import '../../widgets/share/share_image_preview.dart';
 import '../../widgets/share/export_sheet.dart';
+import '../../widgets/bookmark/bookmark_edit_sheet.dart';
 import '../../widgets/search/topic_search_view.dart';
 import '../../providers/topic_search_provider.dart';
 import '../edit_topic_page.dart';
@@ -487,7 +488,7 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
           } else if (value == 'edit_topic') {
             _handleEditTopic();
           } else if (value == 'bookmark') {
-            _handleToggleBookmark(notifier);
+            _handleBookmark(notifier);
           }
         },
         itemBuilder: (context) => [
@@ -520,7 +521,7 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
                       : Theme.of(context).colorScheme.onSurface,
                 ),
                 const SizedBox(width: 12),
-                Text(detail.bookmarked ? '取消书签' : '添加书签'),
+                Text(detail.bookmarked ? '编辑书签' : '添加书签'),
               ],
             ),
           ),

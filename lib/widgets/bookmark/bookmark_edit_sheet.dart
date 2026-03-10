@@ -1,0 +1,405 @@
+import 'package:flutter/material.dart';
+import '../../models/bookmark.dart';
+import '../../services/discourse/discourse_service.dart';
+import '../../services/toast_service.dart';
+import '../../services/app_error_handler.dart';
+import '../../utils/time_utils.dart';
+import 'package:dio/dio.dart';
+
+/// 书签编辑结果
+class BookmarkEditResult {
+  final String? name;
+  final DateTime? reminderAt;
+  final bool deleted;
+
+  const BookmarkEditResult({this.name, this.reminderAt, this.deleted = false});
+}
+
+/// 书签编辑 BottomSheet
+class BookmarkEditSheet extends StatefulWidget {
+  final int bookmarkId;
+  final String? initialName;
+  final DateTime? initialReminderAt;
+
+  const BookmarkEditSheet({
+    super.key,
+    required this.bookmarkId,
+    this.initialName,
+    this.initialReminderAt,
+  });
+
+  /// 显示书签编辑 BottomSheet
+  static Future<BookmarkEditResult?> show(
+    BuildContext context, {
+    required int bookmarkId,
+    String? initialName,
+    DateTime? initialReminderAt,
+  }) {
+    return showModalBottomSheet<BookmarkEditResult>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => BookmarkEditSheet(
+        bookmarkId: bookmarkId,
+        initialName: initialName,
+        initialReminderAt: initialReminderAt,
+      ),
+    );
+  }
+
+  @override
+  State<BookmarkEditSheet> createState() => _BookmarkEditSheetState();
+}
+
+class _BookmarkEditSheetState extends State<BookmarkEditSheet> {
+  late final TextEditingController _nameController;
+  BookmarkReminderOption? _selectedReminder;
+  DateTime? _customReminderAt;
+  DateTime? _currentReminderAt;
+  bool _isSaving = false;
+  bool _isDeleting = false;
+  final DiscourseService _service = DiscourseService();
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName ?? '');
+    _currentReminderAt = widget.initialReminderAt;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+
+    try {
+      // 计算提醒时间
+      DateTime? reminderAt = _currentReminderAt;
+      if (_selectedReminder != null && _selectedReminder != BookmarkReminderOption.custom) {
+        reminderAt = _selectedReminder!.toReminderAt();
+      } else if (_selectedReminder == BookmarkReminderOption.custom && _customReminderAt != null) {
+        reminderAt = _customReminderAt;
+      }
+
+      final name = _nameController.text.trim();
+
+      await _service.updateBookmark(
+        widget.bookmarkId,
+        name: name,
+        reminderAt: reminderAt,
+      );
+
+      if (mounted) {
+        Navigator.pop(context, BookmarkEditResult(
+          name: name.isNotEmpty ? name : null,
+          reminderAt: reminderAt,
+        ));
+        ToastService.showSuccess('书签已更新');
+      }
+    } on DioException catch (_) {
+      // 网络错误已由 ErrorInterceptor 处理
+    } catch (e, s) {
+      AppErrorHandler.handleUnexpected(e, s);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _delete() async {
+    if (_isDeleting) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除书签'),
+        content: const Text('确定要删除这个书签吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isDeleting = true);
+    try {
+      await _service.deleteBookmark(widget.bookmarkId);
+      if (mounted) {
+        Navigator.pop(context, const BookmarkEditResult(deleted: true));
+        ToastService.showSuccess('已取消书签');
+      }
+    } on DioException catch (_) {
+      // 网络错误已由 ErrorInterceptor 处理
+    } catch (e, s) {
+      AppErrorHandler.handleUnexpected(e, s);
+    } finally {
+      if (mounted) setState(() => _isDeleting = false);
+    }
+  }
+
+  Future<void> _pickCustomDateTime() async {
+    final now = DateTime.now();
+    final initialDate = _customReminderAt ?? now.add(const Duration(hours: 1));
+
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (date == null || !mounted) return;
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initialDate),
+    );
+    if (time == null || !mounted) return;
+
+    setState(() {
+      _customReminderAt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      _currentReminderAt = _customReminderAt;
+    });
+  }
+
+  void _selectReminder(BookmarkReminderOption option) {
+    setState(() {
+      if (_selectedReminder == option) {
+        // 取消选择
+        _selectedReminder = null;
+        _currentReminderAt = widget.initialReminderAt;
+        return;
+      }
+      _selectedReminder = option;
+      if (option == BookmarkReminderOption.custom) {
+        _pickCustomDateTime();
+      } else {
+        _currentReminderAt = option.toReminderAt();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Container(
+      margin: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16 + bottomInset),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 标题栏
+              Row(
+                children: [
+                  Icon(Icons.bookmark, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    '编辑书签',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // 书签名称
+              TextField(
+                controller: _nameController,
+                maxLength: 100,
+                decoration: InputDecoration(
+                  labelText: '书签名称（可选）',
+                  hintText: '为书签添加备注...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  counterText: '',
+                  prefixIcon: const Icon(Icons.label_outline, size: 20),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 提醒时间
+              Text(
+                '设置提醒',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // 当前提醒时间显示
+              if (_currentReminderAt != null && _selectedReminder == null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: _currentReminderAt!.isAfter(DateTime.now())
+                        ? theme.colorScheme.primaryContainer
+                        : theme.colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.alarm,
+                        size: 16,
+                        color: _currentReminderAt!.isAfter(DateTime.now())
+                            ? theme.colorScheme.onPrimaryContainer
+                            : theme.colorScheme.onErrorContainer,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _currentReminderAt!.isAfter(DateTime.now())
+                            ? '提醒时间：${TimeUtils.formatDetailTime(_currentReminderAt!)}'
+                            : '提醒已过期',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: _currentReminderAt!.isAfter(DateTime.now())
+                              ? theme.colorScheme.onPrimaryContainer
+                              : theme.colorScheme.onErrorContainer,
+                        ),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _currentReminderAt = null;
+                          });
+                        },
+                        child: Icon(
+                          Icons.close,
+                          size: 16,
+                          color: _currentReminderAt!.isAfter(DateTime.now())
+                              ? theme.colorScheme.onPrimaryContainer
+                              : theme.colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // 快捷提醒选项
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: BookmarkReminderOption.values.map((option) {
+                  final isSelected = _selectedReminder == option;
+                  return ChoiceChip(
+                    label: Text(option.label),
+                    selected: isSelected,
+                    onSelected: (_) => _selectReminder(option),
+                  );
+                }).toList(),
+              ),
+
+              // 自定义时间显示
+              if (_selectedReminder == BookmarkReminderOption.custom && _customReminderAt != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.alarm, size: 16, color: theme.colorScheme.onPrimaryContainer),
+                        const SizedBox(width: 8),
+                        Text(
+                          TimeUtils.formatFullDate(_customReminderAt!),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: theme.colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: _pickCustomDateTime,
+                          child: Icon(
+                            Icons.edit,
+                            size: 16,
+                            color: theme.colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              const SizedBox(height: 20),
+
+              // 按钮区域
+              Row(
+                children: [
+                  // 删除按钮
+                  TextButton.icon(
+                    onPressed: _isDeleting ? null : _delete,
+                    icon: _isDeleting
+                        ? const SizedBox(
+                            width: 16, height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(Icons.delete_outline, color: theme.colorScheme.error),
+                    label: Text(
+                      '删除',
+                      style: TextStyle(color: theme.colorScheme.error),
+                    ),
+                  ),
+                  const Spacer(),
+                  // 取消按钮
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('取消'),
+                  ),
+                  const SizedBox(width: 8),
+                  // 保存按钮
+                  FilledButton(
+                    onPressed: _isSaving ? null : _save,
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 16, height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('保存'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
