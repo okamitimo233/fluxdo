@@ -6,7 +6,11 @@ mixin _AuthMixin on _DiscourseServiceBase {
   void _initInterceptors() {
     // 设置 PreloadedDataService 的登录失效回调
     PreloadedDataService().setAuthInvalidCallback(() {
-      _handleAuthInvalid('登录已失效，请重新登录');
+      _handleAuthInvalid(
+        '登录已失效，请重新登录',
+        source: 'preloaded_data',
+        triggerInfo: '有 token 但没有 currentUser，WebView 验证确认已登出',
+      );
     });
 
     // 添加业务特定拦截器
@@ -41,7 +45,11 @@ mixin _AuthMixin on _DiscourseServiceBase {
               'requestHeaders': response.requestOptions.headers,
             },
           );
-          await _handleAuthInvalid('登录已失效，请重新登录');
+          await _handleAuthInvalid(
+            '登录已失效，请重新登录',
+            source: 'response_header',
+            triggerInfo: '${response.requestOptions.method} ${response.requestOptions.uri} → ${response.statusCode}',
+          );
           return handler.next(response);
         }
 
@@ -78,7 +86,11 @@ mixin _AuthMixin on _DiscourseServiceBase {
               'errorMessage': error.message,
             },
           );
-          await _handleAuthInvalid('登录已失效，请重新登录');
+          await _handleAuthInvalid(
+            '登录已失效，请重新登录',
+            source: 'error_response_header',
+            triggerInfo: '${error.requestOptions.method} ${error.requestOptions.uri} → ${error.response?.statusCode}',
+          );
           return handler.next(error);
         }
 
@@ -97,7 +109,11 @@ mixin _AuthMixin on _DiscourseServiceBase {
             },
           );
           final message = (data['errors'] as List?)?.first?.toString() ?? '登录已失效，请重新登录';
-          await _handleAuthInvalid(message);
+          await _handleAuthInvalid(
+            message,
+            source: 'error_response_body',
+            triggerInfo: '${error.requestOptions.method} ${error.requestOptions.uri} → ${error.response?.statusCode}, error_type=${data['error_type']}',
+          );
         }
 
         handler.next(error);
@@ -110,11 +126,15 @@ mixin _AuthMixin on _DiscourseServiceBase {
     _cfChallenge.setContext(context);
   }
 
-  Future<void> _handleAuthInvalid(String message) async {
+  Future<void> _handleAuthInvalid(
+    String message, {
+    String? source,
+    String? triggerInfo,
+  }) async {
     if (_isLoggingOut) return;
     _isLoggingOut = true;
 
-    // 记录被动退出日志
+    // 记录被动退出日志（含触发来源，方便排查）
     LogWriter.instance.write({
       'timestamp': DateTime.now().toIso8601String(),
       'level': 'warning',
@@ -122,6 +142,8 @@ mixin _AuthMixin on _DiscourseServiceBase {
       'event': 'logout_passive',
       'message': '登录失效被动退出',
       'reason': message,
+      if (source != null) 'source': source,
+      if (triggerInfo != null) 'trigger': triggerInfo,
     });
 
     await logout(callApi: false, refreshPreload: true);
