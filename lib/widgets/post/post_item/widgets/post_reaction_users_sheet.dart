@@ -169,15 +169,15 @@ class _PostReactionUsersSheetState extends State<PostReactionUsersSheet> {
                         color: theme.colorScheme.onSurfaceVariant)),
               )
             else ...[
-              // Emoji 标签栏
-              _buildTabBar(theme),
-
-              const Divider(height: 1),
-
               // 用户列表
               Flexible(
                 child: _buildUserList(theme),
               ),
+
+              const Divider(height: 1),
+
+              // Emoji 标签栏（放底部，避免高度变化导致位置跳动）
+              _buildTabBar(theme),
             ],
           ],
         ),
