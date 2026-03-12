@@ -31,6 +31,12 @@ class RequestHeaderInterceptor extends Interceptor {
       options.headers['X-CSRF-Token'] = (csrf == null || csrf.isEmpty) ? 'undefined' : csrf;
     }
 
+    // 4. API 请求（XHR）设置 Origin 和 Referer，文档类请求不设置
+    if (options.headers['X-Requested-With'] == 'XMLHttpRequest') {
+      options.headers['Origin'] = AppConstants.baseUrl;
+      options.headers['Referer'] = '${AppConstants.baseUrl}/';
+    }
+
     handler.next(options);
   }
 }
