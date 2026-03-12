@@ -13,7 +13,7 @@ import '../utils/number_utils.dart';
 import '../utils/pagination_helper.dart';
 import '../services/emoji_handler.dart';
 import 'package:dio/dio.dart';
-import '../constants.dart';
+import '../utils/url_helper.dart';
 import '../services/app_error_handler.dart';
 import '../utils/share_utils.dart';
 import '../providers/preferences_provider.dart';
@@ -847,7 +847,7 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage>
               if (hasBackground)
                 Image(
                   image: discourseImageProvider(
-                    bgUrl.startsWith('http') ? bgUrl : '${AppConstants.baseUrl}$bgUrl',
+                    UrlHelper.resolveUrl(bgUrl),
                   ),
                   fit: BoxFit.cover,
                   alignment: Alignment.center,

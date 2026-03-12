@@ -1,4 +1,5 @@
 import '../utils/time_utils.dart';
+import '../utils/url_helper.dart';
 
 /// Discourse 通知类型枚举
 enum NotificationType {
@@ -176,8 +177,9 @@ class DiscourseNotification {
     if (template == null || template.isEmpty) {
       return '';
     }
-    // 直接替换 {size} 占位符
-    return template.replaceAll('{size}', size.toString());
+    // 替换 {size} 占位符并解析 URL
+    final url = template.replaceAll('{size}', size.toString());
+    return UrlHelper.resolveUrl(url);
   }
 
   DiscourseNotification copyWith({

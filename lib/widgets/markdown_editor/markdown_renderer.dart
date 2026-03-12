@@ -89,7 +89,9 @@ class MarkdownBody extends StatelessWidget {
       var src = match.group(4) ?? '';
       
       // 处理相对路径
-      if (src.startsWith('/') && !src.startsWith('//')) {
+      if (src.startsWith('//')) {
+        src = 'https:$src';
+      } else if (src.startsWith('/')) {
         src = '${AppConstants.baseUrl}$src';
       }
       

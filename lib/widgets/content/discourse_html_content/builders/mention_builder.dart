@@ -81,9 +81,11 @@ Widget _buildStatusEmoji(dom.Element imgElement, double size) {
   if (src.isEmpty) return const SizedBox.shrink();
 
   // 将相对路径转换为绝对路径
-  final resolvedSrc = src.startsWith('/') && !src.startsWith('//')
-      ? '${AppConstants.baseUrl}$src'
-      : src;
+  final resolvedSrc = src.startsWith('//')
+      ? 'https:$src'
+      : src.startsWith('/')
+          ? '${AppConstants.baseUrl}$src'
+          : src;
 
   return Image(
     image: emojiImageProvider(resolvedSrc),

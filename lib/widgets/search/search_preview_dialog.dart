@@ -7,9 +7,9 @@ import '../../models/category.dart';
 import '../../models/search_result.dart';
 import '../../providers/discourse_providers.dart';
 import '../../providers/preferences_provider.dart';
-import '../../constants.dart';
 import '../../utils/font_awesome_helper.dart';
 import '../../utils/share_utils.dart';
+import '../../utils/url_helper.dart';
 import '../../utils/number_utils.dart';
 import '../../services/discourse_cache_manager.dart';
 import '../common/smart_avatar.dart';
@@ -296,9 +296,7 @@ class SearchPreviewDialog extends ConsumerWidget {
                     padding: const EdgeInsets.only(right: 6),
                     child: Image(
                       image: discourseImageProvider(
-                        logoUrl.startsWith('http')
-                            ? logoUrl
-                            : '${AppConstants.baseUrl}$logoUrl',
+                        UrlHelper.resolveUrl(logoUrl),
                       ),
                       width: 12,
                       height: 12,

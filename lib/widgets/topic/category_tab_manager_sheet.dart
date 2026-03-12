@@ -6,7 +6,7 @@ import '../../providers/discourse_providers.dart';
 import '../../providers/pinned_categories_provider.dart';
 import '../../utils/font_awesome_helper.dart';
 import '../../services/discourse_cache_manager.dart';
-import '../../constants.dart';
+import '../../utils/url_helper.dart';
 import '../../pages/category_topics_page.dart';
 
 // ============================================================
@@ -32,7 +32,7 @@ Widget _buildCategoryIcon(Category category, Color color, double size, {bool pre
     if (logoUrl != null && logoUrl.isNotEmpty) {
       return Image(
         image: discourseImageProvider(
-          logoUrl.startsWith('http') ? logoUrl : '${AppConstants.baseUrl}$logoUrl',
+          UrlHelper.resolveUrl(logoUrl),
         ),
         width: size,
         height: size,
@@ -50,7 +50,7 @@ Widget _buildCategoryIcon(Category category, Color color, double size, {bool pre
     if (logoUrl != null && logoUrl.isNotEmpty) {
       return Image(
         image: discourseImageProvider(
-          logoUrl.startsWith('http') ? logoUrl : '${AppConstants.baseUrl}$logoUrl',
+          UrlHelper.resolveUrl(logoUrl),
         ),
         width: size,
         height: size,

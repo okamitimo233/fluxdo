@@ -264,7 +264,9 @@ class AiShareImageWidget extends StatelessWidget {
       final height = match.group(3)!;
       var src = match.group(4) ?? '';
 
-      if (src.startsWith('/') && !src.startsWith('//')) {
+      if (src.startsWith('//')) {
+        src = 'https:$src';
+      } else if (src.startsWith('/')) {
         src = '${AppConstants.baseUrl}$src';
       }
 

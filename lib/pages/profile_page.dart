@@ -14,6 +14,7 @@ import 'my_badges_page.dart';
 import 'user_profile_page.dart';
 import 'trust_level_requirements_page.dart';
 import 'about_page.dart';
+import 'data_management_page.dart';
 import 'network_settings_page/network_settings_page.dart';
 import 'preferences_page.dart';
 import '../widgets/common/loading_spinner.dart';
@@ -572,6 +573,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             iconColor: Colors.deepPurple,
             title: '功能设置',
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PreferencesPage())),
+          ),
+          _buildOptionTile(
+            icon: Icons.storage_rounded,
+            iconColor: Colors.brown,
+            title: '数据管理',
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DataManagementPage())),
           ),
           _buildOptionTile(
             icon: Icons.info_rounded,

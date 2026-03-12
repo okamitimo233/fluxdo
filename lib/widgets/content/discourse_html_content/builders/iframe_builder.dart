@@ -124,7 +124,10 @@ class IframeAttributes {
 
   /// 获取完整 URL
   String get fullUrl {
-    if (src.startsWith('/') && !src.startsWith('//')) {
+    if (src.startsWith('//')) {
+      return 'https:$src';
+    }
+    if (src.startsWith('/')) {
       return '${AppConstants.baseUrl}$src';
     }
     return src;

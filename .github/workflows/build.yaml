@@ -32,6 +32,12 @@ jobs:
             flutter-target: android-x64
           - platform: ios
             os: macos-latest
+          - platform: macos
+            os: macos-latest
+            arch: arm64
+          - platform: macos
+            os: macos-13
+            arch: x86_64
 
     steps:
       - name: Checkout
@@ -53,7 +59,7 @@ jobs:
           cache: true
 
       - name: Setup Rust
-        if: startsWith(matrix.platform, 'android')
+        if: startsWith(matrix.platform, 'android') || matrix.platform == 'macos'
         uses: dtolnay/rust-toolchain@stable
 
       - name: Setup Android build environment
@@ -111,6 +117,49 @@ jobs:
           cp -r Runner.app Payload/
           zip -r fluxdo-unsigned.ipa Payload
           mv fluxdo-unsigned.ipa ../../../dist/
+
+      - name: Install macOS dependencies
+        if: matrix.platform == 'macos'
+        run: npm install -g appdmg
+
+      - name: Build DOH Proxy for macOS
+        if: matrix.platform == 'macos'
+        working-directory: core/doh_proxy
+        run: cargo build --release --features ech
+
+      - name: Copy macOS native libraries
+        if: matrix.platform == 'macos'
+        run: |
+          mkdir -p macos/Runner/Resources
+          cp core/doh_proxy/target/release/libdoh_proxy.dylib macos/Runner/Resources/
+          cp core/doh_proxy/certs/ca.der macos/Runner/Resources/proxy_ca.der
+
+      - name: Build macOS
+        if: matrix.platform == 'macos'
+        run: |
+          flutter build macos --release
+          mkdir -p dist
+          APP_PATH="build/macos/Build/Products/Release/fluxdo.app"
+          # 将 dylib 复制到 app bundle 内
+          cp core/doh_proxy/target/release/libdoh_proxy.dylib "$APP_PATH/Contents/Frameworks/"
+          cp core/doh_proxy/certs/ca.der "$APP_PATH/Contents/Resources/proxy_ca.der"
+
+      - name: Package macOS DMG
+        if: matrix.platform == 'macos'
+        run: |
+          cat > dmg-config.json << 'DMGEOF'
+          {
+            "title": "Fluxdo",
+            "contents": [
+              { "x": 448, "y": 344, "type": "link", "path": "/Applications" },
+              { "x": 192, "y": 344, "type": "file", "path": "build/macos/Build/Products/Release/fluxdo.app" }
+            ],
+            "window": {
+              "size": { "width": 660, "height": 500 }
+            }
+          }
+          DMGEOF
+          appdmg dmg-config.json "dist/fluxdo-macos-${{ matrix.arch }}.dmg"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -289,3 +338,68 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update AltStore Source
+        if: env.IS_STABLE == 'true'
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          VERSION_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          DOWNLOAD_URL="https://github.com/lingyan000/fluxdo/releases/download/v${VERSION}/fluxdo-unsigned.ipa"
+          IPA_SIZE=$(stat -c%s "./dist/fluxdo-unsigned.ipa" 2>/dev/null || stat -f%z "./dist/fluxdo-unsigned.ipa")
+          VERSION_DESC=$(cat release_notes.md | head -50)
+
+          # 尝试从 gh-pages 获取已有的 source.json（保留历史版本）
+          EXISTING_SOURCE=""
+          if git fetch origin gh-pages 2>/dev/null; then
+            EXISTING_SOURCE=$(git show origin/gh-pages:source.json 2>/dev/null || echo "")
+          fi
+
+          if [ -n "$EXISTING_SOURCE" ]; then
+            # 基于已有的 source.json，追加新版本
+            echo "$EXISTING_SOURCE" | jq \
+              --arg ver "$VERSION" \
+              --arg date "$VERSION_DATE" \
+              --arg url "$DOWNLOAD_URL" \
+              --argjson size "$IPA_SIZE" \
+              --arg desc "$VERSION_DESC" \
+              '.apps[0].versions = [{
+                "version": $ver,
+                "date": $date,
+                "downloadURL": $url,
+                "size": $size,
+                "localizedDescription": $desc
+              }] + [.apps[0].versions[] | select(.version != $ver)]' \
+              > altstore/source.json
+          else
+            # 首次生成，基于模板
+            jq \
+              --arg ver "$VERSION" \
+              --arg date "$VERSION_DATE" \
+              --arg url "$DOWNLOAD_URL" \
+              --argjson size "$IPA_SIZE" \
+              --arg desc "$VERSION_DESC" \
+              '.apps[0].versions = [{
+                "version": $ver,
+                "date": $date,
+                "downloadURL": $url,
+                "size": $size,
+                "localizedDescription": $desc
+              }]' \
+              altstore/source.json > altstore/source_tmp.json
+            mv altstore/source_tmp.json altstore/source.json
+          fi
+
+      - name: Prepare GitHub Pages
+        if: env.IS_STABLE == 'true'
+        run: |
+          mkdir -p gh-pages-deploy
+          cp altstore/source.json gh-pages-deploy/
+          cp ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png gh-pages-deploy/icon.png
+
+      - name: Deploy to GitHub Pages
+        if: env.IS_STABLE == 'true'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./gh-pages-deploy
+          keep_files: false

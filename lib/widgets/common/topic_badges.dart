@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import '../../constants.dart';
 import '../../models/category.dart';
+import '../../utils/url_helper.dart';
 import '../../services/discourse_cache_manager.dart';
 import '../../utils/tag_icon_list.dart';
 
@@ -258,9 +258,7 @@ class CategoryBadge extends StatelessWidget {
           else if (logoUrl != null && logoUrl!.isNotEmpty)
             Image(
               image: discourseImageProvider(
-                logoUrl!.startsWith('http')
-                    ? logoUrl!
-                    : '${AppConstants.baseUrl}$logoUrl',
+                UrlHelper.resolveUrl(logoUrl!),
               ),
               width: size.iconSize,
               height: size.iconSize,

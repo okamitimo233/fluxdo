@@ -29,6 +29,13 @@
                 <a href="https://github.com/lingyan000/fluxdo/releases/download/vVERSION/fluxdo-unsigned.ipa"><img src="https://img.shields.io/badge/IPA-Unsigned-0c6bff.svg?logo=apple"></a>
             </td>
         </tr>
+        <tr>
+        <td>macOS</td>
+            <td>
+                <a href="https://github.com/lingyan000/fluxdo/releases/download/vVERSION/fluxdo-macos-arm64.dmg"><img src="https://img.shields.io/badge/DMG-Apple_Silicon-333333.svg?logo=apple"></a><br>
+                <a href="https://github.com/lingyan000/fluxdo/releases/download/vVERSION/fluxdo-macos-x86_64.dmg"><img src="https://img.shields.io/badge/DMG-Intel-666666.svg?logo=apple"></a>
+            </td>
+        </tr>
     </tbody>
 </table>
 

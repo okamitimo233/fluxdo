@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import '../../../../constants.dart';
 import '../../../../models/topic.dart';
 import '../../../../services/discourse_cache_manager.dart';
 import '../../../../utils/font_awesome_helper.dart';
+import '../../../../utils/url_helper.dart';
 
 /// 帖子头部徽章图标
 class PostGrantedBadgeIcon extends StatelessWidget {
@@ -32,9 +32,7 @@ class PostGrantedBadgeIcon extends StatelessWidget {
 
     // 优先使用图片
     if (badge.imageUrl != null && badge.imageUrl!.isNotEmpty) {
-      final url = badge.imageUrl!.startsWith('http')
-          ? badge.imageUrl!
-          : '${AppConstants.baseUrl}${badge.imageUrl}';
+      final url = UrlHelper.resolveUrl(badge.imageUrl!);
       return Tooltip(
         message: badge.name,
         child: Padding(

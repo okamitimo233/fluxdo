@@ -1,6 +1,7 @@
 // 帖子数据模型
 import 'package:flutter/foundation.dart' show listEquals;
 import '../utils/time_utils.dart';
+import '../utils/url_helper.dart';
 import 'user.dart';
 
 /// 标签模型
@@ -139,7 +140,8 @@ class TopicUser {
   }
 
   String getAvatarUrl({int size = 40}) {
-    return avatarTemplate.replaceAll('{size}', '$size');
+    final template = avatarTemplate.replaceAll('{size}', '$size');
+    return UrlHelper.resolveUrl(template);
   }
 }
 
@@ -434,9 +436,7 @@ class ReactionUser {
 
   String getAvatarUrl({int size = 96}) {
     final template = avatarTemplate.replaceAll('{size}', '$size');
-    if (template.startsWith('http')) return template;
-    if (template.startsWith('/')) return 'https://linux.do$template';
-    return 'https://linux.do/$template';
+    return UrlHelper.resolveUrl(template);
   }
 }
 
@@ -690,9 +690,10 @@ class Post {
   String getAvatarUrl({int size = 120}) {
     // 优先使用动画头像
     if (animatedAvatar != null && animatedAvatar!.isNotEmpty) {
-      return animatedAvatar!;
+      return UrlHelper.resolveUrl(animatedAvatar!);
     }
-    return avatarTemplate.replaceAll('{size}', '$size');
+    final template = avatarTemplate.replaceAll('{size}', '$size');
+    return UrlHelper.resolveUrl(template);
   }
 
   /// 帖子是否已被删除

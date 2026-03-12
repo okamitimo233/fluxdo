@@ -7,9 +7,9 @@ import '../../models/topic.dart';
 import '../../models/category.dart';
 import '../../providers/discourse_providers.dart';
 import '../../providers/preferences_provider.dart';
-import '../../constants.dart';
 import '../../utils/font_awesome_helper.dart';
 import '../../utils/share_utils.dart';
+import '../../utils/url_helper.dart';
 import '../../services/discourse_cache_manager.dart';
 import '../../pages/topic_detail_page/topic_detail_page.dart';
 import '../common/loading_spinner.dart';
@@ -375,9 +375,7 @@ class _TopicPreviewDialogState extends ConsumerState<TopicPreviewDialog> {
 
     if (topic.posters.isNotEmpty && topic.posters.first.user != null) {
       final op = topic.posters.first.user!;
-      avatarUrl = op.avatarTemplate.startsWith('http')
-          ? op.getAvatarUrl(size: 56)
-          : '${AppConstants.baseUrl}${op.getAvatarUrl(size: 56)}';
+      avatarUrl = op.getAvatarUrl(size: 56);
       username = op.username;
     } else {
       username = topic.lastPosterUsername ?? '';
@@ -464,9 +462,7 @@ class _TopicPreviewDialogState extends ConsumerState<TopicPreviewDialog> {
                     padding: const EdgeInsets.only(right: 6),
                     child: Image(
                       image: discourseImageProvider(
-                        logoUrl.startsWith('http')
-                            ? logoUrl
-                            : '${AppConstants.baseUrl}$logoUrl',
+                        UrlHelper.resolveUrl(logoUrl),
                       ),
                       width: 12,
                       height: 12,
@@ -535,9 +531,7 @@ class _TopicPreviewDialogState extends ConsumerState<TopicPreviewDialog> {
                   String fallback = '';
 
                   if (poster.user != null) {
-                    avatarUrl = poster.user!.avatarTemplate.startsWith('http')
-                        ? poster.user!.getAvatarUrl(size: 56)
-                        : '${AppConstants.baseUrl}${poster.user!.getAvatarUrl(size: 56)}';
+                    avatarUrl = poster.user!.getAvatarUrl(size: 56);
                     fallback = poster.user!.username;
                   }
 

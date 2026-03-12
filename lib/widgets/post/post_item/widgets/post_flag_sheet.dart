@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
-import '../../../../constants.dart';
 import '../../../../models/topic.dart';
+import '../../../../utils/url_helper.dart';
 import '../../../../services/preloaded_data_service.dart';
 import '../../../../services/discourse/discourse_service.dart';
 import '../../../../services/toast_service.dart';
@@ -290,7 +290,7 @@ class _PostFlagSheetState extends State<PostFlagSheet> {
         return null;
       },
       onTapUrl: (url) {
-        final fullUrl = url.startsWith('http') ? url : '${AppConstants.baseUrl}$url';
+        final fullUrl = UrlHelper.resolveUrl(url);
         debugPrint('Open URL: $fullUrl');
         return true;
       },

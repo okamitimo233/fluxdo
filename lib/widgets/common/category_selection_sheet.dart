@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:fluxdo/models/category.dart';
 import 'package:fluxdo/utils/font_awesome_helper.dart';
-import 'package:fluxdo/constants.dart';
 import 'package:fluxdo/services/discourse_cache_manager.dart';
+import 'package:fluxdo/utils/url_helper.dart';
 
 class CategorySelectionSheet extends StatefulWidget {
   final List<Category> categories;
@@ -272,7 +272,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
     }
 
     if (logoUrl != null && logoUrl.isNotEmpty) {
-      final fullUrl = logoUrl.startsWith('http') ? logoUrl : '${AppConstants.baseUrl}$logoUrl';
+      final fullUrl = UrlHelper.resolveUrl(logoUrl);
       return SizedBox(
         width: 24,
         height: 24,

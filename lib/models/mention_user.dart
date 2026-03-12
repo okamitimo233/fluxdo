@@ -1,3 +1,5 @@
+import '../utils/url_helper.dart';
+
 /// 从文本中提取所有 @用户名
 /// 返回不重复的用户名列表（不含 @）
 List<String> extractMentionNames(String text) {
@@ -40,8 +42,7 @@ class MentionUser {
   String? getAvatarUrl(String baseUrl, {int size = 40}) {
     if (avatarTemplate == null) return null;
     final url = avatarTemplate!.replaceAll('{size}', size.toString());
-    if (url.startsWith('http')) return url;
-    return '$baseUrl$url';
+    return UrlHelper.resolveUrl(url);
   }
 }
 

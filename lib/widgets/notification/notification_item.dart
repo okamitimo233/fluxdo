@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jovial_svg/jovial_svg.dart';
 import '../../models/notification.dart';
-import '../../constants.dart';
+import '../../utils/url_helper.dart';
 import '../common/emoji_text.dart';
 import '../common/smart_avatar.dart';
 import '../common/relative_time_text.dart';
@@ -108,9 +108,7 @@ class NotificationItem extends StatelessWidget {
     final url = notification.getAvatarUrl();
     if (url.isNotEmpty) return url;
     if (systemAvatarTemplate != null && systemAvatarTemplate!.isNotEmpty) {
-      final template = systemAvatarTemplate!;
-      if (template.startsWith('http')) return template;
-      return '${AppConstants.baseUrl}$template';
+      return UrlHelper.resolveUrl(systemAvatarTemplate!);
     }
     return null;
   }

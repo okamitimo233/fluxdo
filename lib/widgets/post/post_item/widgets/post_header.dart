@@ -5,6 +5,7 @@ import '../../../../models/topic.dart';
 import '../../../../pages/user_profile_page.dart';
 import '../../../../services/discourse_cache_manager.dart';
 import '../../../../services/emoji_handler.dart';
+import '../../../../utils/url_helper.dart';
 import '../../../common/flair_badge.dart';
 import '../../../common/smart_avatar.dart';
 import '../../../common/avatar_glow.dart';
@@ -253,9 +254,7 @@ class PostHeader extends StatelessWidget {
                         backgroundColor: theme.colorScheme.primaryContainer,
                         backgroundImage: post.replyToUser!.avatarTemplate.isNotEmpty
                             ? discourseImageProvider(
-                                post.replyToUser!.avatarTemplate.startsWith('http')
-                                    ? post.replyToUser!.avatarTemplate.replaceAll('{size}', '40')
-                                    : '${AppConstants.baseUrl}${post.replyToUser!.avatarTemplate.replaceAll('{size}', '40')}',
+                                UrlHelper.resolveUrl(post.replyToUser!.avatarTemplate.replaceAll('{size}', '40')),
                               )
                             : null,
                         child: post.replyToUser!.avatarTemplate.isEmpty

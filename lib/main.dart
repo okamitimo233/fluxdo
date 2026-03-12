@@ -21,6 +21,8 @@ import 'services/network/cookie/cookie_sync_service.dart';
 import 'services/network/cookie/cookie_jar_service.dart';
 import 'services/network/adapters/cronet_fallback_service.dart';
 import 'services/local_notification_service.dart';
+import 'services/data_management/cache_size_service.dart';
+import 'services/discourse_cache_manager.dart';
 import 'services/toast_service.dart';
 
 import 'services/preloaded_data_service.dart';
@@ -94,6 +96,15 @@ Future<void> main() async {
       const MethodChannel('com.github.lingyan000.fluxdo/crashlytics')
           .invokeMethod('setCrashlyticsEnabled', {'enabled': true}),
   ]);
+
+  // 冷启动自动清除图片缓存（如果用户开启了该选项）
+  if (prefs.getBool('pref_clear_cache_on_exit') == true) {
+    Future.wait([
+      DiscourseCacheManager().emptyCache(),
+      EmojiCacheManager().emptyCache(),
+      ExternalImageCacheManager().emptyCache(),
+    ]).then((_) => CacheSizeService.deleteImageCacheDirs()).ignore();
+  }
 
   // 应用竖屏锁定设置（仅移动端）
   if (Platform.isIOS || Platform.isAndroid) {

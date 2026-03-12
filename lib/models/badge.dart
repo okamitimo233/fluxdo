@@ -1,4 +1,5 @@
 import '../utils/time_utils.dart';
+import '../utils/url_helper.dart';
 
 /// 徽章类型
 enum BadgeType {
@@ -281,13 +282,10 @@ class BadgeUser {
   String getAvatarUrl({int size = 96}) {
     // 优先使用动画头像
     if (animatedAvatar != null && animatedAvatar!.isNotEmpty) {
-      if (animatedAvatar!.startsWith('http')) return animatedAvatar!;
-      if (animatedAvatar!.startsWith('/')) return 'https://linux.do$animatedAvatar';
-      return 'https://linux.do/$animatedAvatar';
+      return UrlHelper.resolveUrl(animatedAvatar!);
     }
     final template = avatarTemplate.replaceAll('{size}', size.toString());
-    if (template.startsWith('http')) return template;
-    return template;
+    return UrlHelper.resolveUrl(template);
   }
 }
 

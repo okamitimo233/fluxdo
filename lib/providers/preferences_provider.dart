@@ -25,6 +25,8 @@ class AppPreferences {
   final bool portraitLock;
   /// 滚动时收起顶栏和底栏
   final bool hideBarOnScroll;
+  /// 退出时清除图片缓存
+  final bool clearCacheOnExit;
 
   const AppPreferences({
     required this.autoPanguSpacing,
@@ -38,6 +40,7 @@ class AppPreferences {
     required this.crashlytics,
     required this.portraitLock,
     required this.hideBarOnScroll,
+    required this.clearCacheOnExit,
   });
 
   AppPreferences copyWith({
@@ -52,6 +55,7 @@ class AppPreferences {
     bool? crashlytics,
     bool? portraitLock,
     bool? hideBarOnScroll,
+    bool? clearCacheOnExit,
   }) {
     return AppPreferences(
       autoPanguSpacing: autoPanguSpacing ?? this.autoPanguSpacing,
@@ -66,6 +70,7 @@ class AppPreferences {
       crashlytics: crashlytics ?? this.crashlytics,
       portraitLock: portraitLock ?? this.portraitLock,
       hideBarOnScroll: hideBarOnScroll ?? this.hideBarOnScroll,
+      clearCacheOnExit: clearCacheOnExit ?? this.clearCacheOnExit,
     );
   }
 }
@@ -83,6 +88,7 @@ class PreferencesNotifier extends StateNotifier<AppPreferences> {
   static const String _crashlyticsKey = 'pref_crashlytics';
   static const String _portraitLockKey = 'pref_portrait_lock';
   static const String _hideBarOnScrollKey = 'pref_hide_bar_on_scroll';
+  static const String _clearCacheOnExitKey = 'pref_clear_cache_on_exit';
 
   static const _crashlyticsChannel =
       MethodChannel('com.github.lingyan000.fluxdo/crashlytics');
@@ -102,6 +108,7 @@ class PreferencesNotifier extends StateNotifier<AppPreferences> {
             crashlytics: _prefs.getBool(_crashlyticsKey) ?? false,
             portraitLock: _prefs.getBool(_portraitLockKey) ?? false,
             hideBarOnScroll: _prefs.getBool(_hideBarOnScrollKey) ?? true,
+            clearCacheOnExit: _prefs.getBool(_clearCacheOnExitKey) ?? false,
           ),
         ) {
     isPortraitLocked = state.portraitLock;
@@ -179,6 +186,11 @@ class PreferencesNotifier extends StateNotifier<AppPreferences> {
   Future<void> setHideBarOnScroll(bool enabled) async {
     state = state.copyWith(hideBarOnScroll: enabled);
     await _prefs.setBool(_hideBarOnScrollKey, enabled);
+  }
+
+  Future<void> setClearCacheOnExit(bool enabled) async {
+    state = state.copyWith(clearCacheOnExit: enabled);
+    await _prefs.setBool(_clearCacheOnExitKey, enabled);
   }
 
   /// 当前竖屏锁定状态（供视频播放器等无法访问 ref 的组件使用）

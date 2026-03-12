@@ -275,15 +275,11 @@ class User {
   String getAvatarUrl({int size = 120}) {
     // 优先使用动画头像
     if (animatedAvatar != null && animatedAvatar!.isNotEmpty) {
-      if (animatedAvatar!.startsWith('http')) return animatedAvatar!;
-      if (animatedAvatar!.startsWith('/')) return 'https://linux.do$animatedAvatar';
-      return 'https://linux.do/$animatedAvatar';
+      return UrlHelper.resolveUrl(animatedAvatar!);
     }
     if (avatarTemplate == null) return '';
     final template = avatarTemplate!.replaceAll('{size}', size.toString());
-    if (template.startsWith('http')) return template;
-    if (template.startsWith('/')) return 'https://linux.do$template';
-    return 'https://linux.do/$template';
+    return UrlHelper.resolveUrl(template);
   }
 }
 
@@ -543,9 +539,7 @@ class SummaryUserWithCount {
   String getAvatarUrl({int size = 120}) {
     if (avatarTemplate == null) return '';
     final template = avatarTemplate!.replaceAll('{size}', '$size');
-    if (template.startsWith('http')) return template;
-    if (template.startsWith('/')) return 'https://linux.do$template';
-    return 'https://linux.do/$template';
+    return UrlHelper.resolveUrl(template);
   }
 }
 
@@ -624,6 +618,6 @@ class FollowUser {
   String getAvatarUrl({int size = 96}) {
     if (avatarTemplate == null) return '';
     final template = avatarTemplate!.replaceAll('{size}', size.toString());
-    return template.startsWith('http') ? template : 'https://linux.do$template';
+    return UrlHelper.resolveUrl(template);
   }
 }

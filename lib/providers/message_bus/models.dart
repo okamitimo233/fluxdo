@@ -1,6 +1,8 @@
 /// MessageBus 相关数据模型
 library;
 
+import '../../utils/url_helper.dart';
+
 /// 正在输入的用户信息
 class TypingUser {
   final int id;
@@ -14,7 +16,8 @@ class TypingUser {
   });
 
   String getAvatarUrl({int size = 40}) {
-    return avatarTemplate.replaceAll('{size}', '$size');
+    final template = avatarTemplate.replaceAll('{size}', '$size');
+    return UrlHelper.resolveUrl(template);
   }
 
   @override
