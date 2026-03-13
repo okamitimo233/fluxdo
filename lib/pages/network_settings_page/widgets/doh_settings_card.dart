@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../services/network/doh/doh_resolver.dart';
 import '../../../services/network/doh/network_settings_service.dart';
+import '../../../services/network/vpn_auto_toggle_service.dart';
 import '../../../services/toast_service.dart';
 
 /// DOH 设置卡片（含服务器列表和测速）
@@ -11,10 +12,12 @@ class DohSettingsCard extends StatefulWidget {
     super.key,
     required this.settings,
     required this.isApplying,
+    this.isSuppressedByVpn = false,
   });
 
   final NetworkSettings settings;
   final bool isApplying;
+  final bool isSuppressedByVpn;
 
   @override
   State<DohSettingsCard> createState() => _DohSettingsCardState();
@@ -55,7 +58,11 @@ class _DohSettingsCardState extends State<DohSettingsCard> {
           SwitchListTile(
             title: const Text('DNS over HTTPS'),
             subtitle: Text(
-              settings.dohEnabled ? '已启用加密 DNS 解析' : '使用系统默认 DNS',
+              widget.isSuppressedByVpn
+                  ? '已被 VPN 自动关闭，VPN 断开后将自动恢复'
+                  : settings.dohEnabled
+                      ? '已启用加密 DNS 解析'
+                      : '使用系统默认 DNS',
             ),
             secondary: Icon(
               settings.dohEnabled ? Icons.shield : Icons.shield_outlined,
@@ -64,6 +71,10 @@ class _DohSettingsCardState extends State<DohSettingsCard> {
             value: settings.dohEnabled,
             onChanged: (value) async {
               await _service.setDohEnabled(value);
+              // 用户在 VPN 活跃时手动开启，清除压制标记
+              if (value && widget.isSuppressedByVpn) {
+                VpnAutoToggleService.instance.clearDohSuppression();
+              }
             },
           ),
 

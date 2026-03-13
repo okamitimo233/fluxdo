@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../adapters/cronet_fallback_service.dart';
-import '../adapters/platform_adapter.dart';
 
 /// Cronet 降级拦截器
-/// 在请求失败时判断是否是 Cronet 导致的,如果是则自动降级并重试
+/// 在请求失败时判断是否是 Cronet 导致的,如果是则自动降级并重试。
+/// 降级后 _DynamicAdapter 会在下次请求时自动检测到 hasFallenBack 变化并切换适配器。
 class CronetFallbackInterceptor extends Interceptor {
   CronetFallbackInterceptor(this._dio);
 
@@ -23,7 +23,6 @@ class CronetFallbackInterceptor extends Interceptor {
     final isCronetError = CronetFallbackService.isCronetError(err.error);
 
     if (!isCronetError) {
-      // 不是 Cronet 错误,正常处理
       handler.next(err);
       return;
     }
@@ -39,29 +38,20 @@ class CronetFallbackInterceptor extends Interceptor {
       return;
     }
 
-    // 触发降级
+    // 触发降级，_DynamicAdapter 会在重试请求时自动切换适配器
     await fallbackService.triggerFallback(err.error.toString());
+    debugPrint('[Cronet] Fallback triggered, retrying request');
 
-    // 重新配置适配器
+    // 重试请求
+    _isRetrying = true;
     try {
-      reconfigurePlatformAdapter(_dio);
-      debugPrint('[Cronet] Adapter reconfigured, retrying request');
-
-      // 重试请求
-      _isRetrying = true;
-      try {
-        final response = await _dio.fetch(err.requestOptions);
-        handler.resolve(response);
-      } catch (e) {
-        // 重试失败,返回原始错误
-        debugPrint('[Cronet] Retry failed: $e');
-        handler.next(err);
-      } finally {
-        _isRetrying = false;
-      }
+      final response = await _dio.fetch(err.requestOptions);
+      handler.resolve(response);
     } catch (e) {
-      debugPrint('[Cronet] Failed to reconfigure adapter: $e');
+      debugPrint('[Cronet] Retry failed: $e');
       handler.next(err);
+    } finally {
+      _isRetrying = false;
     }
   }
 }

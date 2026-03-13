@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../services/network/proxy/proxy_settings_service.dart';
 import '../../../services/network/proxy/shadowsocks_uri_parser.dart';
+import '../../../services/network/vpn_auto_toggle_service.dart';
 import '../../../services/toast_service.dart';
 
 class HttpProxyCard extends StatelessWidget {
@@ -9,10 +10,12 @@ class HttpProxyCard extends StatelessWidget {
     super.key,
     required this.proxySettings,
     required this.dohEnabled,
+    this.isSuppressedByVpn = false,
   });
 
   final ProxySettings proxySettings;
   final bool dohEnabled;
+  final bool isSuppressedByVpn;
 
   @override
   Widget build(BuildContext context) {
@@ -46,9 +49,11 @@ class HttpProxyCard extends StatelessWidget {
               SwitchListTile(
                 title: const Text('上游代理'),
                 subtitle: Text(
-                  proxySettings.enabled
-                      ? '已启用 ${proxySettings.protocol.displayName} 上游代理，由本地网关统一转发'
-                      : '为本地网关配置远端 HTTP / SOCKS5 / Shadowsocks 代理',
+                  isSuppressedByVpn
+                      ? '已被 VPN 自动关闭，VPN 断开后将自动恢复'
+                      : proxySettings.enabled
+                          ? '已启用 ${proxySettings.protocol.displayName} 上游代理，由本地网关统一转发'
+                          : '为本地网关配置远端 HTTP / SOCKS5 / Shadowsocks 代理',
                 ),
                 secondary: Icon(
                   proxySettings.enabled ? Icons.vpn_key : Icons.vpn_key_outlined,
@@ -69,6 +74,10 @@ class HttpProxyCard extends StatelessWidget {
                   }
 
                   await proxyService.setEnabled(value);
+                  // 用户在 VPN 活跃时手动开启，清除压制标记
+                  if (value && isSuppressedByVpn) {
+                    VpnAutoToggleService.instance.clearProxySuppression();
+                  }
                   if (!value) {
                     return;
                   }

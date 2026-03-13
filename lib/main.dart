@@ -28,6 +28,7 @@ import 'services/toast_service.dart';
 import 'services/preloaded_data_service.dart';
 import 'services/network/doh/network_settings_service.dart';
 import 'services/network/proxy/proxy_settings_service.dart';
+import 'services/network/vpn_auto_toggle_service.dart';
 import 'services/network/doh_proxy/proxy_certificate.dart';
 import 'services/cf_challenge_logger.dart';
 import 'services/cf_clearance_refresh_service.dart';
@@ -96,6 +97,7 @@ Future<void> main() async {
           .invokeMethod('setCrashlyticsEnabled', {'enabled': true}),
   ]);
   await NetworkSettingsService.instance.initialize(prefs);
+  VpnAutoToggleService.instance.initialize(prefs);
 
   // 冷启动自动清除图片缓存（如果用户开启了该选项）
   if (prefs.getBool('pref_clear_cache_on_exit') == true) {

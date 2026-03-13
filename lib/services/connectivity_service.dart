@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import 'network/discourse_dio.dart';
+import 'network/vpn_auto_toggle_service.dart';
 
 /// 网络连通性检测服务
 ///
@@ -62,6 +63,7 @@ class ConnectivityService {
   Future<void> _checkInitial() async {
     try {
       final result = await _connectivity.checkConnectivity();
+      VpnAutoToggleService.instance.handleConnectivityChanged(result);
       await _onConnectivityChanged(result);
     } catch (e) {
       debugPrint('[Connectivity] 初始检查失败: $e');
@@ -70,6 +72,7 @@ class ConnectivityService {
 
   Future<void> _onConnectivityChanged(List<ConnectivityResult> results) async {
     debugPrint('[Connectivity] onConnectivityChanged: $results');
+    VpnAutoToggleService.instance.handleConnectivityChanged(results);
     final hasNetwork = results.isNotEmpty &&
         !results.every((r) => r == ConnectivityResult.none);
 

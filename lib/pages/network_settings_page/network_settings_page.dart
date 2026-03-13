@@ -3,8 +3,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/network/doh/network_settings_service.dart';
 import '../../services/network/proxy/proxy_settings_service.dart';
+import '../../services/network/vpn_auto_toggle_service.dart';
 import 'widgets/http_proxy_card.dart';
 import 'widgets/doh_settings_card.dart';
+import 'widgets/vpn_auto_toggle_card.dart';
 import 'widgets/advanced_settings_card.dart';
 import 'widgets/debug_tools_card.dart';
 
@@ -19,6 +21,7 @@ class NetworkSettingsPage extends StatefulWidget {
 class _NetworkSettingsPageState extends State<NetworkSettingsPage> {
   final NetworkSettingsService _service = NetworkSettingsService.instance;
   final ProxySettingsService _proxyService = ProxySettingsService.instance;
+  final VpnAutoToggleService _vpnService = VpnAutoToggleService.instance;
   bool _isDeveloperMode = false;
 
   @override
@@ -41,11 +44,19 @@ class _NetworkSettingsPageState extends State<NetworkSettingsPage> {
     final theme = Theme.of(context);
 
     return AnimatedBuilder(
-      animation: Listenable.merge([_service.notifier, _service.isApplying, _proxyService.notifier]),
+      animation: Listenable.merge([
+        _service.notifier,
+        _service.isApplying,
+        _proxyService.notifier,
+        _vpnService.enabledNotifier,
+        _vpnService.vpnActiveNotifier,
+      ]),
       builder: (context, _) {
         final settings = _service.notifier.value;
         final proxySettings = _proxyService.notifier.value;
         final isApplying = _service.isApplying.value;
+        final isDohSuppressed = _vpnService.enabled && _vpnService.isDohSuppressed;
+        final isProxySuppressed = _vpnService.enabled && _vpnService.isProxySuppressed;
 
         return Scaffold(
           appBar: AppBar(
@@ -65,10 +76,15 @@ class _NetworkSettingsPageState extends State<NetworkSettingsPage> {
           body: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
+              // VPN 自动切换
+              const VpnAutoToggleCard(),
+              const SizedBox(height: 24),
+
               // 上游 HTTP 代理设置（由本地网关统一转发）
               HttpProxyCard(
                 proxySettings: proxySettings,
                 dohEnabled: settings.dohEnabled,
+                isSuppressedByVpn: isProxySuppressed,
               ),
               const SizedBox(height: 24),
 
@@ -76,6 +92,7 @@ class _NetworkSettingsPageState extends State<NetworkSettingsPage> {
               DohSettingsCard(
                 settings: settings,
                 isApplying: isApplying,
+                isSuppressedByVpn: isDohSuppressed,
               ),
               const SizedBox(height: 24),
 

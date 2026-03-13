@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:native_dio_adapter/native_dio_adapter.dart';
 
@@ -45,46 +46,14 @@ void configurePlatformAdapter(Dio dio) {
     // Windows: 始终使用 WebView 适配器
     _configureWebViewAdapter(dio);
     _currentAdapterType = AdapterType.webview;
-  } else if (Platform.isAndroid) {
-    dio.httpClientAdapter = _AndroidDynamicAdapter(
+  } else {
+    // Android / iOS / macOS / Linux: 动态适配器，请求时自动切换
+    dio.httpClientAdapter = _DynamicAdapter(
       settings,
       proxySettings,
       fallbackService,
     );
-    _currentAdapterType = _resolveAndroidAdapterType(settings, proxySettings, fallbackService);
-  } else if (proxySettings.current.isValid) {
-    // 用户 HTTP 代理启用: 使用 NetworkHttpAdapter
-    debugPrint('[DIO] Using NetworkHttpAdapter (HTTP Proxy)');
-    _configureNetworkAdapter(dio, settings, proxySettings);
-    _currentAdapterType = AdapterType.network;
-  } else if (settings.current.dohEnabled) {
-    // DOH 启用: 使用 NetworkHttpAdapter
-    _configureNetworkAdapter(dio, settings, proxySettings);
-    _currentAdapterType = AdapterType.network;
-  } else if (fallbackService.hasFallenBack) {
-    // 已降级: 使用 NetworkHttpAdapter
-    debugPrint('[DIO] Using NetworkHttpAdapter (fallback from Cronet)');
-    _configureNetworkAdapter(dio, settings, proxySettings);
-    _currentAdapterType = AdapterType.network;
-  } else {
-    // 默认: 使用 NativeAdapter
-    if (kDebugMode && (Platform.isMacOS || Platform.isIOS)) {
-      // 调试模式下使用默认适配器（IOHttpClientAdapter），避免 NativeAdapter 热重启崩溃
-      debugPrint('[DIO] Using IOHttpClientAdapter on ${Platform.operatingSystem} (debug mode)');
-    } else if (Platform.isIOS || Platform.isMacOS) {
-      // Release 模式: URLSession 默认会自动管理 Cookie（httpShouldSetCookies=true），
-      // 会与 AppCookieManager 拦截器冲突。禁用 URLSession 的 Cookie 自动管理。
-      final config = URLSessionConfiguration.ephemeralSessionConfiguration();
-      config.httpShouldSetCookies = false;
-      dio.httpClientAdapter = NativeAdapter(
-        createCupertinoConfiguration: () => config,
-      );
-      debugPrint('[DIO] Using NativeAdapter on ${Platform.operatingSystem}');
-    } else {
-      dio.httpClientAdapter = NativeAdapter();
-      debugPrint('[DIO] Using NativeAdapter on ${Platform.operatingSystem}');
-    }
-    _currentAdapterType = AdapterType.native;
+    _currentAdapterType = _resolveAdapterType(settings, proxySettings, fallbackService);
   }
 }
 
@@ -99,19 +68,7 @@ void _configureWebViewAdapter(Dio dio) {
   });
 }
 
-/// 配置 Network 适配器
-void _configureNetworkAdapter(Dio dio, NetworkSettingsService settings, ProxySettingsService proxySettings) {
-  dio.httpClientAdapter = NetworkHttpAdapter(settings, proxySettings);
-  debugPrint('[DIO] Using NetworkHttpAdapter on ${Platform.operatingSystem}');
-}
-
-/// 根据当前设置重新配置适配器
-void reconfigurePlatformAdapter(Dio dio) {
-  dio.httpClientAdapter.close();
-  configurePlatformAdapter(dio);
-}
-
-AdapterType _resolveAndroidAdapterType(
+AdapterType _resolveAdapterType(
   NetworkSettingsService settings,
   ProxySettingsService proxySettings,
   CronetFallbackService fallbackService,
@@ -123,8 +80,30 @@ AdapterType _resolveAndroidAdapterType(
   return AdapterType.native;
 }
 
-class _AndroidDynamicAdapter implements HttpClientAdapter {
-  _AndroidDynamicAdapter(this._settings, this._proxySettings, this._fallbackService);
+/// 创建当前平台对应的 NativeAdapter
+HttpClientAdapter _createNativeAdapter() {
+  if (kDebugMode && (Platform.isMacOS || Platform.isIOS)) {
+    // 调试模式下使用默认适配器（IOHttpClientAdapter），避免 NativeAdapter 热重启崩溃
+    debugPrint('[DIO] Dynamic adapter -> IOHttpClientAdapter (debug mode)');
+    return IOHttpClientAdapter();
+  }
+  if (Platform.isIOS || Platform.isMacOS) {
+    // Release 模式: URLSession 默认会自动管理 Cookie（httpShouldSetCookies=true），
+    // 会与 AppCookieManager 拦截器冲突。禁用 URLSession 的 Cookie 自动管理。
+    final config = URLSessionConfiguration.ephemeralSessionConfiguration();
+    config.httpShouldSetCookies = false;
+    return NativeAdapter(createCupertinoConfiguration: () => config);
+  }
+  return NativeAdapter();
+}
+
+/// 动态适配器：每次请求时根据设置 version 变化自动切换底层适配器
+///
+/// Android 上在 network ↔ native（Cronet）之间切换；
+/// iOS/macOS/Linux 上在 network ↔ native（Cupertino/IO）之间切换。
+/// 解决了非 Android 平台切换 DOH/代理后必须重启的问题。
+class _DynamicAdapter implements HttpClientAdapter {
+  _DynamicAdapter(this._settings, this._proxySettings, this._fallbackService);
 
   final NetworkSettingsService _settings;
   final ProxySettingsService _proxySettings;
@@ -151,7 +130,7 @@ class _AndroidDynamicAdapter implements HttpClientAdapter {
   }
 
   HttpClientAdapter _ensureDelegate() {
-    final desiredType = _resolveAndroidAdapterType(
+    final desiredType = _resolveAdapterType(
       _settings,
       _proxySettings,
       _fallbackService,
@@ -173,10 +152,10 @@ class _AndroidDynamicAdapter implements HttpClientAdapter {
     _delegate?.close(force: true);
     if (desiredType == AdapterType.network) {
       _delegate = NetworkHttpAdapter(_settings, _proxySettings);
-      debugPrint('[DIO] Android dynamic adapter -> NetworkHttpAdapter');
+      debugPrint('[DIO] Dynamic adapter -> NetworkHttpAdapter');
     } else {
-      _delegate = NativeAdapter();
-      debugPrint('[DIO] Android dynamic adapter -> NativeAdapter');
+      _delegate = _createNativeAdapter();
+      debugPrint('[DIO] Dynamic adapter -> NativeAdapter');
     }
 
     _delegateType = desiredType;
