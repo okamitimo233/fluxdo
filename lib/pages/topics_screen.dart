@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../providers/selected_topic_provider.dart';
@@ -7,6 +8,7 @@ import '../widgets/layout/master_detail_layout.dart';
 import 'topics_page.dart';
 import 'topic_detail_page/topic_detail_page.dart';
 import 'create_topic_page.dart';
+import 'drafts_page.dart';
 
 /// 话题屏幕
 /// 在手机上显示单栏列表，平板上显示 Master-Detail 双栏
@@ -139,8 +141,16 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen> {
       masterFloatingActionButton: user != null
           ? _TopicsFab(
               onCreateTopic: () => _createTopic(context, ref),
+              onOpenDrafts: () => _openDrafts(context),
             )
           : null,
+    );
+  }
+
+  void _openDrafts(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const DraftsPage()),
     );
   }
 
@@ -177,33 +187,213 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen> {
   }
 }
 
-/// 首页 FAB：向上滚动时切换为刷新按钮
-class _TopicsFab extends ConsumerWidget {
-  const _TopicsFab({required this.onCreateTopic});
+/// 首页 FAB：向上滚动时切换为刷新按钮，正常模式下点击展开 Speed Dial 菜单
+class _TopicsFab extends ConsumerStatefulWidget {
+  const _TopicsFab({
+    required this.onCreateTopic,
+    required this.onOpenDrafts,
+  });
 
   final VoidCallback onCreateTopic;
+  final VoidCallback onOpenDrafts;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_TopicsFab> createState() => _TopicsFabState();
+}
+
+class _TopicsFabState extends ConsumerState<_TopicsFab>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _expandAnimation;
+  final LayerLink _layerLink = LayerLink();
+  bool _isExpanded = false;
+  OverlayEntry? _overlayEntry;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _expandAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _removeOverlay();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    if (_isExpanded) {
+      _close();
+    } else {
+      setState(() => _isExpanded = true);
+      _controller.forward();
+      _showOverlay();
+      HapticFeedback.lightImpact();
+    }
+  }
+
+  void _close() {
+    if (!_isExpanded) return;
+    setState(() => _isExpanded = false);
+    _controller.reverse().then((_) {
+      _removeOverlay();
+    });
+  }
+
+  void _showOverlay() {
+    _removeOverlay();
+    final theme = Theme.of(context);
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          // 全屏遮罩
+          GestureDetector(
+            onTap: _close,
+            behavior: HitTestBehavior.opaque,
+            child: FadeTransition(
+              opacity: _expandAnimation,
+              child: const ColoredBox(
+                color: Colors.black26,
+                child: SizedBox.expand(),
+              ),
+            ),
+          ),
+          // 子按钮：定位到主 FAB 上方
+          CompositedTransformFollower(
+            link: _layerLink,
+            targetAnchor: Alignment.topRight,
+            followerAnchor: Alignment.bottomRight,
+            offset: const Offset(0, -16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _buildMiniAction(
+                  icon: Icons.drafts_outlined,
+                  label: '我的草稿',
+                  onTap: () {
+                    _close();
+                    widget.onOpenDrafts();
+                  },
+                  theme: theme,
+                ),
+                const SizedBox(height: 12),
+                _buildMiniAction(
+                  icon: Icons.edit_outlined,
+                  label: '创建话题',
+                  onTap: () {
+                    _close();
+                    widget.onCreateTopic();
+                  },
+                  theme: theme,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry?.dispose();
+    _overlayEntry = null;
+  }
+
+  void _refreshTopics() {
+    ref.read(fabRefreshModeProvider.notifier).state = false;
+    ref.read(scrollToTopProvider.notifier).trigger();
+    ref.read(fabRefreshSignalProvider.notifier).trigger();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final showRefresh = ref.watch(fabRefreshModeProvider);
 
-    return FloatingActionButton(
-      heroTag: 'createTopic',
-      onPressed: showRefresh ? () => _refreshTopics(ref) : onCreateTopic,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        child: Icon(
-          showRefresh ? Icons.refresh : Icons.add,
-          key: ValueKey(showRefresh),
+    // 刷新模式切换时自动收起
+    if (showRefresh && _isExpanded) {
+      _close();
+    }
+
+    // 刷新模式：简单的单按钮
+    if (showRefresh) {
+      return FloatingActionButton(
+        heroTag: 'createTopic',
+        onPressed: _refreshTopics,
+        child: const Icon(Icons.refresh),
+      );
+    }
+
+    // 主 FAB（作为锚点，子按钮在 Overlay 中定位到它上方）
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: FloatingActionButton(
+        heroTag: 'createTopic',
+        onPressed: _toggle,
+        child: AnimatedRotation(
+          turns: _isExpanded ? 0.125 : 0,
+          duration: const Duration(milliseconds: 200),
+          child: const Icon(Icons.add),
         ),
       ),
     );
   }
 
-  void _refreshTopics(WidgetRef ref) {
-    ref.read(fabRefreshModeProvider.notifier).state = false;
-    ref.read(scrollToTopProvider.notifier).trigger();
-    ref.read(fabRefreshSignalProvider.notifier).trigger();
+  Widget _buildMiniAction({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required ThemeData theme,
+  }) {
+    return FadeTransition(
+      opacity: _expandAnimation,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.5),
+          end: Offset.zero,
+        ).animate(_expandAnimation),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Material(
+              color: theme.colorScheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(8),
+              elevation: 2,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: onTap,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
+                  child: Text(
+                    label,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            FloatingActionButton.small(
+              heroTag: 'fab_$label',
+              onPressed: onTap,
+              child: Icon(icon),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
