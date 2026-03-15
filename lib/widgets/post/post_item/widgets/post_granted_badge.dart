@@ -32,7 +32,7 @@ class PostGrantedBadgeIcon extends StatelessWidget {
 
     // 优先使用图片
     if (badge.imageUrl != null && badge.imageUrl!.isNotEmpty) {
-      final url = UrlHelper.resolveUrl(badge.imageUrl!);
+      final url = UrlHelper.resolveUrlWithCdn(badge.imageUrl!);
       return Tooltip(
         message: badge.name,
         child: Padding(

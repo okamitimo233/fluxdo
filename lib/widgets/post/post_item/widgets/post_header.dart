@@ -254,7 +254,7 @@ class PostHeader extends StatelessWidget {
                         backgroundColor: theme.colorScheme.primaryContainer,
                         backgroundImage: post.replyToUser!.avatarTemplate.isNotEmpty
                             ? discourseImageProvider(
-                                UrlHelper.resolveUrl(post.replyToUser!.avatarTemplate.replaceAll('{size}', '40')),
+                                UrlHelper.resolveUrlWithCdn(post.replyToUser!.avatarTemplate.replaceAll('{size}', '40')),
                               )
                             : null,
                         child: post.replyToUser!.avatarTemplate.isEmpty

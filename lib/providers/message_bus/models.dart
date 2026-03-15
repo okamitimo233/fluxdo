@@ -17,7 +17,7 @@ class TypingUser {
 
   String getAvatarUrl({int size = 40}) {
     final template = avatarTemplate.replaceAll('{size}', '$size');
-    return UrlHelper.resolveUrl(template);
+    return UrlHelper.resolveUrlWithCdn(template);
   }
 
   @override

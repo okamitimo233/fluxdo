@@ -950,7 +950,7 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage>
               if (hasBackground)
                 Image(
                   image: discourseImageProvider(
-                    UrlHelper.resolveUrl(bgUrl),
+                    UrlHelper.resolveUrlWithCdn(bgUrl),
                   ),
                   fit: BoxFit.cover,
                   alignment: Alignment.center,

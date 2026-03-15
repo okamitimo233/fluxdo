@@ -94,7 +94,7 @@ class GalleryInfo {
       final href = anchor.attributes['href'];
       if (href == null || href.isEmpty) continue;
 
-      var originalUrl = UrlHelper.resolveUrl(href);
+      var originalUrl = UrlHelper.resolveUrlWithCdn(href);
 
       // 文件名：从 a.lightbox 的 title 获取
       final filename = anchor.attributes['title'];
@@ -103,7 +103,7 @@ class GalleryInfo {
       final img = anchor.querySelector('img');
       var thumbnailUrl = img?.attributes['src'];
       if (thumbnailUrl != null) {
-        thumbnailUrl = UrlHelper.resolveUrl(thumbnailUrl);
+        thumbnailUrl = UrlHelper.resolveUrlWithCdn(thumbnailUrl);
       }
 
       final index = originalUrls.length;
@@ -175,7 +175,7 @@ class GalleryInfo {
     }
     
     // 2. 尝试 resolveUrl 后查找（处理相对路径）
-    final resolvedUrl = UrlHelper.resolveUrl(imageUrl);
+    final resolvedUrl = UrlHelper.resolveUrlWithCdn(imageUrl);
     if (_thumbnailToIndex.containsKey(resolvedUrl)) {
       return _thumbnailToIndex[resolvedUrl];
     }

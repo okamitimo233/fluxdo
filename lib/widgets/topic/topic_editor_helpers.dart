@@ -317,7 +317,7 @@ class CategoryTrigger extends StatelessWidget {
               else if (logoUrl != null && logoUrl.isNotEmpty)
                 Image(
                   image: discourseImageProvider(
-                    UrlHelper.resolveUrl(logoUrl),
+                    UrlHelper.resolveUrlWithCdn(logoUrl),
                   ),
                   width: 16,
                   height: 16,

@@ -220,15 +220,15 @@ class _DiscourseHtmlContentState extends ConsumerState<DiscourseHtmlContent> {
     // Pangu 混排优先处理（命中 isolate 预热缓存时无主线程开销）
     var processedHtml = enablePanguSpacing ? _applyPangu(html) : html;
 
-    // 0. 将相对路径转换为绝对路径（修复新发帖子图片不显示的问题）
-    // Discourse 创建帖子返回的 cooked 中图片使用相对路径 src="/uploads/..."
-    // 而已 rebake 的帖子使用完整 URL src="https://linux.do/uploads/..."
+    // 0. 将资源类属性转换为绝对路径。
+    // 只处理 src/poster，避免把附件 href 也错误改到 CDN。
     processedHtml = processedHtml.replaceAllMapped(
-      RegExp(r'(src|href)="(/[^"]+)"', caseSensitive: false),
+      RegExp(r'''(src|poster)=(["'])(/[^"']+)\2''', caseSensitive: false),
       (match) {
         final attr = match.group(1)!;
-        final path = match.group(2)!;
-        return '$attr="${UrlHelper.resolveUrl(path)}"';
+        final quote = match.group(2)!;
+        final path = match.group(3)!;
+        return '$attr=$quote${UrlHelper.resolveUrlWithCdn(path)}$quote';
       },
     );
 
@@ -359,7 +359,12 @@ class _DiscourseHtmlContentState extends ConsumerState<DiscourseHtmlContent> {
     // 1. 用户链接 (/u/username) - 相当于 mention
     if (DiscourseUrlParser.isUserLink(url)) return;
     // 2. 附件/上传链接
-    if (url.contains('/uploads/')) return;
+    if (url.startsWith('upload://') ||
+        url.contains('/uploads/') ||
+        url.contains('/secure-uploads/') ||
+        url.contains('/secure-media-uploads/')) {
+      return;
+    }
     // 3. Email 链接
     if (url.startsWith('mailto:')) return;
     // 4. 锚点链接
@@ -884,7 +889,7 @@ class _DiscourseHtmlContentState extends ConsumerState<DiscourseHtmlContent> {
     for (final anchor in lightboxLinks) {
       final href = anchor.attributes['href'] as String?;
       if (href != null && href.isNotEmpty) {
-        final url = UrlHelper.resolveUrl(href);
+        final url = UrlHelper.resolveUrlWithCdn(href);
         _revealedImageUrls.add(url);
       }
     }

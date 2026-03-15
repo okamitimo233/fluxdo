@@ -91,7 +91,7 @@ class MarkdownBody extends StatelessWidget {
 
       // upload:// 短链接保留原始值，由下游 widget factory 异步解析
       if (!src.startsWith('upload://')) {
-        src = UrlHelper.resolveUrl(src);
+        src = UrlHelper.resolveUrlWithCdn(src);
       }
 
       return '\n\n<img src="$src" alt="$alt" width="$width" height="$height">\n\n';

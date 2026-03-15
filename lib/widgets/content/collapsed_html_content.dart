@@ -61,7 +61,7 @@ class CollapsedHtmlContent extends StatelessWidget {
 
       if (src != null && isEmoji) {
         // 修正相对路径
-        final fullUrl = UrlHelper.resolveUrl(src);
+        final fullUrl = UrlHelper.resolveUrlWithCdn(src);
         
         // 计算合适的 Emoji 尺寸
         final double emojiSize = (style?.fontSize ?? 14.0) * 1.3;

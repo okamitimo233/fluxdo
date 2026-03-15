@@ -37,6 +37,7 @@ class PreloadedDataService {
   List<String>? _enabledReactions;
   String? _sharedSessionKey;  // MessageBus 跨域认证 key
   String? _longPollingBaseUrl;  // MessageBus 独立域名
+  String _baseUri = '';  // Discourse 子路径前缀（如 /forum）
   String? _cdnUrl;  // CDN 域名（从 data-discourse-setup 提取）
   String? _s3CdnUrl;  // S3 CDN 域名（如 https://cdn3.linux.do）
   String? _s3BaseUrl;  // S3 基础 URL（如 //linuxdo-uploads.s3.linux.do）
@@ -243,6 +244,9 @@ class PreloadedDataService {
   /// 获取 MessageBus 长轮询 base URL（独立域名，如 https://ping.linux.do）
   String? get longPollingBaseUrl => _longPollingBaseUrl;
 
+  /// 获取 Discourse 子路径前缀（如 /forum，根部署时为空字符串）
+  String get baseUri => _baseUri;
+
   /// 获取 CDN URL（如 https://cdn.linux.do）
   String? get cdnUrl => _cdnUrl;
 
@@ -341,6 +345,7 @@ class PreloadedDataService {
     _topicTrackingStateMeta = null;
     _sharedSessionKey = null;
     _longPollingBaseUrl = null;
+    _baseUri = '';
     _cdnUrl = null;
     _s3CdnUrl = null;
     _s3BaseUrl = null;
@@ -362,6 +367,7 @@ class PreloadedDataService {
     _enabledReactions = null;
     _sharedSessionKey = null;
     _longPollingBaseUrl = null;
+    _baseUri = '';
     _cdnUrl = null;
     _s3CdnUrl = null;
     _s3BaseUrl = null;
@@ -417,6 +423,7 @@ class PreloadedDataService {
     _extractCsrfTokenFromHtml(html);
     _extractSharedSessionKeyFromHtml(html);
     _extractTurnstileSitekeyFromHtml(html);
+    _extractBaseUriFromHtml(html);
     _extractCdnUrlFromHtml(html);
     // 提取 data-preloaded 属性内容
     final match = RegExp(r'data-preloaded="([^"]*)"').firstMatch(html);
@@ -498,6 +505,26 @@ class PreloadedDataService {
 
     if (_cdnUrl != null) debugPrint('[PreloadedData] cdnUrl: $_cdnUrl');
     if (_s3CdnUrl != null) debugPrint('[PreloadedData] s3CdnUrl: $_s3CdnUrl, s3BaseUrl: $_s3BaseUrl');
+  }
+
+  /// 从 HTML 中提取 discourse-base-uri（子路径部署前缀）
+  void _extractBaseUriFromHtml(String html) {
+    final match = RegExp(
+      "<meta[^>]+name=[\"']discourse-base-uri[\"'][^>]+content=[\"']([^\"']*)[\"']",
+      caseSensitive: false,
+    ).firstMatch(html);
+
+    final raw = match?.group(1) ?? '';
+    if (raw.isEmpty || raw == '/') {
+      _baseUri = '';
+      return;
+    }
+
+    final normalized = raw.startsWith('/') ? raw : '/$raw';
+    _baseUri = normalized.endsWith('/')
+        ? normalized.substring(0, normalized.length - 1)
+        : normalized;
+    debugPrint('[PreloadedData] baseUri: $_baseUri');
   }
 
   /// 解析预加载数据字符串

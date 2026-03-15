@@ -108,7 +108,7 @@ class NotificationItem extends StatelessWidget {
     final url = notification.getAvatarUrl();
     if (url.isNotEmpty) return url;
     if (systemAvatarTemplate != null && systemAvatarTemplate!.isNotEmpty) {
-      return UrlHelper.resolveUrl(systemAvatarTemplate!);
+      return UrlHelper.resolveUrlWithCdn(systemAvatarTemplate!);
     }
     return null;
   }

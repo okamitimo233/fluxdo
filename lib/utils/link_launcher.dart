@@ -10,6 +10,7 @@ import '../constants.dart';
 import '../pages/user_profile_page.dart';
 import '../pages/webview_page.dart';
 import '../providers/preferences_provider.dart';
+import '../services/discourse/discourse_service.dart';
 import '../widgets/common/external_link_confirm_dialog.dart';
 import 'discourse_url_parser.dart';
 import 'link_security.dart';
@@ -25,8 +26,10 @@ bool isInternalUrl(Uri uri) {
   final baseHost = baseUri.host; // 如 'linux.do'
   final host = uri.host;
 
-  // 主域名或子域名
-  return host == baseHost || host.endsWith('.$baseHost');
+  final hostMatches = host == baseHost || host.endsWith('.$baseHost');
+  if (!hostMatches) return false;
+
+  return UrlHelper.samePrefix(uri.toString());
 }
 
 /// 检查 URL 是否属于站点内部链接（字符串版本，支持相对路径）
@@ -35,6 +38,12 @@ bool isInternalUrlString(String url) {
   final uri = Uri.tryParse(url);
   if (uri == null) return false;
   return isInternalUrl(uri);
+}
+
+bool _isUploadLink(String url) {
+  return url.contains('/uploads/') ||
+      url.contains('/secure-uploads/') ||
+      url.contains('/secure-media-uploads/');
 }
 
 /// 打开外部链接
@@ -107,6 +116,9 @@ Future<void> launchContentLink(
   void Function(int topicId, String? topicSlug, int? postNumber)? onInternalLinkTap,
 }) async {
   if (url.isEmpty) return;
+  if (url.startsWith('upload://')) {
+    url = await DiscourseService().resolveShortUrlForLink(url) ?? url;
+  }
 
   // 1. 识别用户链接 /u/username
   final userInfo = DiscourseUrlParser.parseUser(url);
@@ -131,7 +143,7 @@ Future<void> launchContentLink(
   }
 
   // 3. 下载附件链接：/uploads/ 路径用外部浏览器
-  if (url.contains('/uploads/') && isInternalUrlString(url)) {
+  if (_isUploadLink(url) && isInternalUrlString(url)) {
     final fullUrl = UrlHelper.resolveUrl(url);
     final uri = Uri.tryParse(fullUrl);
     if (uri != null && await canLaunchUrl(uri)) {

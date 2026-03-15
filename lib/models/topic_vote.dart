@@ -60,6 +60,6 @@ class VotedUser {
 
   String getAvatarUrl({int size = 40}) {
     final url = avatarTemplate.replaceAll('{size}', '$size');
-    return UrlHelper.resolveUrl(url);
+    return UrlHelper.resolveUrlWithCdn(url);
   }
 }

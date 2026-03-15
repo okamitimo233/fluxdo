@@ -42,7 +42,7 @@ class MentionUser {
   String? getAvatarUrl(String baseUrl, {int size = 40}) {
     if (avatarTemplate == null) return null;
     final url = avatarTemplate!.replaceAll('{size}', size.toString());
-    return UrlHelper.resolveUrl(url);
+    return UrlHelper.resolveUrlWithCdn(url);
   }
 }
 

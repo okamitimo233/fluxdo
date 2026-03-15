@@ -239,7 +239,7 @@ class _BadgePageState extends ConsumerState<BadgePage> {
     if (badge.imageUrl != null && badge.imageUrl!.isNotEmpty) {
       return Image(
         image: discourseImageProvider(
-          UrlHelper.resolveUrl(badge.imageUrl!),
+          UrlHelper.resolveUrlWithCdn(badge.imageUrl!),
         ),
         width: 100,
         height: 100,

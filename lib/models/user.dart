@@ -175,7 +175,7 @@ class User {
   }
 
   factory User.fromJson(Map<String, dynamic> json) {
-    String? resolve(String? url) => url != null ? UrlHelper.resolveUrl(url) : null;
+    String? resolve(String? url) => url != null ? UrlHelper.resolveUrlWithCdn(url) : null;
     
     // 简单的 HTML 图片路径修复
     String? fixHtml(String? html) {
@@ -183,7 +183,7 @@ class User {
       // 替换 src="/... 为 src="https://linux.do/...
       return html.replaceAllMapped(
         RegExp(r'''src=["'](/[^"']+)["']'''), 
-        (match) => 'src="${UrlHelper.resolveUrl(match.group(1)!)}"'
+        (match) => 'src="${UrlHelper.resolveUrlWithCdn(match.group(1)!)}"'
       );
     }
 
@@ -306,11 +306,11 @@ class User {
   /// 获取头像 URL，优先使用动画头像（GIF）
   String getAvatarUrl({int size = 120}) {
     if (animatedAvatar != null && animatedAvatar!.isNotEmpty) {
-      return UrlHelper.resolveUrl(animatedAvatar!);
+      return UrlHelper.resolveUrlWithCdn(animatedAvatar!);
     }
     if (avatarTemplate == null) return '';
     final template = avatarTemplate!.replaceAll('{size}', size.toString());
-    return UrlHelper.resolveUrl(template);
+    return UrlHelper.resolveUrlWithCdn(template);
   }
 }
 
@@ -570,7 +570,7 @@ class SummaryUserWithCount {
   String getAvatarUrl({int size = 120}) {
     if (avatarTemplate == null) return '';
     final template = avatarTemplate!.replaceAll('{size}', '$size');
-    return UrlHelper.resolveUrl(template);
+    return UrlHelper.resolveUrlWithCdn(template);
   }
 }
 
@@ -649,6 +649,6 @@ class FollowUser {
   String getAvatarUrl({int size = 96}) {
     if (avatarTemplate == null) return '';
     final template = avatarTemplate!.replaceAll('{size}', size.toString());
-    return UrlHelper.resolveUrl(template);
+    return UrlHelper.resolveUrlWithCdn(template);
   }
 }

@@ -272,7 +272,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
     }
 
     if (logoUrl != null && logoUrl.isNotEmpty) {
-      final fullUrl = UrlHelper.resolveUrl(logoUrl);
+      final fullUrl = UrlHelper.resolveUrlWithCdn(logoUrl);
       return SizedBox(
         width: 24,
         height: 24,

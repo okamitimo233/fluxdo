@@ -265,7 +265,7 @@ class AiShareImageWidget extends StatelessWidget {
       final height = match.group(3)!;
       var src = match.group(4) ?? '';
 
-      src = UrlHelper.resolveUrl(src);
+      src = UrlHelper.resolveUrlWithCdn(src);
 
       return '\n\n<img src="$src" alt="$alt" width="$width" height="$height">\n\n';
     });

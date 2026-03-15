@@ -104,13 +104,13 @@ List<GridImageData> extractGridImages(dynamic element) {
 
     // 处理相对路径（但保留 upload:// 协议）
     if (!DiscourseImageUtils.isUploadUrl(src)) {
-      src = UrlHelper.resolveUrl(src);
+      src = UrlHelper.resolveUrlWithCdn(src);
     }
 
     // 尝试获取原图链接
     String? fullSrc = DiscourseImageUtils.findOriginalImageUrl(img);
     if (fullSrc != null && !DiscourseImageUtils.isUploadUrl(fullSrc)) {
-      fullSrc = UrlHelper.resolveUrl(fullSrc);
+      fullSrc = UrlHelper.resolveUrlWithCdn(fullSrc);
     }
 
     // 尝试获取宽高

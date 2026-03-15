@@ -1,5 +1,32 @@
 part of 'discourse_service.dart';
 
+class ResolvedUploadUrl {
+  final String url;
+  final String? shortPath;
+
+  const ResolvedUploadUrl({
+    required this.url,
+    this.shortPath,
+  });
+
+  String mediaUrl() {
+    if (url.contains('secure-media-uploads') || url.contains('secure-uploads')) {
+      return UrlHelper.resolveUrl(url);
+    }
+
+    return UrlHelper.resolveUrlWithCdn(url);
+  }
+
+  String linkUrl({required bool secureUploads}) {
+    if (secureUploads &&
+        (url.contains('secure-media-uploads') || url.contains('secure-uploads'))) {
+      return url;
+    }
+
+    return shortPath ?? url;
+  }
+}
+
 /// 图片上传结果
 class UploadResult {
   final String shortUrl;
@@ -218,8 +245,13 @@ mixin _UploadsMixin on _DiscourseServiceBase {
       for (final item in uploads) {
         if (item is Map<String, dynamic>) {
           result.add(item);
-          if (item['short_url'] != null && item['url'] != null) {
-            _urlCache[item['short_url']] = item['url'];
+          final shortUrl = item['short_url'] as String?;
+          final url = item['url'] as String?;
+          if (shortUrl != null && url != null) {
+            _urlCache[shortUrl] = ResolvedUploadUrl(
+              url: url,
+              shortPath: item['short_path'] as String?,
+            );
           }
         }
       }
@@ -231,8 +263,10 @@ mixin _UploadsMixin on _DiscourseServiceBase {
   }
 
   /// 解析单个 short_url
-  Future<String?> resolveShortUrl(String shortUrl) async {
-    if (!shortUrl.startsWith('upload://')) return shortUrl;
+  Future<ResolvedUploadUrl?> resolveShortUpload(String shortUrl) async {
+    if (!shortUrl.startsWith('upload://')) {
+      return ResolvedUploadUrl(url: shortUrl, shortPath: shortUrl);
+    }
 
     if (_urlCache.containsKey(shortUrl)) {
       return _urlCache[shortUrl];
@@ -240,5 +274,22 @@ mixin _UploadsMixin on _DiscourseServiceBase {
 
     await lookupUrls([shortUrl]);
     return _urlCache[shortUrl];
+  }
+
+  Future<String?> resolveShortUrl(String shortUrl) async {
+    if (!shortUrl.startsWith('upload://')) return shortUrl;
+
+    final resolved = await resolveShortUpload(shortUrl);
+    return resolved?.mediaUrl();
+  }
+
+  Future<String?> resolveShortUrlForLink(String shortUrl) async {
+    if (!shortUrl.startsWith('upload://')) return shortUrl;
+
+    final resolved = await resolveShortUpload(shortUrl);
+    if (resolved == null) return null;
+
+    final secureUploads = PreloadedDataService().siteSettingsSync?['secure_uploads'] == true;
+    return resolved.linkUrl(secureUploads: secureUploads);
   }
 }

@@ -354,16 +354,21 @@ class _MyBadgesPageState extends ConsumerState<MyBadgesPage> {
                               badge.imageUrl!.isNotEmpty
                           ? Image(
                               image: discourseImageProvider(
-                                  UrlHelper.resolveUrl(badge.imageUrl!)),
+                                UrlHelper.resolveUrlWithCdn(badge.imageUrl!),
+                              ),
                               fit: BoxFit.contain,
                               errorBuilder: (context, error, stackTrace) =>
                                   FaIcon(
-                                      badge.icon != null &&
-                                              badge.icon!.isNotEmpty
-                                          ? (FontAwesomeHelper.getIcon(badge.icon!) ?? BadgeUIUtils.getBadgeIcon(type))
-                                          : BadgeUIUtils.getBadgeIcon(type),
-                                      size: 24,
-                                      color: iconColor),
+                                    badge.icon != null &&
+                                            badge.icon!.isNotEmpty
+                                        ? (FontAwesomeHelper.getIcon(
+                                              badge.icon!,
+                                            ) ??
+                                            BadgeUIUtils.getBadgeIcon(type))
+                                        : BadgeUIUtils.getBadgeIcon(type),
+                                    size: 24,
+                                    color: iconColor,
+                                  ),
                             )
                           : FaIcon(
                               badge.icon != null && badge.icon!.isNotEmpty

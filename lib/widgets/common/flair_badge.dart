@@ -82,7 +82,7 @@ class FlairBadge extends StatelessWidget {
       return EmojiHandler().getEmojiUrl(emojiName);
     }
 
-    return UrlHelper.resolveUrl(flairUrl!);
+    return UrlHelper.resolveUrlWithCdn(flairUrl!);
   }
 
   @override

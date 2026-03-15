@@ -179,7 +179,7 @@ class DiscourseNotification {
     }
     // 替换 {size} 占位符并解析 URL
     final url = template.replaceAll('{size}', size.toString());
-    return UrlHelper.resolveUrl(url);
+    return UrlHelper.resolveUrlWithCdn(url);
   }
 
   DiscourseNotification copyWith({

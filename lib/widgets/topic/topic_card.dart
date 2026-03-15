@@ -432,7 +432,7 @@ class CompactTopicCard extends ConsumerWidget {
                 else if (logoUrl != null && logoUrl.isNotEmpty)
                   Image(
                     image: discourseImageProvider(
-                      UrlHelper.resolveUrl(logoUrl),
+                      UrlHelper.resolveUrlWithCdn(logoUrl),
                     ),
                     width: 12,
                     height: 12,

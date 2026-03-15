@@ -117,7 +117,7 @@ class SearchPost {
   String getAvatarUrl({int size = 120}) {
     if (avatarTemplate.isEmpty) return '';
     final url = avatarTemplate.replaceAll('{size}', '$size');
-    return UrlHelper.resolveUrl(url);
+    return UrlHelper.resolveUrlWithCdn(url);
   }
 }
 
@@ -187,7 +187,7 @@ class SearchUser {
   String getAvatarUrl({int size = 120}) {
     if (avatarTemplate.isEmpty) return '';
     final url = avatarTemplate.replaceAll('{size}', '$size');
-    return UrlHelper.resolveUrl(url);
+    return UrlHelper.resolveUrlWithCdn(url);
   }
 }
 

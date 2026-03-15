@@ -60,9 +60,9 @@ class EmojiHandler {
     // 优先查自定义 emoji（如 bili_114、tsai 等）
     final customUrl = _customEmojiMap?[name];
     if (customUrl != null) {
-      return UrlHelper.resolveUrl(customUrl);
+      return UrlHelper.resolveUrlWithCdn(customUrl);
     }
     // 标准 emoji，URL 确定性拼接（与 Discourse buildEmojiUrl 一致）
-    return UrlHelper.resolveUrl('/images/emoji/twitter/$name.png?v=12');
+    return UrlHelper.resolveUrlWithCdn('/images/emoji/twitter/$name.png?v=12');
   }
 }

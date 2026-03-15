@@ -462,7 +462,7 @@ class _TopicPreviewDialogState extends ConsumerState<TopicPreviewDialog> {
                     padding: const EdgeInsets.only(right: 6),
                     child: Image(
                       image: discourseImageProvider(
-                        UrlHelper.resolveUrl(logoUrl),
+                        UrlHelper.resolveUrlWithCdn(logoUrl),
                       ),
                       width: 12,
                       height: 12,

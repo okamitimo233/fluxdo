@@ -141,7 +141,7 @@ class TopicUser {
 
   String getAvatarUrl({int size = 40}) {
     final template = avatarTemplate.replaceAll('{size}', '$size');
-    return UrlHelper.resolveUrl(template);
+    return UrlHelper.resolveUrlWithCdn(template);
   }
 }
 
@@ -436,7 +436,7 @@ class ReactionUser {
 
   String getAvatarUrl({int size = 96}) {
     final template = avatarTemplate.replaceAll('{size}', '$size');
-    return UrlHelper.resolveUrl(template);
+    return UrlHelper.resolveUrlWithCdn(template);
   }
 }
 
@@ -713,10 +713,10 @@ class Post {
   /// 获取头像 URL，优先使用动画头像（GIF）
   String getAvatarUrl({int size = 120}) {
     if (animatedAvatar != null && animatedAvatar!.isNotEmpty) {
-      return UrlHelper.resolveUrl(animatedAvatar!);
+      return UrlHelper.resolveUrlWithCdn(animatedAvatar!);
     }
     final template = avatarTemplate.replaceAll('{size}', '$size');
-    return UrlHelper.resolveUrl(template);
+    return UrlHelper.resolveUrlWithCdn(template);
   }
 
   /// 帖子是否已被删除

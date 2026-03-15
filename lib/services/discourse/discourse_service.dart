@@ -30,6 +30,7 @@ import '../preloaded_data_service.dart';
 import '../auth_log_service.dart';
 import '../log/log_writer.dart';
 import '../network/exceptions/api_exception.dart';
+import '../../utils/url_helper.dart';
 
 part '_auth.dart';
 part '_topics.dart';
@@ -73,7 +74,7 @@ abstract class _DiscourseServiceBase {
   StreamController<void> get _authStateController;
   // ignore: unused_element
   StreamController<void> get _cfChallengeController;
-  Map<String, String> get _urlCache;
+  Map<String, ResolvedUploadUrl> get _urlCache;
 
   bool get isAuthenticated;
 
@@ -145,7 +146,7 @@ class DiscourseService extends _DiscourseServiceBase
   Stream<void> get cfChallengeStream => _cfChallengeController.stream;
 
   @override
-  final Map<String, String> _urlCache = {};
+  final Map<String, ResolvedUploadUrl> _urlCache = {};
 
   static final DiscourseService _instance = DiscourseService._internal();
   factory DiscourseService() => _instance;

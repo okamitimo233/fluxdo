@@ -32,7 +32,7 @@ Widget _buildCategoryIcon(Category category, Color color, double size, {bool pre
     if (logoUrl != null && logoUrl.isNotEmpty) {
       return Image(
         image: discourseImageProvider(
-          UrlHelper.resolveUrl(logoUrl),
+          UrlHelper.resolveUrlWithCdn(logoUrl),
         ),
         width: size,
         height: size,
@@ -50,7 +50,7 @@ Widget _buildCategoryIcon(Category category, Color color, double size, {bool pre
     if (logoUrl != null && logoUrl.isNotEmpty) {
       return Image(
         image: discourseImageProvider(
-          UrlHelper.resolveUrl(logoUrl),
+          UrlHelper.resolveUrlWithCdn(logoUrl),
         ),
         width: size,
         height: size,

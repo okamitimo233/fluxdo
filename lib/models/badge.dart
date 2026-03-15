@@ -281,10 +281,10 @@ class BadgeUser {
 
   String getAvatarUrl({int size = 96}) {
     if (animatedAvatar != null && animatedAvatar!.isNotEmpty) {
-      return UrlHelper.resolveUrl(animatedAvatar!);
+      return UrlHelper.resolveUrlWithCdn(animatedAvatar!);
     }
     final template = avatarTemplate.replaceAll('{size}', size.toString());
-    return UrlHelper.resolveUrl(template);
+    return UrlHelper.resolveUrlWithCdn(template);
   }
 }
 
