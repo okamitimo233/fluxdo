@@ -18,6 +18,7 @@ class DownloadProgressDialog extends StatefulWidget {
     required this.downloadService,
   });
 
+
   @override
   State<DownloadProgressDialog> createState() => _DownloadProgressDialogState();
 }
@@ -134,13 +135,26 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
 
   Widget _buildMeshBackground(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // 深色模式：使用低饱和度的深色调，营造沉稳氛围
+    // 浅色模式：使用高亮度的柔和色调，营造清新感
+    final colors = isDark
+        ? [
+            Color.lerp(colorScheme.primary, Colors.black, 0.6)!,
+            Color.lerp(colorScheme.secondary, Colors.black, 0.65)!,
+            Color.lerp(colorScheme.tertiary, Colors.black, 0.6)!,
+            Color.lerp(colorScheme.inversePrimary, Colors.black, 0.7)!,
+          ]
+        : [
+            Color.lerp(colorScheme.primary, Colors.white, 0.65)!,
+            Color.lerp(colorScheme.secondary, Colors.white, 0.6)!,
+            Color.lerp(colorScheme.tertiary, Colors.white, 0.65)!,
+            Color.lerp(colorScheme.inversePrimary, Colors.white, 0.5)!,
+          ];
+
     return MeshGradient(
-      colors: [
-        colorScheme.primary,
-        colorScheme.secondary,
-        colorScheme.tertiary,
-        colorScheme.inversePrimary,
-      ],
+      colors: colors,
       distortion: 0.8,
       swirl: 0.1,
       speed: 1,
