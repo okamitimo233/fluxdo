@@ -20,6 +20,7 @@ extension _FilterActions on _TopicDetailPageState {
     final notifier = ref.read(topicDetailProvider(params).notifier);
     final wasSummaryMode = notifier.isSummaryMode;
     final wasAuthorOnlyMode = notifier.isAuthorOnlyMode;
+    final wasTopLevelMode = notifier.isTopLevelMode;
 
     setState(() => _isSwitchingMode = true);
     _controller.resetVisibility();
@@ -30,7 +31,7 @@ extension _FilterActions on _TopicDetailPageState {
 
       final detail = ref.read(topicDetailProvider(params)).value;
       final hasTarget = detail != null && _detailHasTargetPost(detail, postNumber: postNumber, postId: postId);
-      final shouldFallback = detail != null && _shouldFallbackFilter(detail, wasSummaryMode, wasAuthorOnlyMode);
+      final shouldFallback = detail != null && _shouldFallbackFilter(detail, wasSummaryMode, wasAuthorOnlyMode, wasTopLevelMode);
       if (!hasTarget || shouldFallback) {
         _controller.resetVisibility();
         _controller.prepareJumpToPost(postNumber);
@@ -41,7 +42,7 @@ extension _FilterActions on _TopicDetailPageState {
     }
   }
 
-  bool _shouldFallbackFilter(TopicDetail detail, bool wasSummaryMode, bool wasAuthorOnlyMode) {
+  bool _shouldFallbackFilter(TopicDetail detail, bool wasSummaryMode, bool wasAuthorOnlyMode, bool wasTopLevelMode) {
     if (wasSummaryMode) {
       if (!detail.hasSummary) return true;
       if (detail.postsCount > 0 && detail.postStream.stream.length >= detail.postsCount) {
@@ -55,6 +56,9 @@ extension _FilterActions on _TopicDetailPageState {
       final hasOtherUsers = detail.postStream.posts.any((p) => p.username != author);
       if (hasOtherUsers) return true;
     }
+
+    // 只看顶层模式下跳转到楼中楼帖子时需要取消过滤
+    if (wasTopLevelMode) return true;
 
     return false;
   }
@@ -90,6 +94,25 @@ extension _FilterActions on _TopicDetailPageState {
 
     if (mounted) {
       setState(() => _isSwitchingMode = false);
+    }
+  }
+
+  Future<void> _handleShowTopLevelReplies() async {
+    final params = _params;
+    final notifier = ref.read(topicDetailProvider(params).notifier);
+
+    setState(() => _isSwitchingMode = true);
+
+    _controller.prepareJumpToPost(1);
+    _controller.skipNextJumpHighlight = true;
+    _controller.resetVisibility();
+
+    try {
+      await notifier.showTopLevelReplies();
+    } finally {
+      if (mounted) {
+        setState(() => _isSwitchingMode = false);
+      }
     }
   }
 

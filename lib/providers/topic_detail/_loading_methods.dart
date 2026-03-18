@@ -272,6 +272,7 @@ extension LoadingMethods on TopicDetailNotifier {
         postNumber: postNumber,
         filter: _filter,
         usernameFilters: _usernameFilter,
+        filterTopLevelReplies: _filterTopLevelReplies,
       );
 
       _updateBoundaryState(detail.postStream.posts, detail.postStream.stream);

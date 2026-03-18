@@ -33,6 +33,8 @@ class PostItem extends ConsumerStatefulWidget {
   final void Function(String selectedText, Post post)? onQuoteSelection;
   final void Function(String quote, Post post)? onQuoteImage;
   final void Function(int postId)? onExpandHiddenPost;
+  final bool useReplyDialog;
+  final VoidCallback? onShowPostDetail;
 
   const PostItem({
     super.key,
@@ -54,6 +56,8 @@ class PostItem extends ConsumerStatefulWidget {
     this.onQuoteSelection,
     this.onQuoteImage,
     this.onExpandHiddenPost,
+    this.useReplyDialog = false,
+    this.onShowPostDetail,
   });
 
   @override
@@ -230,6 +234,8 @@ class _PostItemState extends ConsumerState<PostItem> {
                 onRefreshPost: widget.onRefreshPost,
                 onJumpToPost: widget.onJumpToPost,
                 onSolutionChanged: widget.onSolutionChanged,
+                useReplyDialog: widget.useReplyDialog,
+                onShowPostDetail: widget.onShowPostDetail,
                 onAcceptedAnswerChanged: (accepted) {
                   if (!mounted) return;
                   setState(() {

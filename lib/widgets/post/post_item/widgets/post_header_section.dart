@@ -20,7 +20,12 @@ class PostHeaderSection extends ConsumerStatefulWidget {
   final bool showStamp;
   final EdgeInsetsGeometry padding;
   final void Function(int postNumber)? onJumpToPost;
-
+  /// 禁用回复历史（弹框内使用时，显示用户名文本替代可点击操作）
+  final bool disableReplyHistory;
+  /// 自定义回复指示点击回调（优先于回复历史加载）
+  final void Function(int postNumber)? onReplyIndicatorTap;
+  /// 隐藏回复指示的目标帖子号（回复此帖时不显示指示器）
+  final int? hideReplyToPostNumber;
   const PostHeaderSection({
     super.key,
     required this.post,
@@ -29,6 +34,9 @@ class PostHeaderSection extends ConsumerStatefulWidget {
     required this.showStamp,
     required this.padding,
     required this.onJumpToPost,
+    this.disableReplyHistory = false,
+    this.onReplyIndicatorTap,
+    this.hideReplyToPostNumber,
   });
 
   @override
@@ -186,8 +194,13 @@ class _PostHeaderSectionState extends ConsumerState<PostHeaderSection> {
                 isOwnPost: isOwnPost,
                 isWhisper: isWhisper,
                 cachedAvatarWidget: _cachedAvatarWidget!,
-                isLoadingReplyHistoryNotifier: _isLoadingReplyHistoryNotifier,
-                onToggleReplyHistory: _toggleReplyHistory,
+                isLoadingReplyHistoryNotifier: widget.disableReplyHistory ? null : _isLoadingReplyHistoryNotifier,
+                onToggleReplyHistory: widget.disableReplyHistory ? null : _toggleReplyHistory,
+                onReplyIndicatorTap: widget.onReplyIndicatorTap != null && widget.post.replyToPostNumber > 0
+                    ? () => widget.onReplyIndicatorTap!(widget.post.replyToPostNumber)
+                    : null,
+                hideReplyIndicator: widget.hideReplyToPostNumber != null &&
+                    widget.post.replyToPostNumber == widget.hideReplyToPostNumber,
                 buildCompactBadge: _buildCompactBadge,
                 timeAndFloorWidget: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
