@@ -229,6 +229,21 @@ class CookieJarService {
         bucketedCookies.putIfAbsent(bucketUri, () => <String, io.Cookie>{})[dedupeKey] = cookie;
       }
 
+      // 收集所有要同步的 cookie 名称，先清掉 CookieJar 中的同名旧值。
+      // 这样 WebView 的值不会被旧的 host-only cookie 覆盖
+      // （saveFromResponse 只更新同 domain 类型的 cookie，不同 domain 类型的同名 cookie 会残留）。
+      final namesAboutToSync = <String>{};
+      for (final cookies in bucketedCookies.values) {
+        for (final cookie in cookies.values) {
+          if (_isCriticalCookie(cookie.name)) {
+            namesAboutToSync.add(cookie.name);
+          }
+        }
+      }
+      for (final name in namesAboutToSync) {
+        await deleteCookie(name);
+      }
+
       var totalSynced = 0;
       for (final entry in bucketedCookies.entries) {
         final cookies = entry.value.values.toList();

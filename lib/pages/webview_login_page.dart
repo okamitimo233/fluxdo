@@ -308,10 +308,18 @@ class _WebViewLoginPageState extends ConsumerState<WebViewLoginPage> {
         CookieSyncService().setCsrfToken(csrf.toString());
       }
     } catch (_) {}
-    // 登录后从 WebView 同步所有 Cookie 到 CookieJar（包括 _t、cf_clearance 等）
-    await _cookieJar.syncFromWebView();
-    // 切断旧的匿名请求
+    // 先切断旧请求，防止 syncFromWebView 期间旧响应的 Set-Cookie 写入竞争
     AuthSession().advance();
+    // 登录后从 WebView 同步所有 Cookie 到 CookieJar（包括 _t、cf_clearance 等）
+    // syncFromWebView 内部会先清掉关键 cookie 的旧值，确保 WebView 的值不被残留的 host-only cookie 覆盖
+    await _cookieJar.syncFromWebView();
+
+    // 校验同步后 CookieJar 中的 _t 与 WebView 一致
+    final jarToken = await _cookieJar.getTToken();
+    final tokenMatch = jarToken == tToken;
+    if (!tokenMatch) {
+      debugPrint('[Login] _t 不一致! WebView=${tToken.length}chars, Jar=${jarToken?.length}chars');
+    }
     // 仅设置 token，暂不广播
     _service.setToken(tToken);
     // 先刷新预加载数据（确保 longPollingBaseUrl 等就绪）
@@ -327,6 +335,9 @@ class _WebViewLoginPageState extends ConsumerState<WebViewLoginPage> {
       'event': 'login',
       'message': '用户登录成功',
       if (username != null) 'username': username,
+      'jarTokenLen': jarToken?.length,
+      'webViewTokenLen': tToken.length,
+      'tokenMatch': tokenMatch,
     });
 
     if (mounted) {
