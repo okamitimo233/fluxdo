@@ -110,13 +110,13 @@ class WindowStateService with WindowListener {
   @override
   void onWindowClose() async {
     _saveTimer?.cancel();
+    // 先隐藏窗口，让用户感知上立即关闭，再执行耗时的保存和清理
+    await windowManager.hide();
     try {
       await save();
     } finally {
-      if (Platform.isMacOS) {
-        // macOS: 隐藏窗口而不是销毁，Dock 图标可以重新唤起
-        await windowManager.hide();
-      } else {
+      if (!Platform.isMacOS) {
+        // macOS: 隐藏即可，Dock 图标可以重新唤起；其他平台需要销毁
         await windowManager.destroy();
       }
     }
