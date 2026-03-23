@@ -911,7 +911,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           icon: const Icon(Icons.login_rounded, size: 20),
           label: Text(context.l10n.profile_loginLinuxDo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            minimumSize: const Size(double.infinity, 52),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
         ),
