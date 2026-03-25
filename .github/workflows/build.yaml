@@ -94,6 +94,11 @@ jobs:
           echo "${{ secrets.ANDROID_KEY_PROPERTIES }}" > android/key.properties
           echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > android/app/google-services.json
 
+      - name: Generate CA certificates
+        if: startsWith(matrix.platform, 'android') || matrix.platform == 'macos' || matrix.platform == 'ios' || matrix.platform == 'windows'
+        working-directory: core/doh_proxy
+        run: cargo run --bin gen_ca
+
       - name: Build DOH Proxy
         if: startsWith(matrix.platform, 'android')
         working-directory: core/doh_proxy

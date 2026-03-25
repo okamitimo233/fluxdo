@@ -41,9 +41,6 @@ PODS:
   - OrderedSet (6.0.3)
   - package_info_plus (0.0.1):
     - FlutterMacOS
-  - path_provider_foundation (0.0.1):
-    - Flutter
-    - FlutterMacOS
   - rhttp (0.0.1):
     - FlutterMacOS
   - screen_retriever_macos (0.0.1):
@@ -91,7 +88,6 @@ DEPENDENCIES:
   - just_audio (from `Flutter/ephemeral/.symlinks/plugins/just_audio/darwin`)
   - macos_window_utils (from `Flutter/ephemeral/.symlinks/plugins/macos_window_utils/macos`)
   - package_info_plus (from `Flutter/ephemeral/.symlinks/plugins/package_info_plus/macos`)
-  - path_provider_foundation (from `Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin`)
   - rhttp (from `Flutter/ephemeral/.symlinks/plugins/rhttp/macos`)
   - screen_retriever_macos (from `Flutter/ephemeral/.symlinks/plugins/screen_retriever_macos/macos`)
   - share_plus (from `Flutter/ephemeral/.symlinks/plugins/share_plus/macos`)
@@ -147,8 +143,6 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/macos_window_utils/macos
   package_info_plus:
     :path: Flutter/ephemeral/.symlinks/plugins/package_info_plus/macos
-  path_provider_foundation:
-    :path: Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin
   rhttp:
     :path: Flutter/ephemeral/.symlinks/plugins/rhttp/macos
   screen_retriever_macos:
@@ -193,7 +187,6 @@ SPEC CHECKSUMS:
   macos_window_utils: 23f54331a0fd51eea9e0ed347253bf48fd379d1d
   OrderedSet: e539b66b644ff081c73a262d24ad552a69be3a94
   package_info_plus: f0052d280d17aa382b932f399edf32507174e870
-  path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
   rhttp: 08d791d6373089de796318f4cfb172cbcf34e78b
   screen_retriever_macos: 452e51764a9e1cdb74b3c541238795849f21557f
   share_plus: 510bf0af1a42cd602274b4629920c9649c52f4cc

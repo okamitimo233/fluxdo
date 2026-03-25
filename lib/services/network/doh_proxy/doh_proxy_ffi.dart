@@ -62,6 +62,7 @@ class DohProxyFfi {
     int,
   ) _dohProxyClearPreferredHostIp;
   Pointer<Utf8> Function()? _dohProxyGenerateCa;
+  Pointer<Utf8> Function()? _dohProxyGetEmbeddedCaPem;
   late void Function(Pointer<Utf8>) _dohProxyFreeString;
 
   /// Initialize FFI bindings
@@ -155,6 +156,15 @@ class DohProxyFfi {
       } catch (_) {
         _dohProxyGenerateCa = null;
         debugPrint('[DOH FFI] doh_proxy_generate_ca 未找到，per-device CA 不可用');
+      }
+
+      // doh_proxy_get_embedded_ca_pem 是新增符号，可选绑定
+      try {
+        _dohProxyGetEmbeddedCaPem = _lib!
+            .lookup<NativeFunction<Pointer<Utf8> Function()>>('doh_proxy_get_embedded_ca_pem')
+            .asFunction();
+      } catch (_) {
+        _dohProxyGetEmbeddedCaPem = null;
       }
 
       _dohProxyFreeString = _lib!
@@ -315,6 +325,22 @@ class DohProxyFfi {
     }
     debugPrint('[DOH FFI] generateCa: ${map['error'] ?? 'unknown error'}');
     return null;
+  }
+
+  /// 获取编译时嵌入的 CA 证书 PEM
+  ///
+  /// 返回 Rust 库中通过 include_str! 嵌入的 CA PEM，保证和代理实际使用的 CA 一致
+  String? getEmbeddedCaPem() {
+    if (!_initialized && !initialize()) return null;
+    final fn = _dohProxyGetEmbeddedCaPem;
+    if (fn == null) return null;
+
+    final resultPtr = fn();
+    if (resultPtr == nullptr) return null;
+
+    final pem = resultPtr.toDartString();
+    _dohProxyFreeString(resultPtr);
+    return pem;
   }
 
   /// Lookup ECH config for a host via DOH DNS HTTPS record.

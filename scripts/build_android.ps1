@@ -46,6 +46,14 @@ foreach ($target in $targets) {
     }
 }
 
+# 自动生成证书（如果不存在）
+$CaCert = Join-Path $RustDir "certs\ca.crt"
+if (-not (Test-Path $CaCert)) {
+    Write-Host "Generating CA certificates..." -ForegroundColor Yellow
+    Push-Location $RustDir
+    try { cargo run --bin gen_ca } finally { Pop-Location }
+}
+
 # Build for all Android architectures
 Write-Host "Building for all Android architectures..." -ForegroundColor Yellow
 Push-Location $RustDir

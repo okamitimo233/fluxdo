@@ -5269,6 +5269,86 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dohSettings_moreSettingsDesc => '服务器、IPv6、ECH 等';
 
   @override
+  String get dohSettings_certInstalled => 'CA 证书已安装';
+
+  @override
+  String get dohSettings_certRequired => '需要安装 CA 证书';
+
+  @override
+  String get dohSettings_certReinstallHint => '点击可重新安装或更换证书';
+
+  @override
+  String get dohSettings_certInstallHint => 'HTTPS 拦截需要安装并信任证书';
+
+  @override
+  String get dohSettings_certReinstall => '重新安装';
+
+  @override
+  String get dohSettings_certInstall => '安装';
+
+  @override
+  String get dohSettings_perDeviceCert => '设备独有证书';
+
+  @override
+  String get dohSettings_perDeviceCertEnabledDesc => '已启用，每台设备使用独立 CA 证书';
+
+  @override
+  String get dohSettings_perDeviceCertDisabledDesc => '启用后每台设备生成独立的 CA 证书，更安全';
+
+  @override
+  String get dohSettings_certDialogTitle => 'CA 证书安装';
+
+  @override
+  String get dohSettings_certDialogDesc => 'HTTPS 拦截需要安装并信任 CA 证书，每台设备生成唯一证书';
+
+  @override
+  String get dohSettings_certStepDownload => '下载描述文件';
+
+  @override
+  String get dohSettings_certStepInstall => '安装描述文件';
+
+  @override
+  String get dohSettings_certStepTrust => '信任证书';
+
+  @override
+  String get dohSettings_certDownloadHint => '点击下方按钮，Safari 会弹出下载提示，请点击\"允许\"。';
+
+  @override
+  String get dohSettings_certDownloadFailed => '描述文件下载失败';
+
+  @override
+  String get dohSettings_certPreparing => '正在准备...';
+
+  @override
+  String get dohSettings_certDownloadProfile => '下载描述文件';
+
+  @override
+  String get dohSettings_certRegenerate => '重新生成证书';
+
+  @override
+  String get dohSettings_certRegenerated => '新证书已生成';
+
+  @override
+  String get dohSettings_certRegenerateFailed => '证书重新生成失败';
+
+  @override
+  String get dohSettings_certInstallProfileHint =>
+      '前往 设置 → 通用 → VPN与设备管理，找到 DOH Proxy CA 描述文件并安装。';
+
+  @override
+  String get dohSettings_certOpenSettings => '打开设置';
+
+  @override
+  String get dohSettings_certInstalledNext => '已安装，下一步';
+
+  @override
+  String get dohSettings_certTrustHint =>
+      '前往 设置 → 通用 → 关于本机 → 证书信任设置，开启 DOH Proxy CA 的信任开关。';
+
+  @override
+  String get dohSettings_certAllDone => '已完成所有步骤';
+
+  @override
   String get template_insertTitle => '插入模板';
 
   @override
@@ -10483,6 +10563,86 @@ class AppLocalizationsZhHk extends AppLocalizationsZh {
   String get dohSettings_moreSettingsDesc => '服務器、IPv6、ECH 等';
 
   @override
+  String get dohSettings_certInstalled => 'CA 證書已安裝';
+
+  @override
+  String get dohSettings_certRequired => '需要安裝 CA 證書';
+
+  @override
+  String get dohSettings_certReinstallHint => '點擊可重新安裝或更換證書';
+
+  @override
+  String get dohSettings_certInstallHint => 'HTTPS 攔截需要安裝並信任證書';
+
+  @override
+  String get dohSettings_certReinstall => '重新安裝';
+
+  @override
+  String get dohSettings_certInstall => '安裝';
+
+  @override
+  String get dohSettings_perDeviceCert => '裝置獨有證書';
+
+  @override
+  String get dohSettings_perDeviceCertEnabledDesc => '已啟用，每台裝置使用獨立 CA 證書';
+
+  @override
+  String get dohSettings_perDeviceCertDisabledDesc => '啟用後每台裝置生成獨立的 CA 證書，更安全';
+
+  @override
+  String get dohSettings_certDialogTitle => 'CA 證書安裝';
+
+  @override
+  String get dohSettings_certDialogDesc => 'HTTPS 攔截需要安裝並信任 CA 證書，每台裝置生成唯一證書';
+
+  @override
+  String get dohSettings_certStepDownload => '下載描述檔';
+
+  @override
+  String get dohSettings_certStepInstall => '安裝描述檔';
+
+  @override
+  String get dohSettings_certStepTrust => '信任證書';
+
+  @override
+  String get dohSettings_certDownloadHint => '點擊下方按鈕，Safari 會彈出下載提示，請點擊「允許」。';
+
+  @override
+  String get dohSettings_certDownloadFailed => '描述檔下載失敗';
+
+  @override
+  String get dohSettings_certPreparing => '正在準備...';
+
+  @override
+  String get dohSettings_certDownloadProfile => '下載描述檔';
+
+  @override
+  String get dohSettings_certRegenerate => '重新生成證書';
+
+  @override
+  String get dohSettings_certRegenerated => '新證書已生成';
+
+  @override
+  String get dohSettings_certRegenerateFailed => '證書重新生成失敗';
+
+  @override
+  String get dohSettings_certInstallProfileHint =>
+      '前往 設定 → 一般 → VPN與裝置管理，找到 DOH Proxy CA 描述檔並安裝。';
+
+  @override
+  String get dohSettings_certOpenSettings => '打開設定';
+
+  @override
+  String get dohSettings_certInstalledNext => '已安裝，下一步';
+
+  @override
+  String get dohSettings_certTrustHint =>
+      '前往 設定 → 一般 → 關於本機 → 證書信任設定，開啟 DOH Proxy CA 的信任開關。';
+
+  @override
+  String get dohSettings_certAllDone => '已完成所有步驟';
+
+  @override
   String get template_insertTitle => '插入模板';
 
   @override
@@ -15695,6 +15855,86 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get dohSettings_moreSettingsDesc => '伺服器、IPv6、ECH 等';
+
+  @override
+  String get dohSettings_certInstalled => 'CA 憑證已安裝';
+
+  @override
+  String get dohSettings_certRequired => '需要安裝 CA 憑證';
+
+  @override
+  String get dohSettings_certReinstallHint => '點擊可重新安裝或更換憑證';
+
+  @override
+  String get dohSettings_certInstallHint => 'HTTPS 攔截需要安裝並信任憑證';
+
+  @override
+  String get dohSettings_certReinstall => '重新安裝';
+
+  @override
+  String get dohSettings_certInstall => '安裝';
+
+  @override
+  String get dohSettings_perDeviceCert => '裝置獨有憑證';
+
+  @override
+  String get dohSettings_perDeviceCertEnabledDesc => '已啟用，每台裝置使用獨立 CA 憑證';
+
+  @override
+  String get dohSettings_perDeviceCertDisabledDesc => '啟用後每台裝置產生獨立的 CA 憑證，更安全';
+
+  @override
+  String get dohSettings_certDialogTitle => 'CA 憑證安裝';
+
+  @override
+  String get dohSettings_certDialogDesc => 'HTTPS 攔截需要安裝並信任 CA 憑證，每台裝置產生唯一憑證';
+
+  @override
+  String get dohSettings_certStepDownload => '下載描述檔';
+
+  @override
+  String get dohSettings_certStepInstall => '安裝描述檔';
+
+  @override
+  String get dohSettings_certStepTrust => '信任憑證';
+
+  @override
+  String get dohSettings_certDownloadHint => '點擊下方按鈕，Safari 會彈出下載提示，請點擊「允許」。';
+
+  @override
+  String get dohSettings_certDownloadFailed => '描述檔下載失敗';
+
+  @override
+  String get dohSettings_certPreparing => '正在準備...';
+
+  @override
+  String get dohSettings_certDownloadProfile => '下載描述檔';
+
+  @override
+  String get dohSettings_certRegenerate => '重新產生憑證';
+
+  @override
+  String get dohSettings_certRegenerated => '新憑證已產生';
+
+  @override
+  String get dohSettings_certRegenerateFailed => '憑證重新產生失敗';
+
+  @override
+  String get dohSettings_certInstallProfileHint =>
+      '前往 設定 → 一般 → VPN與裝置管理，找到 DOH Proxy CA 描述檔並安裝。';
+
+  @override
+  String get dohSettings_certOpenSettings => '打開設定';
+
+  @override
+  String get dohSettings_certInstalledNext => '已安裝，下一步';
+
+  @override
+  String get dohSettings_certTrustHint =>
+      '前往 設定 → 一般 → 關於本機 → 憑證信任設定，開啟 DOH Proxy CA 的信任開關。';
+
+  @override
+  String get dohSettings_certAllDone => '已完成所有步驟';
 
   @override
   String get template_insertTitle => '插入範本';

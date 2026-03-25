@@ -9,8 +9,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../constants.dart';
 import '../../preloaded_data_service.dart';
+import '../doh_proxy/cert_preference_service.dart';
 import '../doh_proxy/doh_proxy_service.dart';
 import '../doh_proxy/per_device_cert_service.dart';
+import '../doh_proxy/proxy_certificate.dart';
 import '../proxy/proxy_settings_service.dart';
 import '../rhttp/rhttp_settings_service.dart';
 import 'doh_resolver.dart';
@@ -462,10 +464,21 @@ class NetworkSettingsService {
         _clearResolvedHostCache();
       }
 
-      // iOS: 读取 per-device CA 传给代理
+      // macOS: 启动前确保 CA 在钥匙串中被信任
+      if (Platform.isMacOS && current.dohEnabled) {
+        final trusted = await ProxyCertificate.ensureKeychainTrust();
+        if (!trusted) {
+          debugPrint('[DOH] macOS: CA 未被钥匙串信任，无法启动代理');
+          _setStartFailed(true);
+          _setPendingStart(false);
+          return;
+        }
+      }
+
+      // per-device CA: 读取证书传给代理（iOS/macOS 强制，其他平台可选）
       String? caCertPem;
       String? caKeyPem;
-      if (Platform.isIOS) {
+      if (await CertPreferenceService.usePerDevice()) {
         final certService = PerDeviceCertService.instance;
         if (certService.isLoaded || await certService.ensureCaCert()) {
           caCertPem = certService.certPem;

@@ -64,3 +64,7 @@ ios/rust_libs/
 
 # Firebase config (contains API keys)
 android/app/google-services.json
+
+# Generated CA certificates (CI/local build auto-generates)
+assets/certs/proxy_ca.pem
+android/app/src/main/res/raw/proxy_ca.der

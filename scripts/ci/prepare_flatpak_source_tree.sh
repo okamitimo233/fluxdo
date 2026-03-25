@@ -76,6 +76,9 @@ done < <(find "${PUB_CACHE_DIR}" -path '*/cargokit/build_tool/pubspec.yaml' 2>/d
 
 rm -rf "${CARGOKIT_WARM_ROOT}"
 
+echo "==> Generating CA certificates"
+(cd "${PROJECT_ROOT}/core/doh_proxy" && cargo run --bin gen_ca)
+
 echo "==> Staging repository source tree"
 rm -rf "${SOURCE_TREE_ROOT}"
 mkdir -p "${SOURCE_TREE_ROOT}"

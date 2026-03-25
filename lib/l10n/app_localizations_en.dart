@@ -5382,6 +5382,93 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dohSettings_moreSettingsDesc => 'Servers, IPv6, ECH, etc.';
 
   @override
+  String get dohSettings_certInstalled => 'CA Certificate Installed';
+
+  @override
+  String get dohSettings_certRequired => 'CA Certificate Required';
+
+  @override
+  String get dohSettings_certReinstallHint =>
+      'Tap to reinstall or replace certificate';
+
+  @override
+  String get dohSettings_certInstallHint =>
+      'Install and trust the certificate for HTTPS interception';
+
+  @override
+  String get dohSettings_certReinstall => 'Reinstall';
+
+  @override
+  String get dohSettings_certInstall => 'Install';
+
+  @override
+  String get dohSettings_perDeviceCert => 'Per-Device Certificate';
+
+  @override
+  String get dohSettings_perDeviceCertEnabledDesc =>
+      'Enabled, each device uses its own CA certificate';
+
+  @override
+  String get dohSettings_perDeviceCertDisabledDesc =>
+      'Enable to generate a unique CA certificate per device for better security';
+
+  @override
+  String get dohSettings_certDialogTitle => 'CA Certificate Installation';
+
+  @override
+  String get dohSettings_certDialogDesc =>
+      'HTTPS interception requires installing and trusting a CA certificate, each device generates a unique certificate';
+
+  @override
+  String get dohSettings_certStepDownload => 'Download Profile';
+
+  @override
+  String get dohSettings_certStepInstall => 'Install Profile';
+
+  @override
+  String get dohSettings_certStepTrust => 'Trust Certificate';
+
+  @override
+  String get dohSettings_certDownloadHint =>
+      'Tap the button below, Safari will prompt to download. Tap \"Allow\".';
+
+  @override
+  String get dohSettings_certDownloadFailed => 'Profile download failed';
+
+  @override
+  String get dohSettings_certPreparing => 'Preparing...';
+
+  @override
+  String get dohSettings_certDownloadProfile => 'Download Profile';
+
+  @override
+  String get dohSettings_certRegenerate => 'Regenerate Certificate';
+
+  @override
+  String get dohSettings_certRegenerated => 'New certificate generated';
+
+  @override
+  String get dohSettings_certRegenerateFailed =>
+      'Certificate regeneration failed';
+
+  @override
+  String get dohSettings_certInstallProfileHint =>
+      'Go to Settings → General → VPN & Device Management, find the DOH Proxy CA profile and install it.';
+
+  @override
+  String get dohSettings_certOpenSettings => 'Open Settings';
+
+  @override
+  String get dohSettings_certInstalledNext => 'Installed, Next';
+
+  @override
+  String get dohSettings_certTrustHint =>
+      'Go to Settings → General → About → Certificate Trust Settings, enable the trust switch for DOH Proxy CA.';
+
+  @override
+  String get dohSettings_certAllDone => 'All Steps Completed';
+
+  @override
   String get template_insertTitle => 'Insert Template';
 
   @override

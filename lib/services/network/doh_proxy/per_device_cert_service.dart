@@ -7,10 +7,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'doh_proxy_service.dart';
 
-/// iOS per-device CA 证书管理服务
+/// Per-device CA 证书管理服务
 ///
 /// 每台设备生成唯一的 CA 证书，避免所有用户共享同一私钥。
-/// 仅在 iOS 平台使用。
+/// 全平台可用：iOS 强制启用，其他平台通过 CertPreferenceService 可选启用。
+/// installProfile() / _buildMobileConfig() 仅 iOS 调用。
 class PerDeviceCertService {
   PerDeviceCertService._();
   static final PerDeviceCertService instance = PerDeviceCertService._();

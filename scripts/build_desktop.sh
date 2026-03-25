@@ -19,6 +19,12 @@ fi
 
 echo "=== Building Rust DOH Proxy for Desktop ($BUILD_TYPE) ==="
 
+# 自动生成证书（如果不存在）
+if [ ! -f "$RUST_DIR/certs/ca.crt" ]; then
+    echo "Generating CA certificates..."
+    (cd "$RUST_DIR" && cargo run --bin gen_ca)
+fi
+
 cd "$RUST_DIR"
 cargo build $CARGO_FLAG --features ech
 

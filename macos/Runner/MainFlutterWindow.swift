@@ -34,6 +34,30 @@ class MainFlutterWindow: NSWindow {
       }
     }
 
+    // 注册代理 CA 证书 channel（原生层 SSL challenge 拦截）
+    let proxyCertChannel = FlutterMethodChannel(
+      name: "com.fluxdo/proxy_cert",
+      binaryMessenger: flutterViewController.engine.binaryMessenger
+    )
+    proxyCertChannel.setMethodCallHandler { (call, result) in
+      switch call.method {
+      case "setCaCertPem":
+        guard let pem = call.arguments as? String else {
+          result(false)
+          return
+        }
+        let trusted = DohProxyCertHandler.shared.setCaCertPem(pem)
+        result(trusted)
+      case "isCaTrusted":
+        result(DohProxyCertHandler.shared.isCaTrusted())
+      case "clear":
+        DohProxyCertHandler.shared.clearCaCert()
+        result(true)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+
     super.awakeFromNib()
   }
 

@@ -35,6 +35,12 @@ for target in aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
     fi
 done
 
+# 自动生成证书（如果不存在）
+if [ ! -f "$RUST_DIR/certs/ca.crt" ]; then
+    echo "Generating CA certificates..."
+    (cd "$RUST_DIR" && cargo run --bin gen_ca)
+fi
+
 # Build for all Android architectures
 echo "Building for all Android architectures..."
 cd "$RUST_DIR"

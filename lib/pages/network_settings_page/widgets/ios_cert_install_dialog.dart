@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/s.dart';
 import '../../../services/network/doh_proxy/per_device_cert_service.dart';
 import '../../../services/toast_service.dart';
 
@@ -37,12 +39,6 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
   static const _browserChannel =
       MethodChannel('com.github.lingyan000.fluxdo/browser');
 
-  static const _steps = [
-    '下载描述文件',
-    '安装描述文件',
-    '信任证书',
-  ];
-
   Future<void> _downloadProfile() async {
     setState(() => _installing = true);
     try {
@@ -51,7 +47,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
         if (ok) {
           setState(() => _currentStep = 1);
         } else {
-          ToastService.showError('描述文件下载失败');
+          ToastService.showError(S.current.dohSettings_certDownloadFailed);
         }
       }
     } finally {
@@ -69,9 +65,9 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
       if (mounted) {
         if (ok) {
           setState(() => _currentStep = 1);
-          ToastService.showInfo('新证书已生成');
+          ToastService.showInfo(S.current.dohSettings_certRegenerated);
         } else {
-          ToastService.showError('证书重新生成失败');
+          ToastService.showError(S.current.dohSettings_certRegenerateFailed);
         }
       }
     } finally {
@@ -94,6 +90,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Container(
       decoration: BoxDecoration(
@@ -123,7 +120,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
                 Icon(Icons.security, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'CA 证书安装',
+                  l10n.dohSettings_certDialogTitle,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -141,7 +138,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Text(
-              'HTTPS 拦截需要安装并信任 CA 证书，每台设备生成唯一证书',
+              l10n.dohSettings_certDialogDesc,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -150,7 +147,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
           const SizedBox(height: 20),
 
           // 步骤指示器
-          _buildStepIndicator(theme),
+          _buildStepIndicator(theme, l10n),
           const SizedBox(height: 20),
 
           // 步骤内容
@@ -158,7 +155,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
-              child: _buildStepContent(theme),
+              child: _buildStepContent(theme, l10n),
             ),
           ),
 
@@ -168,11 +165,17 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
     );
   }
 
-  Widget _buildStepIndicator(ThemeData theme) {
+  Widget _buildStepIndicator(ThemeData theme, AppLocalizations l10n) {
+    final steps = [
+      l10n.dohSettings_certStepDownload,
+      l10n.dohSettings_certStepInstall,
+      l10n.dohSettings_certStepTrust,
+    ];
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
-        children: List.generate(_steps.length * 2 - 1, (index) {
+        children: List.generate(steps.length * 2 - 1, (index) {
           if (index.isOdd) {
             // 连接线
             final stepBefore = index ~/ 2;
@@ -225,7 +228,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _steps[step],
+                  steps[step],
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: isActive || isDone
                         ? theme.colorScheme.primary
@@ -241,21 +244,21 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
     );
   }
 
-  Widget _buildStepContent(ThemeData theme) {
+  Widget _buildStepContent(ThemeData theme, AppLocalizations l10n) {
     switch (_currentStep) {
       case 0:
-        return _buildStep0(theme);
+        return _buildStep0(theme, l10n);
       case 1:
-        return _buildStep1(theme);
+        return _buildStep1(theme, l10n);
       case 2:
-        return _buildStep2(theme);
+        return _buildStep2(theme, l10n);
       default:
         return const SizedBox.shrink();
     }
   }
 
   /// 步骤 1：下载描述文件
-  Widget _buildStep0(ThemeData theme) {
+  Widget _buildStep0(ThemeData theme, AppLocalizations l10n) {
     return Column(
       key: const ValueKey(0),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,7 +266,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
         _infoCard(
           theme,
           icon: Icons.info_outline,
-          text: '点击下方按钮，Safari 会弹出下载提示，请点击"允许"。',
+          text: l10n.dohSettings_certDownloadHint,
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -273,7 +276,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
             icon: _installing
                 ? const _MiniSpinner()
                 : const Icon(Icons.download, size: 18),
-            label: Text(_installing ? '正在准备...' : '下载描述文件'),
+            label: Text(_installing ? l10n.dohSettings_certPreparing : l10n.dohSettings_certDownloadProfile),
           ),
         ),
         const SizedBox(height: 8),
@@ -286,7 +289,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
                 ? const _MiniSpinner()
                 : const Icon(Icons.refresh, size: 16),
             label: Text(
-              '重新生成证书',
+              l10n.dohSettings_certRegenerate,
               style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
             ),
           ),
@@ -296,7 +299,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
   }
 
   /// 步骤 2：安装描述文件
-  Widget _buildStep1(ThemeData theme) {
+  Widget _buildStep1(ThemeData theme, AppLocalizations l10n) {
     return Column(
       key: const ValueKey(1),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -304,7 +307,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
         _infoCard(
           theme,
           icon: Icons.smartphone,
-          text: '前往 设置 → 通用 → VPN与设备管理，找到 DOH Proxy CA 描述文件并安装。',
+          text: l10n.dohSettings_certInstallProfileHint,
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -312,7 +315,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
           child: FilledButton.icon(
             onPressed: _openSettings,
             icon: const Icon(Icons.settings, size: 18),
-            label: const Text('打开设置'),
+            label: Text(l10n.dohSettings_certOpenSettings),
           ),
         ),
         const SizedBox(height: 8),
@@ -320,7 +323,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
           width: double.infinity,
           child: OutlinedButton(
             onPressed: () => setState(() => _currentStep = 2),
-            child: const Text('已安装，下一步'),
+            child: Text(l10n.dohSettings_certInstalledNext),
           ),
         ),
       ],
@@ -328,7 +331,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
   }
 
   /// 步骤 3：信任证书
-  Widget _buildStep2(ThemeData theme) {
+  Widget _buildStep2(ThemeData theme, AppLocalizations l10n) {
     return Column(
       key: const ValueKey(2),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -336,7 +339,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
         _infoCard(
           theme,
           icon: Icons.verified_user,
-          text: '前往 设置 → 通用 → 关于本机 → 证书信任设置，开启 DOH Proxy CA 的信任开关。',
+          text: l10n.dohSettings_certTrustHint,
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -344,7 +347,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
           child: FilledButton.icon(
             onPressed: _openSettings,
             icon: const Icon(Icons.settings, size: 18),
-            label: const Text('打开设置'),
+            label: Text(l10n.dohSettings_certOpenSettings),
           ),
         ),
         const SizedBox(height: 8),
@@ -352,7 +355,7 @@ class _IosCertInstallSheetState extends State<_IosCertInstallSheet> {
           width: double.infinity,
           child: FilledButton.tonal(
             onPressed: _finish,
-            child: const Text('已完成所有步骤'),
+            child: Text(l10n.dohSettings_certAllDone),
           ),
         ),
       ],

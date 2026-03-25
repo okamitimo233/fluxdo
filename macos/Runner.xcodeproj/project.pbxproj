@@ -28,6 +28,7 @@
 		33CC10F32044A3C60003C045 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F22044A3C60003C045 /* Assets.xcassets */; };
 		33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F42044A3C60003C045 /* MainMenu.xib */; };
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
+		A1B2C3D400000001000CERT0 /* DohProxyCertHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000002000CERT0 /* DohProxyCertHandler.swift */; };
 		64ECB773246C7D295B20DA98 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B821E2474ED1A6E7625611 /* Pods_Runner.framework */; };
 /* End PBXBuildFile section */
 
@@ -61,14 +62,22 @@
             runOnlyForDeploymentPostprocessing = 0;
             shellPath = /bin/sh;
             shellScript = "
-        # dylib source（自行改路径）
-        SRC_LIB=\"${PROJECT_DIR}/../core/doh_proxy/target/release/libdoh_proxy.dylib\"
+        # 根据构建配置选择 debug/release dylib
+        if [ \"${CONFIGURATION}\" = \"Release\" ]; then
+          SRC_LIB=\"${PROJECT_DIR}/../core/doh_proxy/target/release/libdoh_proxy.dylib\"
+        else
+          SRC_LIB=\"${PROJECT_DIR}/../core/doh_proxy/target/debug/libdoh_proxy.dylib\"
+          # debug 模式 fallback 到 release
+          if [ ! -f \"$SRC_LIB\" ]; then
+            SRC_LIB=\"${PROJECT_DIR}/../core/doh_proxy/target/release/libdoh_proxy.dylib\"
+          fi
+        fi
 
         if [ ! -f \"$SRC_LIB\" ]; then
           echo \"[dylib] not found, building via cargo...\"
           sh ${PROJECT_DIR}/../scripts/build_desktop.sh
         else
-          echo \"[dylib] found existing build\"
+          echo \"[dylib] found existing build: $SRC_LIB\"
         fi
 
         # 目标路径
@@ -79,8 +88,12 @@
         mkdir -p \"$DST_DIR\"
         cp \"$SRC_LIB\" \"$DST_DIR/\"
 
-        # 可选：修正 install_name（强烈建议）
+        # 修正 install_name
         install_name_tool -id @rpath/libdoh_proxy.dylib \"$DST_DIR/libdoh_proxy.dylib\" || true
+
+        # 签名 dylib（使用构建配置中的签名身份，CI 上通常为 ad-hoc '-'）
+        SIGN_IDENTITY=\"${EXPANDED_CODE_SIGN_IDENTITY:-\"-\"}\"
+        codesign --force --sign \"$SIGN_IDENTITY\" \"$DST_DIR/libdoh_proxy.dylib\"
 
         SRC_CER=\"${PROJECT_DIR}/../core/doh_proxy/certs/ca.der\"
         DST_CER_DIR=\"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources\"
@@ -104,6 +117,7 @@
 		33CC10F52044A3C60003C045 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		33CC10F72044A3C60003C045 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = Runner/Info.plist; sourceTree = "<group>"; };
 		33CC11122044BFA00003C045 /* MainFlutterWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlutterWindow.swift; sourceTree = "<group>"; };
+		A1B2C3D400000002000CERT0 /* DohProxyCertHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DohProxyCertHandler.swift; sourceTree = "<group>"; };
 		33CEB47222A05771004F2AC0 /* Flutter-Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Debug.xcconfig"; sourceTree = "<group>"; };
 		33CEB47422A05771004F2AC0 /* Flutter-Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Release.xcconfig"; sourceTree = "<group>"; };
 		33CEB47722A0578A004F2AC0 /* Flutter-Generated.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = "Flutter-Generated.xcconfig"; path = "ephemeral/Flutter-Generated.xcconfig"; sourceTree = "<group>"; };
@@ -208,6 +222,7 @@
 			children = (
 				33CC10F02044A3C60003C045 /* AppDelegate.swift */,
 				33CC11122044BFA00003C045 /* MainFlutterWindow.swift */,
+				A1B2C3D400000002000CERT0 /* DohProxyCertHandler.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
 				33CC11242044D66E0003C045 /* Resources */,
@@ -470,6 +485,7 @@
 				33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */,
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
+				A1B2C3D400000001000CERT0 /* DohProxyCertHandler.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

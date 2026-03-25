@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../../l10n/s.dart';
 import '../../../services/network/doh/network_settings_service.dart';
+import '../../../services/network/doh_proxy/cert_preference_service.dart';
 import '../../../services/network/doh_proxy/per_device_cert_service.dart';
 import '../../../services/network/vpn_auto_toggle_service.dart';
 import '../../../services/toast_service.dart';
@@ -73,8 +74,8 @@ class DohSettingsCard extends StatelessWidget {
 
           // 仅在开启 DOH 后显示以下内容
           if (settings.dohEnabled) ...[
-            // iOS 证书安装引导
-            if (Platform.isIOS) _IosCertGuide(isApplying: isApplying),
+            // 证书引导（iOS: 安装引导，其他平台: per-device 开关）
+            _CertGuide(isApplying: isApplying),
 
             // 状态区域
             Divider(height: 1, color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2)),
@@ -267,38 +268,58 @@ class DohSettingsCard extends StatelessWidget {
   }
 }
 
-/// iOS 证书安装引导 Widget
+/// 证书引导 Widget
 ///
-/// 显示一个提示条，点击后打开证书安装对话框
-class _IosCertGuide extends StatefulWidget {
-  const _IosCertGuide({required this.isApplying});
+/// iOS（强制 per-device）：显示安装引导
+/// 其他平台：显示 per-device 证书开关
+class _CertGuide extends StatefulWidget {
+  const _CertGuide({required this.isApplying});
 
   final bool isApplying;
 
   @override
-  State<_IosCertGuide> createState() => _IosCertGuideState();
+  State<_CertGuide> createState() => _CertGuideState();
 }
 
-class _IosCertGuideState extends State<_IosCertGuide> {
+class _CertGuideState extends State<_CertGuide> {
   bool _installed = false;
   bool _loading = true;
+  bool _perDeviceEnabled = false;
 
   @override
   void initState() {
     super.initState();
-    _checkInstalled();
+    _loadState();
   }
 
-  Future<void> _checkInstalled() async {
-    final installed = await PerDeviceCertService.instance.isCertInstalled();
-    if (mounted) setState(() { _installed = installed; _loading = false; });
+  Future<void> _loadState() async {
+    if (CertPreferenceService.isPerDeviceRequired) {
+      // iOS: 需要安装引导; macOS: 钥匙串自动处理，无需引导
+      if (Platform.isIOS) {
+        final installed = await PerDeviceCertService.instance.isCertInstalled();
+        if (mounted) setState(() { _installed = installed; _loading = false; });
+      } else {
+        // macOS: per-device 强制启用，钥匙串自动添加，不显示引导
+        if (mounted) setState(() { _loading = false; });
+      }
+    } else {
+      final usePerDevice = await CertPreferenceService.usePerDevice();
+      if (mounted) setState(() { _perDeviceEnabled = usePerDevice; _loading = false; });
+    }
   }
 
-  Future<void> _showDialog() async {
+  Future<void> _showIosDialog() async {
     final result = await showIosCertInstallDialog(context);
     if (result == true && mounted) {
       setState(() => _installed = true);
     }
+  }
+
+  Future<void> _togglePerDevice(bool value) async {
+    await CertPreferenceService.setUsePerDevice(value);
+    setState(() => _perDeviceEnabled = value);
+    // 重启代理以应用新证书
+    await NetworkSettingsService.instance.restartProxy();
   }
 
   @override
@@ -307,28 +328,60 @@ class _IosCertGuideState extends State<_IosCertGuide> {
 
     final theme = Theme.of(context);
 
+    final l10n = context.l10n;
+
+    // macOS: per-device 强制但钥匙串自动处理，不显示引导
+    if (Platform.isMacOS) {
+      return const SizedBox.shrink();
+    }
+
+    // iOS: 强制 per-device，显示安装引导
+    if (Platform.isIOS) {
+      return Column(
+        children: [
+          Divider(height: 1, color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2)),
+          ListTile(
+            leading: Icon(
+              _installed ? Icons.verified_user : Icons.security,
+              color: _installed ? Colors.green : theme.colorScheme.error,
+            ),
+            title: Text(_installed ? l10n.dohSettings_certInstalled : l10n.dohSettings_certRequired),
+            subtitle: Text(
+              _installed ? l10n.dohSettings_certReinstallHint : l10n.dohSettings_certInstallHint,
+              style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12),
+            ),
+            trailing: _installed
+                ? OutlinedButton(
+                    onPressed: _showIosDialog,
+                    child: Text(l10n.dohSettings_certReinstall),
+                  )
+                : FilledButton(
+                    onPressed: _showIosDialog,
+                    child: Text(l10n.dohSettings_certInstall),
+                  ),
+          ),
+        ],
+      );
+    }
+
+    // 其他平台: per-device 证书开关
     return Column(
       children: [
         Divider(height: 1, color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2)),
-        ListTile(
-          leading: Icon(
-            _installed ? Icons.verified_user : Icons.security,
-            color: _installed ? Colors.green : theme.colorScheme.error,
+        SwitchListTile(
+          secondary: Icon(
+            _perDeviceEnabled ? Icons.verified_user : Icons.security,
+            color: _perDeviceEnabled ? Colors.green : null,
           ),
-          title: Text(_installed ? 'CA 证书已安装' : '需要安装 CA 证书'),
+          title: Text(l10n.dohSettings_perDeviceCert),
           subtitle: Text(
-            _installed ? '点击可重新安装或更换证书' : 'HTTPS 拦截需要安装并信任证书',
+            _perDeviceEnabled
+                ? l10n.dohSettings_perDeviceCertEnabledDesc
+                : l10n.dohSettings_perDeviceCertDisabledDesc,
             style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12),
           ),
-          trailing: _installed
-              ? OutlinedButton(
-                  onPressed: _showDialog,
-                  child: const Text('重新安装'),
-                )
-              : FilledButton(
-                  onPressed: _showDialog,
-                  child: const Text('安装'),
-                ),
+          value: _perDeviceEnabled,
+          onChanged: widget.isApplying ? null : _togglePerDevice,
         ),
       ],
     );

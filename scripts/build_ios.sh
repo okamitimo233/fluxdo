@@ -29,6 +29,12 @@ for target in aarch64-apple-ios aarch64-apple-ios-sim; do
     fi
 done
 
+# 自动生成证书（如果不存在）
+if [ ! -f "$RUST_DIR/certs/ca.crt" ]; then
+    echo "Generating CA certificates..."
+    (cd "$RUST_DIR" && cargo run --bin gen_ca)
+fi
+
 # iOS 不支持 cdylib，只编译 staticlib（通过 cargo rustc 覆盖 crate-type）
 cd "$RUST_DIR"
 

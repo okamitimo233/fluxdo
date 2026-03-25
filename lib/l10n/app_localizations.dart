@@ -9809,6 +9809,162 @@ abstract class AppLocalizations {
   /// **'服务器、IPv6、ECH 等'**
   String get dohSettings_moreSettingsDesc;
 
+  /// No description provided for @dohSettings_certInstalled.
+  ///
+  /// In zh, this message translates to:
+  /// **'CA 证书已安装'**
+  String get dohSettings_certInstalled;
+
+  /// No description provided for @dohSettings_certRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要安装 CA 证书'**
+  String get dohSettings_certRequired;
+
+  /// No description provided for @dohSettings_certReinstallHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击可重新安装或更换证书'**
+  String get dohSettings_certReinstallHint;
+
+  /// No description provided for @dohSettings_certInstallHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'HTTPS 拦截需要安装并信任证书'**
+  String get dohSettings_certInstallHint;
+
+  /// No description provided for @dohSettings_certReinstall.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新安装'**
+  String get dohSettings_certReinstall;
+
+  /// No description provided for @dohSettings_certInstall.
+  ///
+  /// In zh, this message translates to:
+  /// **'安装'**
+  String get dohSettings_certInstall;
+
+  /// No description provided for @dohSettings_perDeviceCert.
+  ///
+  /// In zh, this message translates to:
+  /// **'设备独有证书'**
+  String get dohSettings_perDeviceCert;
+
+  /// No description provided for @dohSettings_perDeviceCertEnabledDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'已启用，每台设备使用独立 CA 证书'**
+  String get dohSettings_perDeviceCertEnabledDesc;
+
+  /// No description provided for @dohSettings_perDeviceCertDisabledDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'启用后每台设备生成独立的 CA 证书，更安全'**
+  String get dohSettings_perDeviceCertDisabledDesc;
+
+  /// No description provided for @dohSettings_certDialogTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'CA 证书安装'**
+  String get dohSettings_certDialogTitle;
+
+  /// No description provided for @dohSettings_certDialogDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'HTTPS 拦截需要安装并信任 CA 证书，每台设备生成唯一证书'**
+  String get dohSettings_certDialogDesc;
+
+  /// No description provided for @dohSettings_certStepDownload.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载描述文件'**
+  String get dohSettings_certStepDownload;
+
+  /// No description provided for @dohSettings_certStepInstall.
+  ///
+  /// In zh, this message translates to:
+  /// **'安装描述文件'**
+  String get dohSettings_certStepInstall;
+
+  /// No description provided for @dohSettings_certStepTrust.
+  ///
+  /// In zh, this message translates to:
+  /// **'信任证书'**
+  String get dohSettings_certStepTrust;
+
+  /// No description provided for @dohSettings_certDownloadHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击下方按钮，Safari 会弹出下载提示，请点击\"允许\"。'**
+  String get dohSettings_certDownloadHint;
+
+  /// No description provided for @dohSettings_certDownloadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'描述文件下载失败'**
+  String get dohSettings_certDownloadFailed;
+
+  /// No description provided for @dohSettings_certPreparing.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在准备...'**
+  String get dohSettings_certPreparing;
+
+  /// No description provided for @dohSettings_certDownloadProfile.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载描述文件'**
+  String get dohSettings_certDownloadProfile;
+
+  /// No description provided for @dohSettings_certRegenerate.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新生成证书'**
+  String get dohSettings_certRegenerate;
+
+  /// No description provided for @dohSettings_certRegenerated.
+  ///
+  /// In zh, this message translates to:
+  /// **'新证书已生成'**
+  String get dohSettings_certRegenerated;
+
+  /// No description provided for @dohSettings_certRegenerateFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'证书重新生成失败'**
+  String get dohSettings_certRegenerateFailed;
+
+  /// No description provided for @dohSettings_certInstallProfileHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'前往 设置 → 通用 → VPN与设备管理，找到 DOH Proxy CA 描述文件并安装。'**
+  String get dohSettings_certInstallProfileHint;
+
+  /// No description provided for @dohSettings_certOpenSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开设置'**
+  String get dohSettings_certOpenSettings;
+
+  /// No description provided for @dohSettings_certInstalledNext.
+  ///
+  /// In zh, this message translates to:
+  /// **'已安装，下一步'**
+  String get dohSettings_certInstalledNext;
+
+  /// No description provided for @dohSettings_certTrustHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'前往 设置 → 通用 → 关于本机 → 证书信任设置，开启 DOH Proxy CA 的信任开关。'**
+  String get dohSettings_certTrustHint;
+
+  /// No description provided for @dohSettings_certAllDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成所有步骤'**
+  String get dohSettings_certAllDone;
+
   /// No description provided for @template_insertTitle.
   ///
   /// In zh, this message translates to:
