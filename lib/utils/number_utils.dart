@@ -10,4 +10,23 @@ class NumberUtils {
     if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}k';
     return count.toString();
   }
+
+  /// 格式化持续时间（秒 → 可读字符串）
+  /// 例：90061 → "1天1小时", 3661 → "1小时1分钟", 120 → "2分钟"
+  static String formatDuration(int seconds) {
+    if (seconds <= 0) return '0分钟';
+    final days = seconds ~/ 86400;
+    final hours = (seconds % 86400) ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+
+    if (days > 0) {
+      if (hours > 0) return '$days天$hours小时';
+      return '$days天';
+    }
+    if (hours > 0) {
+      if (minutes > 0) return '$hours小时$minutes分钟';
+      return '$hours小时';
+    }
+    return '$minutes分钟';
+  }
 }

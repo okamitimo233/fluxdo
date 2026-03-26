@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../providers/discourse_providers.dart';
 import '../services/discourse_cache_manager.dart';
@@ -29,11 +30,13 @@ import '../providers/ldc_providers.dart';
 import '../widgets/ldc_balance_card.dart';
 import '../providers/cdk_providers.dart';
 import '../widgets/cdk_balance_card.dart';
+import '../widgets/profile_stats_card.dart';
+import '../widgets/common/spotlight_overlay.dart';
+import 'profile_stats_edit_page.dart';
 import '../services/ldc_oauth_service.dart';
 import '../services/cdk_oauth_service.dart';
 import '../l10n/s.dart';
 import '../services/toast_service.dart';
-import '../utils/number_utils.dart';
 import '../utils/responsive.dart';
 import '../services/emoji_handler.dart';
 import '../services/log/log_writer.dart';
@@ -42,7 +45,8 @@ import '../widgets/layout/master_detail_layout.dart';
 
 /// 个人页面
 class ProfilePage extends ConsumerStatefulWidget {
-  const ProfilePage({super.key});
+  final bool isActive;
+  const ProfilePage({super.key, this.isActive = false});
 
   @override
   ConsumerState<ProfilePage> createState() => _ProfilePageState();
@@ -54,12 +58,28 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   bool _showTitle = false;
   bool _isRefreshing = false;
 
+  // 统计卡片引导
+  static const String _guideKey = 'profile_stats_card_guide_shown';
+  final GlobalKey _statsCardKey = GlobalKey();
+  bool _guideShown = false;
+
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
     _rightScrollController = ScrollController();
+  }
+
+  @override
+  void didUpdateWidget(ProfilePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // tab 切换时 isActive 变化
+    if (widget.isActive && !oldWidget.isActive && !_guideShown) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _tryShowStatsGuide();
+      });
+    }
   }
 
   /// 下拉刷新
@@ -80,9 +100,32 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   @override
   void dispose() {
+    SpotlightOverlay.dismiss();
     _scrollController.dispose();
     _rightScrollController.dispose();
     super.dispose();
+  }
+
+  /// 统计卡片引导：页面可见且卡片已渲染时触发（仅一次）
+  Future<void> _tryShowStatsGuide() async {
+    if (_guideShown) return;
+    if (!widget.isActive) return;
+
+    final renderObj = _statsCardKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderObj == null || !renderObj.hasSize) return;
+
+    _guideShown = true;
+
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_guideKey) == true) return;
+    await prefs.setBool(_guideKey, true);
+
+    if (!mounted) return;
+    SpotlightOverlay.show(
+      context,
+      targetKey: _statsCardKey,
+      message: S.current.profileStats_guideMessage,
+    );
   }
 
   void _onScroll() {
@@ -333,24 +376,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ))
           else if (hasError)
             _buildError(theme, errorMessage)
-          else
-            Consumer(
-              builder: (context, ref, _) {
-                final summary = ref.watch(userSummaryProvider.select((value) => value.value));
-                final loggedIn = ref.watch(
-                  currentUserProvider.select((value) => value.value != null),
-                );
-                if (!loggedIn || summary == null) {
-                  return const SizedBox.shrink();
-                }
-                return Column(
-                  children: [
-                    _buildStatsRow(theme, summary),
-                    const SizedBox(height: 24),
-                  ],
-                );
-              },
-            ),
+          else if (isLoggedIn)
+            _buildStatsCardWithGuide(),
 
           _buildBalanceCards(),
 
@@ -414,24 +441,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ))
                 else if (hasError)
                   _buildError(theme, errorMessage)
-                else
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final summary = ref.watch(userSummaryProvider.select((value) => value.value));
-                      final loggedIn = ref.watch(
-                        currentUserProvider.select((value) => value.value != null),
-                      );
-                      if (!loggedIn || summary == null) {
-                        return const SizedBox.shrink();
-                      }
-                      return Column(
-                        children: [
-                          _buildStatsRow(theme, summary),
-                          const SizedBox(height: 24),
-                        ],
-                      );
-                    },
-                  ),
+                else if (isLoggedIn)
+                  _buildStatsCardWithGuide(),
 
                 _buildBalanceCards(),
 
@@ -540,60 +551,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
   
-  /// 社区表现 - 使用 Card 保持一致性
-  Widget _buildStatsRow(ThemeData theme, UserSummary summary) {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildCompactStatItem(theme, NumberUtils.formatCount(summary.daysVisited), context.l10n.profile_daysVisited, summary.daysVisited),
-            _buildVerticalDivider(theme),
-            _buildCompactStatItem(theme, NumberUtils.formatCount(summary.postsReadCount), context.l10n.profile_postsRead, summary.postsReadCount),
-            _buildVerticalDivider(theme),
-            _buildCompactStatItem(theme, NumberUtils.formatCount(summary.likesReceived), context.l10n.profile_likesReceived, summary.likesReceived),
-            _buildVerticalDivider(theme),
-            _buildCompactStatItem(theme, NumberUtils.formatCount(summary.postCount), context.l10n.profile_postCount, summary.postCount),
-          ],
+  /// 统计卡片 + 引导触发
+  Widget _buildStatsCardWithGuide() {
+    return Column(
+      children: [
+        ProfileStatsCard(
+          statsCardKey: _statsCardKey,
+          onEdit: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ProfileStatsEditPage()),
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildVerticalDivider(ThemeData theme) {
-    return Container(
-      height: 20,
-      width: 1,
-      color: theme.colorScheme.outlineVariant.withValues(alpha:0.5),
-    );
-  }
-
-  Widget _buildCompactStatItem(ThemeData theme, String value, String label, int rawValue) {
-    return Tooltip(
-      message: '$rawValue',
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.primary,
-            )
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontSize: 11,
-            )
-          ),
-        ],
-      ),
+        const SizedBox(height: 24),
+      ],
     );
   }
 

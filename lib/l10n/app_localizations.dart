@@ -10246,6 +10246,210 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'缤纷'**
   String get schemeVariant_fruitSalad;
+
+  /// No description provided for @profileStats_editTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'统计卡片自定义'**
+  String get profileStats_editTitle;
+
+  /// No description provided for @profileStats_layoutSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'布局设置'**
+  String get profileStats_layoutSettings;
+
+  /// No description provided for @profileStats_layoutMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'布局模式'**
+  String get profileStats_layoutMode;
+
+  /// No description provided for @profileStats_layoutGrid.
+  ///
+  /// In zh, this message translates to:
+  /// **'网格'**
+  String get profileStats_layoutGrid;
+
+  /// No description provided for @profileStats_layoutScroll.
+  ///
+  /// In zh, this message translates to:
+  /// **'滚动'**
+  String get profileStats_layoutScroll;
+
+  /// No description provided for @profileStats_columnsPerRow.
+  ///
+  /// In zh, this message translates to:
+  /// **'每行数量'**
+  String get profileStats_columnsPerRow;
+
+  /// No description provided for @profileStats_dataSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据源'**
+  String get profileStats_dataSource;
+
+  /// No description provided for @profileStats_enabledItems.
+  ///
+  /// In zh, this message translates to:
+  /// **'已添加项目'**
+  String get profileStats_enabledItems;
+
+  /// No description provided for @profileStats_availableItems.
+  ///
+  /// In zh, this message translates to:
+  /// **'可添加项目'**
+  String get profileStats_availableItems;
+
+  /// No description provided for @profileStats_noItemsSelected.
+  ///
+  /// In zh, this message translates to:
+  /// **'未选择任何统计项'**
+  String get profileStats_noItemsSelected;
+
+  /// No description provided for @profileStats_addItems.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击添加统计项'**
+  String get profileStats_addItems;
+
+  /// No description provided for @profileStats_guideMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击统计卡片可自定义展示项目、布局和数据源'**
+  String get profileStats_guideMessage;
+
+  /// No description provided for @profileStats_allItemsAdded.
+  ///
+  /// In zh, this message translates to:
+  /// **'所有统计项已添加'**
+  String get profileStats_allItemsAdded;
+
+  /// No description provided for @profileStats_incompatibleSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'不兼容当前数据源'**
+  String get profileStats_incompatibleSource;
+
+  /// No description provided for @profileStats_daysVisited.
+  ///
+  /// In zh, this message translates to:
+  /// **'访问天数'**
+  String get profileStats_daysVisited;
+
+  /// No description provided for @profileStats_postsRead.
+  ///
+  /// In zh, this message translates to:
+  /// **'已读帖子'**
+  String get profileStats_postsRead;
+
+  /// No description provided for @profileStats_likesReceived.
+  ///
+  /// In zh, this message translates to:
+  /// **'获赞'**
+  String get profileStats_likesReceived;
+
+  /// No description provided for @profileStats_likesGiven.
+  ///
+  /// In zh, this message translates to:
+  /// **'送赞'**
+  String get profileStats_likesGiven;
+
+  /// No description provided for @profileStats_topicCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题数'**
+  String get profileStats_topicCount;
+
+  /// No description provided for @profileStats_postCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'发帖数'**
+  String get profileStats_postCount;
+
+  /// No description provided for @profileStats_timeRead.
+  ///
+  /// In zh, this message translates to:
+  /// **'阅读时间'**
+  String get profileStats_timeRead;
+
+  /// No description provided for @profileStats_recentTimeRead.
+  ///
+  /// In zh, this message translates to:
+  /// **'近60天阅读'**
+  String get profileStats_recentTimeRead;
+
+  /// No description provided for @profileStats_bookmarkCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'书签数'**
+  String get profileStats_bookmarkCount;
+
+  /// No description provided for @profileStats_topicsEntered.
+  ///
+  /// In zh, this message translates to:
+  /// **'浏览主题'**
+  String get profileStats_topicsEntered;
+
+  /// No description provided for @profileStats_topicsRepliedTo.
+  ///
+  /// In zh, this message translates to:
+  /// **'回复主题'**
+  String get profileStats_topicsRepliedTo;
+
+  /// No description provided for @profileStats_likesReceivedDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'获赞天数'**
+  String get profileStats_likesReceivedDays;
+
+  /// No description provided for @profileStats_likesReceivedUsers.
+  ///
+  /// In zh, this message translates to:
+  /// **'获赞人数'**
+  String get profileStats_likesReceivedUsers;
+
+  /// No description provided for @profileStats_sourceSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'全量统计'**
+  String get profileStats_sourceSummary;
+
+  /// No description provided for @profileStats_sourceDaily.
+  ///
+  /// In zh, this message translates to:
+  /// **'本日'**
+  String get profileStats_sourceDaily;
+
+  /// No description provided for @profileStats_sourceWeekly.
+  ///
+  /// In zh, this message translates to:
+  /// **'本周'**
+  String get profileStats_sourceWeekly;
+
+  /// No description provided for @profileStats_sourceMonthly.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月'**
+  String get profileStats_sourceMonthly;
+
+  /// No description provided for @profileStats_sourceQuarterly.
+  ///
+  /// In zh, this message translates to:
+  /// **'本季'**
+  String get profileStats_sourceQuarterly;
+
+  /// No description provided for @profileStats_sourceYearly.
+  ///
+  /// In zh, this message translates to:
+  /// **'本年'**
+  String get profileStats_sourceYearly;
+
+  /// No description provided for @profileStats_sourceConnect.
+  ///
+  /// In zh, this message translates to:
+  /// **'信任等级周期'**
+  String get profileStats_sourceConnect;
 }
 
 class _AppLocalizationsDelegate

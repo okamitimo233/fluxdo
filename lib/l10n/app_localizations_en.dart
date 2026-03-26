@@ -5614,4 +5614,108 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get schemeVariant_fruitSalad => 'Fruit Salad';
+
+  @override
+  String get profileStats_editTitle => 'Customize Stats Card';
+
+  @override
+  String get profileStats_layoutSettings => 'Layout Settings';
+
+  @override
+  String get profileStats_layoutMode => 'Layout Mode';
+
+  @override
+  String get profileStats_layoutGrid => 'Grid';
+
+  @override
+  String get profileStats_layoutScroll => 'Scroll';
+
+  @override
+  String get profileStats_columnsPerRow => 'Columns Per Row';
+
+  @override
+  String get profileStats_dataSource => 'Data Source';
+
+  @override
+  String get profileStats_enabledItems => 'Enabled Items';
+
+  @override
+  String get profileStats_availableItems => 'Available Items';
+
+  @override
+  String get profileStats_noItemsSelected => 'No items selected';
+
+  @override
+  String get profileStats_addItems => 'Tap to add stats';
+
+  @override
+  String get profileStats_guideMessage =>
+      'Tap the stats card to customize items, layout, and data source';
+
+  @override
+  String get profileStats_allItemsAdded => 'All items added';
+
+  @override
+  String get profileStats_incompatibleSource =>
+      'Incompatible with current data source';
+
+  @override
+  String get profileStats_daysVisited => 'Days Visited';
+
+  @override
+  String get profileStats_postsRead => 'Posts Read';
+
+  @override
+  String get profileStats_likesReceived => 'Likes Received';
+
+  @override
+  String get profileStats_likesGiven => 'Likes Given';
+
+  @override
+  String get profileStats_topicCount => 'Topics';
+
+  @override
+  String get profileStats_postCount => 'Posts';
+
+  @override
+  String get profileStats_timeRead => 'Time Read';
+
+  @override
+  String get profileStats_recentTimeRead => 'Recent 60d Read';
+
+  @override
+  String get profileStats_bookmarkCount => 'Bookmarks';
+
+  @override
+  String get profileStats_topicsEntered => 'Topics Viewed';
+
+  @override
+  String get profileStats_topicsRepliedTo => 'Topics Replied';
+
+  @override
+  String get profileStats_likesReceivedDays => 'Liked Days';
+
+  @override
+  String get profileStats_likesReceivedUsers => 'Liked Users';
+
+  @override
+  String get profileStats_sourceSummary => 'All Time';
+
+  @override
+  String get profileStats_sourceDaily => 'Daily';
+
+  @override
+  String get profileStats_sourceWeekly => 'Weekly';
+
+  @override
+  String get profileStats_sourceMonthly => 'Monthly';
+
+  @override
+  String get profileStats_sourceQuarterly => 'Quarterly';
+
+  @override
+  String get profileStats_sourceYearly => 'Yearly';
+
+  @override
+  String get profileStats_sourceConnect => 'Trust Period';
 }

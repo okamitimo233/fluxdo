@@ -437,7 +437,7 @@ class _MainPageState extends ConsumerState<MainPage>
   Timer? _resumeDebounceTimer;
   DateTime? _lastBackPressTime;
 
-  static const _profilePage = ProfilePage();
+  // 不能是 const，需要传入 isActive
 
   @override
   void initState() {
@@ -715,7 +715,7 @@ class _MainPageState extends ConsumerState<MainPage>
           index: _currentIndex,
           children: [
             TopicsScreen(isActive: _currentIndex == 0),
-            _profilePage,
+            ProfilePage(isActive: _currentIndex == 1),
           ],
         ),
       ),

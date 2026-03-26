@@ -5489,6 +5489,108 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get schemeVariant_fruitSalad => '缤纷';
+
+  @override
+  String get profileStats_editTitle => '统计卡片自定义';
+
+  @override
+  String get profileStats_layoutSettings => '布局设置';
+
+  @override
+  String get profileStats_layoutMode => '布局模式';
+
+  @override
+  String get profileStats_layoutGrid => '网格';
+
+  @override
+  String get profileStats_layoutScroll => '滚动';
+
+  @override
+  String get profileStats_columnsPerRow => '每行数量';
+
+  @override
+  String get profileStats_dataSource => '数据源';
+
+  @override
+  String get profileStats_enabledItems => '已添加项目';
+
+  @override
+  String get profileStats_availableItems => '可添加项目';
+
+  @override
+  String get profileStats_noItemsSelected => '未选择任何统计项';
+
+  @override
+  String get profileStats_addItems => '点击添加统计项';
+
+  @override
+  String get profileStats_guideMessage => '点击统计卡片可自定义展示项目、布局和数据源';
+
+  @override
+  String get profileStats_allItemsAdded => '所有统计项已添加';
+
+  @override
+  String get profileStats_incompatibleSource => '不兼容当前数据源';
+
+  @override
+  String get profileStats_daysVisited => '访问天数';
+
+  @override
+  String get profileStats_postsRead => '已读帖子';
+
+  @override
+  String get profileStats_likesReceived => '获赞';
+
+  @override
+  String get profileStats_likesGiven => '送赞';
+
+  @override
+  String get profileStats_topicCount => '主题数';
+
+  @override
+  String get profileStats_postCount => '发帖数';
+
+  @override
+  String get profileStats_timeRead => '阅读时间';
+
+  @override
+  String get profileStats_recentTimeRead => '近60天阅读';
+
+  @override
+  String get profileStats_bookmarkCount => '书签数';
+
+  @override
+  String get profileStats_topicsEntered => '浏览主题';
+
+  @override
+  String get profileStats_topicsRepliedTo => '回复主题';
+
+  @override
+  String get profileStats_likesReceivedDays => '获赞天数';
+
+  @override
+  String get profileStats_likesReceivedUsers => '获赞人数';
+
+  @override
+  String get profileStats_sourceSummary => '全量统计';
+
+  @override
+  String get profileStats_sourceDaily => '本日';
+
+  @override
+  String get profileStats_sourceWeekly => '本周';
+
+  @override
+  String get profileStats_sourceMonthly => '本月';
+
+  @override
+  String get profileStats_sourceQuarterly => '本季';
+
+  @override
+  String get profileStats_sourceYearly => '本年';
+
+  @override
+  String get profileStats_sourceConnect => '信任等级周期';
 }
 
 /// The translations for Chinese, as used in Hong Kong (`zh_HK`).
@@ -10855,6 +10957,108 @@ class AppLocalizationsZhHk extends AppLocalizationsZh {
 
   @override
   String get schemeVariant_fruitSalad => '繽紛';
+
+  @override
+  String get profileStats_editTitle => '統計卡片自訂';
+
+  @override
+  String get profileStats_layoutSettings => '佈局設定';
+
+  @override
+  String get profileStats_layoutMode => '佈局模式';
+
+  @override
+  String get profileStats_layoutGrid => '網格';
+
+  @override
+  String get profileStats_layoutScroll => '滾動';
+
+  @override
+  String get profileStats_columnsPerRow => '每行數量';
+
+  @override
+  String get profileStats_dataSource => '數據來源';
+
+  @override
+  String get profileStats_enabledItems => '已添加項目';
+
+  @override
+  String get profileStats_availableItems => '可添加項目';
+
+  @override
+  String get profileStats_noItemsSelected => '未選擇任何統計項';
+
+  @override
+  String get profileStats_addItems => '點擊添加統計項';
+
+  @override
+  String get profileStats_guideMessage => '點擊統計卡片可自訂展示項目、佈局和數據來源';
+
+  @override
+  String get profileStats_allItemsAdded => '所有統計項已添加';
+
+  @override
+  String get profileStats_incompatibleSource => '不兼容當前數據來源';
+
+  @override
+  String get profileStats_daysVisited => '訪問天數';
+
+  @override
+  String get profileStats_postsRead => '已讀帖子';
+
+  @override
+  String get profileStats_likesReceived => '獲贊';
+
+  @override
+  String get profileStats_likesGiven => '送贊';
+
+  @override
+  String get profileStats_topicCount => '主題數';
+
+  @override
+  String get profileStats_postCount => '發帖數';
+
+  @override
+  String get profileStats_timeRead => '閱讀時間';
+
+  @override
+  String get profileStats_recentTimeRead => '近60天閱讀';
+
+  @override
+  String get profileStats_bookmarkCount => '書簽數';
+
+  @override
+  String get profileStats_topicsEntered => '瀏覽主題';
+
+  @override
+  String get profileStats_topicsRepliedTo => '回覆主題';
+
+  @override
+  String get profileStats_likesReceivedDays => '獲贊天數';
+
+  @override
+  String get profileStats_likesReceivedUsers => '獲贊人數';
+
+  @override
+  String get profileStats_sourceSummary => '全量統計';
+
+  @override
+  String get profileStats_sourceDaily => '本日';
+
+  @override
+  String get profileStats_sourceWeekly => '本週';
+
+  @override
+  String get profileStats_sourceMonthly => '本月';
+
+  @override
+  String get profileStats_sourceQuarterly => '本季';
+
+  @override
+  String get profileStats_sourceYearly => '本年';
+
+  @override
+  String get profileStats_sourceConnect => '信任等級週期';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -16221,4 +16425,106 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get schemeVariant_fruitSalad => '繽紛';
+
+  @override
+  String get profileStats_editTitle => '統計卡片自訂';
+
+  @override
+  String get profileStats_layoutSettings => '佈局設定';
+
+  @override
+  String get profileStats_layoutMode => '佈局模式';
+
+  @override
+  String get profileStats_layoutGrid => '網格';
+
+  @override
+  String get profileStats_layoutScroll => '滾動';
+
+  @override
+  String get profileStats_columnsPerRow => '每行數量';
+
+  @override
+  String get profileStats_dataSource => '資料來源';
+
+  @override
+  String get profileStats_enabledItems => '已新增項目';
+
+  @override
+  String get profileStats_availableItems => '可新增項目';
+
+  @override
+  String get profileStats_noItemsSelected => '未選擇任何統計項';
+
+  @override
+  String get profileStats_addItems => '點擊新增統計項';
+
+  @override
+  String get profileStats_guideMessage => '點擊統計卡片可自訂展示項目、佈局和資料來源';
+
+  @override
+  String get profileStats_allItemsAdded => '所有統計項已新增';
+
+  @override
+  String get profileStats_incompatibleSource => '不相容目前資料來源';
+
+  @override
+  String get profileStats_daysVisited => '造訪天數';
+
+  @override
+  String get profileStats_postsRead => '已讀帖子';
+
+  @override
+  String get profileStats_likesReceived => '獲讚';
+
+  @override
+  String get profileStats_likesGiven => '送讚';
+
+  @override
+  String get profileStats_topicCount => '主題數';
+
+  @override
+  String get profileStats_postCount => '發帖數';
+
+  @override
+  String get profileStats_timeRead => '閱讀時間';
+
+  @override
+  String get profileStats_recentTimeRead => '近60天閱讀';
+
+  @override
+  String get profileStats_bookmarkCount => '書籤數';
+
+  @override
+  String get profileStats_topicsEntered => '瀏覽主題';
+
+  @override
+  String get profileStats_topicsRepliedTo => '回覆主題';
+
+  @override
+  String get profileStats_likesReceivedDays => '獲讚天數';
+
+  @override
+  String get profileStats_likesReceivedUsers => '獲讚人數';
+
+  @override
+  String get profileStats_sourceSummary => '全量統計';
+
+  @override
+  String get profileStats_sourceDaily => '本日';
+
+  @override
+  String get profileStats_sourceWeekly => '本週';
+
+  @override
+  String get profileStats_sourceMonthly => '本月';
+
+  @override
+  String get profileStats_sourceQuarterly => '本季';
+
+  @override
+  String get profileStats_sourceYearly => '本年';
+
+  @override
+  String get profileStats_sourceConnect => '信任等級週期';
 }

@@ -120,6 +120,25 @@ mixin _UsersMixin on _DiscourseServiceBase {
     return summary;
   }
 
+  /// 获取用户 Directory 统计（按时间段）
+  Future<Map<String, dynamic>?> getDirectoryItem(
+    String username,
+    String period,
+  ) async {
+    final response = await _dio.get(
+      '/directory_items.json',
+      queryParameters: {
+        'period': period,
+        'username': username,
+      },
+    );
+    final items = response.data['directory_items'] as List<dynamic>?;
+    if (items != null && items.isNotEmpty) {
+      return items.first as Map<String, dynamic>;
+    }
+    return null;
+  }
+
   /// 获取用户动态
   Future<UserActionResponse> getUserActions(
     String username, {

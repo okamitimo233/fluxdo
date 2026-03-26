@@ -340,6 +340,8 @@ class UserSummary {
   final int postCount;
   final int timeRead; // 秒
   final int bookmarkCount;
+  final int topicsEntered; // 浏览主题数
+  final int recentTimeRead; // 近60天阅读时间（秒）
 
   // 详细统计
   final List<SummaryTopic> topics;
@@ -360,6 +362,8 @@ class UserSummary {
     required this.postCount,
     required this.timeRead,
     required this.bookmarkCount,
+    this.topicsEntered = 0,
+    this.recentTimeRead = 0,
     this.topics = const [],
     this.replies = const [],
     this.links = const [],
@@ -402,6 +406,8 @@ class UserSummary {
       postCount: summary['post_count'] as int? ?? 0,
       timeRead: summary['time_read'] as int? ?? 0,
       bookmarkCount: summary['bookmark_count'] as int? ?? 0,
+      topicsEntered: summary['topics_entered'] as int? ?? 0,
+      recentTimeRead: summary['recent_time_read'] as int? ?? 0,
       topics: topics,
       replies: repliesJson.map((e) => SummaryReply.fromJson(e as Map<String, dynamic>, topicMap)).toList(),
       links: linksJson.map((e) => SummaryLink.fromJson(e as Map<String, dynamic>, topicMap)).toList(),
@@ -413,12 +419,18 @@ class UserSummary {
     );
   }
 
-  /// 序列化为缓存 JSON（只缓存四项统计数据）
+  /// 序列化为缓存 JSON
   Map<String, dynamic> toCacheJson() => {
     'days_visited': daysVisited,
     'posts_read_count': postsReadCount,
     'likes_received': likesReceived,
     'post_count': postCount,
+    'likes_given': likesGiven,
+    'topic_count': topicCount,
+    'time_read': timeRead,
+    'bookmark_count': bookmarkCount,
+    'topics_entered': topicsEntered,
+    'recent_time_read': recentTimeRead,
   };
 
   /// 从缓存 JSON 恢复
@@ -427,11 +439,13 @@ class UserSummary {
       daysVisited: json['days_visited'] as int? ?? 0,
       postsReadCount: json['posts_read_count'] as int? ?? 0,
       likesReceived: json['likes_received'] as int? ?? 0,
-      likesGiven: 0,
-      topicCount: 0,
+      likesGiven: json['likes_given'] as int? ?? 0,
+      topicCount: json['topic_count'] as int? ?? 0,
       postCount: json['post_count'] as int? ?? 0,
-      timeRead: 0,
-      bookmarkCount: 0,
+      timeRead: json['time_read'] as int? ?? 0,
+      bookmarkCount: json['bookmark_count'] as int? ?? 0,
+      topicsEntered: json['topics_entered'] as int? ?? 0,
+      recentTimeRead: json['recent_time_read'] as int? ?? 0,
     );
   }
 
