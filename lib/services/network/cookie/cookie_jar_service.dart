@@ -146,35 +146,6 @@ class CookieJarService {
     await _coordinator!.syncFromWebView(ctx);
   }
 
-  /// 从 CookieJar 同步 Cookie 到 WebView
-  Future<void> syncToWebView({
-    String? currentUrl,
-    InAppWebViewController? controller,
-  }) async {
-    if (!_initialized) await initialize();
-
-    final ctx = await _buildSyncContext(
-      currentUrl: currentUrl,
-      controller: controller,
-    );
-    await _coordinator!.syncToWebView(ctx);
-  }
-
-  /// Windows 专用：通过页面级 controller 的 CDP 直接写入 CookieJar 中的 cookie
-  Future<void> syncToWebViewViaController(
-    InAppWebViewController controller, {
-    String? currentUrl,
-  }) async {
-    if (!io.Platform.isWindows) return;
-    if (!_initialized) await initialize();
-
-    final ctx = await _buildSyncContext(
-      currentUrl: currentUrl,
-      controller: controller,
-    );
-    await _coordinator!.syncToWebViewViaController(controller, ctx);
-  }
-
   /// 从当前 WebView 控制器的实时 Cookie 中读取指定值
   Future<String?> readCookieValueFromController(
     InAppWebViewController controller,

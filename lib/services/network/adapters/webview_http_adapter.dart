@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../../../constants.dart';
 import '../cookie/cookie_jar_service.dart';
+import '../cookie/cookie_write_through.dart';
 import '../../webview_settings.dart';
 import '../../windows_webview_environment_service.dart';
 
@@ -100,10 +101,10 @@ class WebViewHttpAdapter implements HttpClientAdapter {
     final shouldSyncAppCookies = _shouldSyncAppCookies(requestUri, baseUri);
 
     if (shouldSyncAppCookies) {
-      await CookieJarService().syncToWebView(
-        currentUrl: url,
+      await CookieWriteThrough.instance.seedCriticalCookies(
         controller: _controller,
       );
+      await CookieWriteThrough.instance.barrier();
     }
 
     // 非应用站点的备选路径：根据请求头尽力补 Cookie。

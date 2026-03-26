@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cookie_jar/cookie_jar.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../log/log_writer.dart';
 import 'cookie_jar_service.dart';
+import 'cookie_write_through.dart';
 
 /// App-specific CookieManager.
 /// Avoids saving Set-Cookie into redirect target domains by default.
@@ -222,6 +224,12 @@ class AppCookieManager extends Interceptor {
       originalUri.resolveUri(response.realUri),
       filteredCookies,
     );
+
+    // 实时推送关键 cookie 到 WebView（不阻塞 Dio 响应链）
+    unawaited(CookieWriteThrough.instance.writeThrough(
+      filteredCookies,
+      originalUri,
+    ));
 
     // Optionally save cookies for redirected locations.
     final allowRedirectSave = response.requestOptions.extra['allowRedirectSetCookie'] == true;

@@ -8,6 +8,7 @@ import '../services/toast_service.dart';
 import '../services/app_link_service.dart';
 import '../constants.dart';
 import '../services/network/cookie/cookie_jar_service.dart';
+import '../services/network/cookie/cookie_write_through.dart';
 import '../services/webview_settings.dart';
 import '../services/windows_webview_environment_service.dart';
 import '../widgets/common/app_link_confirm_dialog.dart';
@@ -60,11 +61,7 @@ class _WebViewPageState extends ConsumerState<WebViewPage> {
     super.initState();
     _currentUrl = widget.url;
     _currentTitle = widget.title ?? '';
-    // Windows 上不再提前 sync（CookieManager 对页面 WebView 不可靠），
-    // 改为在 onWebViewCreated 中通过 controller CDP 写入
-    _cookieSyncFuture = io.Platform.isWindows
-        ? Future.value()
-        : _syncCookiesBeforeOpen();
+    _cookieSyncFuture = _seedAndBarrier();
   }
 
   @override
@@ -246,10 +243,10 @@ class _WebViewPageState extends ConsumerState<WebViewPage> {
                     onWebViewCreated: (controller) async {
                       _controller = controller;
                       if (io.Platform.isWindows && widget.url.isNotEmpty) {
-                        await CookieJarService().syncToWebViewViaController(
-                          controller,
-                          currentUrl: widget.url,
+                        await CookieWriteThrough.instance.seedCriticalCookies(
+                          controller: controller,
                         );
+                        await CookieWriteThrough.instance.barrier();
                         await controller.loadUrl(
                           urlRequest: URLRequest(url: WebUri(widget.url)),
                         );
@@ -391,10 +388,10 @@ class _WebViewPageState extends ConsumerState<WebViewPage> {
     return NavigationActionPolicy.CANCEL;
   }
 
-  Future<void> _syncCookiesBeforeOpen() async {
-    await CookieJarService().syncToWebView(
-      currentUrl: widget.url,
-    );
+  Future<void> _seedAndBarrier() async {
+    if (io.Platform.isWindows) return; // Windows 在 onWebViewCreated 中处理
+    await CookieWriteThrough.instance.seedCriticalCookies();
+    await CookieWriteThrough.instance.barrier();
   }
 
   bool _shouldSyncCookiesForUrl(String url) {
