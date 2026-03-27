@@ -5739,4 +5739,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get migration_reloginRequired =>
       'Cookie storage has been upgraded. Your login session was cleared. Please log in again.';
+
+  @override
+  String table_rowCount(int count) {
+    return '$count rows';
+  }
 }

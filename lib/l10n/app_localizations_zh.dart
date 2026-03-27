@@ -5610,6 +5610,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get migration_reloginRequired =>
       '本次版本升级优化了 Cookie 存储机制，已清除旧的登录状态。请重新登录。';
+
+  @override
+  String table_rowCount(int count) {
+    return '共 $count 行';
+  }
 }
 
 /// The translations for Chinese, as used in Hong Kong (`zh_HK`).
@@ -11097,6 +11102,11 @@ class AppLocalizationsZhHk extends AppLocalizationsZh {
   @override
   String get migration_reloginRequired =>
       '本次版本升級優化了 Cookie 儲存機制，已清除舊的登入狀態。請重新登入。';
+
+  @override
+  String table_rowCount(int count) {
+    return '共 $count 行';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -16584,4 +16594,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String get migration_reloginRequired =>
       '本次版本升級優化了 Cookie 儲存機制，已清除舊的登入狀態。請重新登入。';
+
+  @override
+  String table_rowCount(int count) {
+    return '共 $count 行';
+  }
 }

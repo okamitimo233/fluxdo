@@ -3125,5 +3125,14 @@
   "profileStats_sourceYearly": "本年",
   "profileStats_sourceConnect": "信任等級週期",
 
-  "migration_reloginRequired": "本次版本升級優化了 Cookie 儲存機制，已清除舊的登入狀態。請重新登入。"
+  "migration_reloginRequired": "本次版本升級優化了 Cookie 儲存機制，已清除舊的登入狀態。請重新登入。",
+
+  "table_rowCount": "共 {count} 行",
+  "@table_rowCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

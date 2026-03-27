@@ -2100,5 +2100,14 @@
   "profileStats_sourceYearly": "本年",
   "profileStats_sourceConnect": "信任等级周期",
 
-  "migration_reloginRequired": "本次版本升级优化了 Cookie 存储机制，已清除旧的登录状态。请重新登录。"
+  "migration_reloginRequired": "本次版本升级优化了 Cookie 存储机制，已清除旧的登录状态。请重新登录。",
+
+  "table_rowCount": "共 {count} 行",
+  "@table_rowCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

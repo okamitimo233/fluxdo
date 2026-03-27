@@ -1918,5 +1918,14 @@
   "profileStats_sourceYearly": "Yearly",
   "profileStats_sourceConnect": "Trust Period",
 
-  "migration_reloginRequired": "Cookie storage has been upgraded. Your login session was cleared. Please log in again."
+  "migration_reloginRequired": "Cookie storage has been upgraded. Your login session was cleared. Please log in again.",
+
+  "table_rowCount": "{count} rows",
+  "@table_rowCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

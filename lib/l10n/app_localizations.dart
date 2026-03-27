@@ -10486,6 +10486,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'本次版本升级优化了 Cookie 存储机制，已清除旧的登录状态。请重新登录。'**
   String get migration_reloginRequired;
+
+  /// No description provided for @table_rowCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'共 {count} 行'**
+  String table_rowCount(int count);
 }
 
 class _AppLocalizationsDelegate
