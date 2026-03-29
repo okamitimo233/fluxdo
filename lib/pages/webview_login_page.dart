@@ -160,6 +160,7 @@ class _WebViewLoginPageState extends ConsumerState<WebViewLoginPage> {
                   ),
                 ),
                 initialSettings: WebViewSettings.visible,
+                initialUserScripts: WebViewSettings.ios15PolyfillScripts,
                 onReceivedServerTrustAuthRequest: (_, challenge) =>
                     WebViewSettings.handleServerTrustAuthRequest(challenge),
                 onWebViewCreated: (controller) {

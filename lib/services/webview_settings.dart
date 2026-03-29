@@ -1,5 +1,5 @@
+import 'dart:collection' show UnmodifiableListView;
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -97,6 +97,44 @@ class WebViewSettings {
     // 安全相关
     thirdPartyCookiesEnabled: true,
   );
+
+  /// iOS 15 及以下缺少的现代 JS API polyfill，在页面最早期注入以兼容 Discourse 前端
+  static final _ios15Polyfills = UserScript(
+    source: '''
+(function() {
+  // Object.hasOwn — iOS 15.4 引入，15.3 及以下不存在
+  if (!Object.hasOwn) {
+    Object.hasOwn = function(obj, prop) {
+      return Object.prototype.hasOwnProperty.call(obj, prop);
+    };
+  }
+  // Array.prototype.at — iOS 15.4 引入
+  if (!Array.prototype.at) {
+    Array.prototype.at = function(index) {
+      var n = Math.trunc(index) || 0;
+      if (n < 0) n += this.length;
+      if (n < 0 || n >= this.length) return undefined;
+      return this[n];
+    };
+  }
+  // String.prototype.at — iOS 15.4 引入
+  if (!String.prototype.at) {
+    String.prototype.at = function(index) {
+      var n = Math.trunc(index) || 0;
+      if (n < 0) n += this.length;
+      if (n < 0 || n >= this.length) return undefined;
+      return this[n];
+    };
+  }
+})();
+''',
+    injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+    forMainFrameOnly: false,
+  );
+
+  /// iOS 15 polyfill 脚本列表，传给 InAppWebView.initialUserScripts
+  static UnmodifiableListView<UserScript> get ios15PolyfillScripts =>
+      UnmodifiableListView([_ios15Polyfills]);
 
   /// 可见 WebView 配置（登录页、CF 手动验证等，完整功能）
   /// 用于 WebViewLoginPage、CF 手动验证页面等
