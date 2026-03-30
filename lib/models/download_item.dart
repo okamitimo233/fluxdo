@@ -26,6 +26,8 @@ class DownloadItem {
   });
 
   DownloadItem copyWith({
+    String? fileName,
+    String? savePath,
     DownloadItemStatus? status,
     double? progress,
     int? fileSize,
@@ -33,8 +35,8 @@ class DownloadItem {
       DownloadItem(
         id: id,
         url: url,
-        fileName: fileName,
-        savePath: savePath,
+        fileName: fileName ?? this.fileName,
+        savePath: savePath ?? this.savePath,
         fileSize: fileSize ?? this.fileSize,
         createdAt: createdAt,
         status: status ?? this.status,

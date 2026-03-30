@@ -12,6 +12,7 @@ class DownloadToastHandle {
   OverlayEntry? _entry;
   AnimationController? _controller;
   final progress = ValueNotifier<double>(-1.0); // -1 = 不确定进度
+  final fileName = ValueNotifier<String>('');
   bool _disposed = false;
 
   bool get isActive => !_disposed && _entry != null;
@@ -19,6 +20,11 @@ class DownloadToastHandle {
   /// 更新下载进度（0.0~1.0，-1 为不确定进度）
   void updateProgress(double value) {
     if (!_disposed) progress.value = value;
+  }
+
+  /// 更新显示的文件名（HEAD 请求获取到更好的文件名时调用）
+  void updateFileName(String name) {
+    if (!_disposed) fileName.value = name;
   }
 
   /// 关闭 Toast
@@ -35,10 +41,12 @@ class DownloadToastHandle {
         e.remove();
         c.dispose();
         progress.dispose();
+        fileName.dispose();
       });
     } else {
       e?.remove();
       progress.dispose();
+      fileName.dispose();
     }
   }
 }
@@ -110,10 +118,11 @@ class ToastService {
     }
 
     final handle = DownloadToastHandle();
+    handle.fileName.value = fileName;
 
     final entry = OverlayEntry(
       builder: (context) => _DownloadToastWidget(
-        fileName: fileName,
+        fileName: handle.fileName,
         progress: handle.progress,
         onControllerCreated: (c) {
           handle._controller = c;
@@ -374,7 +383,7 @@ class _ToastWidgetState extends State<_ToastWidget>
 
 /// 下载进度 Toast 组件
 class _DownloadToastWidget extends StatefulWidget {
-  final String fileName;
+  final ValueNotifier<String> fileName;
   final ValueNotifier<double> progress;
   final void Function(AnimationController) onControllerCreated;
   final VoidCallback onDismiss;
@@ -510,15 +519,18 @@ class _DownloadToastWidgetState extends State<_DownloadToastWidget>
                               ),
                               const SizedBox(width: 12),
                               Flexible(
-                                child: Text(
-                                  widget.fileName,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: colorScheme.onInverseSurface,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.2,
+                                child: ValueListenableBuilder<String>(
+                                  valueListenable: widget.fileName,
+                                  builder: (context, name, _) => Text(
+                                    name,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: colorScheme.onInverseSurface,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.2,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               if (percentage.isNotEmpty) ...[

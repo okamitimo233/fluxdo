@@ -353,6 +353,7 @@
 			);
 			name = "Copy Rust DOH Proxy";
 			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/libdoh_proxy.a",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;

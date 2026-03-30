@@ -47,19 +47,15 @@ class DownloadNotifier extends StateNotifier<List<DownloadItem>> {
     String? mimeType,
     int? contentLength,
   }) async {
-    // 没有建议文件名时，通过 HEAD 请求从 Content-Disposition 获取原始文件名
-    if (suggestedFilename == null || suggestedFilename.isEmpty) {
-      suggestedFilename =
-          await DownloadService.instance.fetchFileNameFromHeader(url);
-    }
-    final fileName =
+    // 快速解析初始文件名（不等待网络），立即反馈用户
+    final initialFileName =
         DownloadService.resolveFileName(url, suggestedFilename: suggestedFilename);
 
     // 获取下载目录，处理重名
     final dir = await _getDownloadDir();
-    final savePath = _uniquePath(dir.path, fileName);
+    var savePath = _uniquePath(dir.path, initialFileName);
     // 实际文件名可能带编号（如 "file (1).pdf"）
-    final actualFileName = savePath.split('/').last;
+    var actualFileName = savePath.split('/').last;
 
     final id = DateTime.now().millisecondsSinceEpoch.toString();
     final item = DownloadItem(
@@ -76,8 +72,24 @@ class DownloadNotifier extends StateNotifier<List<DownloadItem>> {
     state = [item, ...state];
     _save();
 
-    // 显示下载进度 Toast
+    // 立即显示下载进度 Toast（不等待 HEAD 请求）
     final toastHandle = ToastService.showDownload(actualFileName);
+
+    // 没有建议文件名时，通过 HEAD 请求获取更准确的文件名（作为下载 loading 的一部分）
+    if (suggestedFilename == null || suggestedFilename.isEmpty) {
+      final headerName =
+          await DownloadService.instance.fetchFileNameFromHeader(url);
+      if (headerName != null && headerName.isNotEmpty) {
+        final betterPath = _uniquePath(dir.path, headerName);
+        final betterActualName = betterPath.split('/').last;
+        if (betterActualName != actualFileName) {
+          savePath = betterPath;
+          actualFileName = betterActualName;
+          _updateItem(id, fileName: betterActualName, savePath: betterPath);
+          toastHandle.updateFileName(betterActualName);
+        }
+      }
+    }
 
     // 开始下载
     final cancelToken = CancelToken();
@@ -110,7 +122,7 @@ class DownloadNotifier extends StateNotifier<List<DownloadItem>> {
     } on DioException catch (e) {
       toastHandle.dismiss();
       if (e.type == DioExceptionType.cancel) {
-        debugPrint('[DownloadProvider] 下载已取消: $fileName');
+        debugPrint('[DownloadProvider] 下载已取消: $actualFileName');
       } else {
         debugPrint('[DownloadProvider] 下载失败: $e');
         _updateItem(id, status: DownloadItemStatus.failed);
@@ -177,17 +189,25 @@ class DownloadNotifier extends StateNotifier<List<DownloadItem>> {
   }
 
   void _updateItem(String id,
-      {DownloadItemStatus? status, double? progress, int? fileSize}) {
+      {String? fileName,
+      String? savePath,
+      DownloadItemStatus? status,
+      double? progress,
+      int? fileSize}) {
     state = [
       for (final item in state)
         if (item.id == id)
           item.copyWith(
-              status: status, progress: progress, fileSize: fileSize)
+              fileName: fileName,
+              savePath: savePath,
+              status: status,
+              progress: progress,
+              fileSize: fileSize)
         else
           item,
     ];
-    // 只在状态变更时持久化，避免进度更新频繁写入
-    if (status != null) _save();
+    // 只在状态变更或文件名更新时持久化，避免进度更新频繁写入
+    if (status != null || fileName != null) _save();
   }
 
   /// 持久化到 SharedPreferences

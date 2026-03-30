@@ -111,6 +111,9 @@ class _DiscourseHtmlContentState extends ConsumerState<DiscourseHtmlContent> {
   /// 已揭示的内联 spoiler ID 集合
   final Set<String> _revealedSpoilers = {};
 
+  /// 附件链接 URL → 显示文件名 映射（由 customWidgetBuilder 填充）
+  final Map<String, String> _attachmentFileNames = {};
+
   /// 已揭示的 spoiler 内的图片 URL 集合（用于画廊过滤）
   /// 优先使用外部共享集合，否则创建本地集合
   late final Set<String> _revealedImageUrls;
@@ -526,7 +529,10 @@ class _DiscourseHtmlContentState extends ConsumerState<DiscourseHtmlContent> {
           url,
           onInternalLinkTap: widget.onInternalLinkTap,
           onDownloadAttachment: (downloadUrl) {
-            ref.read(downloadProvider.notifier).startDownload(url: downloadUrl);
+            ref.read(downloadProvider.notifier).startDownload(
+                  url: downloadUrl,
+                  suggestedFilename: _attachmentFileNames[downloadUrl],
+                );
           },
         );
         return true;
@@ -607,6 +613,18 @@ class _DiscourseHtmlContentState extends ConsumerState<DiscourseHtmlContent> {
     // 内联 SVG 渲染
     if (element.localName == 'svg') {
       return _buildInlineSvg(element);
+    }
+
+    // 附件链接 (a.attachment)：提取显示文件名，供下载时使用
+    if (element.localName == 'a' && element.classes.contains('attachment')) {
+      final href = element.attributes['href'];
+      if (href != null) {
+        final text = element.text.trim();
+        if (text.isNotEmpty) {
+          _attachmentFileNames[UrlHelper.resolveUrl(href)] = text;
+        }
+      }
+      // 返回 null，保持默认渲染
     }
 
     // 用户提及链接 (a.mention)：直接 WidgetSpan 渲染
