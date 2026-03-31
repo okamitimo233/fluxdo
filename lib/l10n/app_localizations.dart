@@ -6665,6 +6665,30 @@ abstract class AppLocalizations {
   /// **'应用日志'**
   String get appLogs_shareSubject;
 
+  /// No description provided for @appLogs_sendFeedback.
+  ///
+  /// In zh, this message translates to:
+  /// **'私信反馈日志'**
+  String get appLogs_sendFeedback;
+
+  /// No description provided for @appLogs_feedbackSending.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在发送反馈…'**
+  String get appLogs_feedbackSending;
+
+  /// No description provided for @appLogs_feedbackSent.
+  ///
+  /// In zh, this message translates to:
+  /// **'反馈已发送'**
+  String get appLogs_feedbackSent;
+
+  /// No description provided for @appLogs_feedbackTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用日志反馈'**
+  String get appLogs_feedbackTitle;
+
   /// No description provided for @preferences_title.
   ///
   /// In zh, this message translates to:

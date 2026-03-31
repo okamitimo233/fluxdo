@@ -1159,6 +1159,10 @@
   "appLogs_logoutActive": "Active logout",
   "appLogs_logoutPassive": "Passive logout",
   "appLogs_shareSubject": "App Logs",
+  "appLogs_sendFeedback": "Send logs via PM",
+  "appLogs_feedbackSending": "Sending feedback...",
+  "appLogs_feedbackSent": "Feedback sent",
+  "appLogs_feedbackTitle": "App Log Feedback",
 
   "preferences_title": "Preferences",
   "preferences_basic": "Basic",

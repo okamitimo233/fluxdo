@@ -3600,6 +3600,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appLogs_shareSubject => '应用日志';
 
   @override
+  String get appLogs_sendFeedback => '私信反馈日志';
+
+  @override
+  String get appLogs_feedbackSending => '正在发送反馈…';
+
+  @override
+  String get appLogs_feedbackSent => '反馈已发送';
+
+  @override
+  String get appLogs_feedbackTitle => '应用日志反馈';
+
+  @override
   String get preferences_title => '功能设置';
 
   @override
@@ -9266,6 +9278,18 @@ class AppLocalizationsZhHk extends AppLocalizationsZh {
   String get appLogs_shareSubject => '應用日誌';
 
   @override
+  String get appLogs_sendFeedback => '私信反饋日誌';
+
+  @override
+  String get appLogs_feedbackSending => '正在發送反饋…';
+
+  @override
+  String get appLogs_feedbackSent => '反饋已發送';
+
+  @override
+  String get appLogs_feedbackTitle => '應用日誌反饋';
+
+  @override
   String get preferences_title => '功能設置';
 
   @override
@@ -14809,6 +14833,18 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get appLogs_shareSubject => '應用日誌';
+
+  @override
+  String get appLogs_sendFeedback => '私訊回報日誌';
+
+  @override
+  String get appLogs_feedbackSending => '正在傳送回報…';
+
+  @override
+  String get appLogs_feedbackSent => '回報已傳送';
+
+  @override
+  String get appLogs_feedbackTitle => '應用日誌回報';
 
   @override
   String get preferences_title => '功能設定';

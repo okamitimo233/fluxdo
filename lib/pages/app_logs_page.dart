@@ -1,10 +1,16 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../services/app_error_handler.dart';
+import '../services/discourse/discourse_service.dart';
 import '../services/log/logger_utils.dart';
 import '../services/toast_service.dart';
 import '../widgets/common/dismissible_popup_menu.dart';
+import '../widgets/post/reply_sheet.dart';
 import '../l10n/s.dart';
 import '../utils/dialog_utils.dart';
 
@@ -99,6 +105,74 @@ class _AppLogsPageState extends State<AppLogsPage> {
       await LoggerUtils.clearLogs();
       await _loadLogs();
       ToastService.showSuccess(S.current.appLogs_logsCleared);
+    }
+  }
+
+  /// 打开私信界面，预填设备信息、日志摘要和完整日志附件
+  Future<void> _sendFeedback() async {
+    try {
+      // 并行：获取设备信息、读取日志内容、上传完整日志文件
+      final deviceInfoFuture = LoggerUtils.getDeviceInfoText();
+      final logContentFuture = LoggerUtils.readLogContent();
+      final uploadFuture = _uploadLogFile();
+      final deviceInfo = await deviceInfoFuture;
+      final logContent = await logContentFuture;
+      final attachmentMarkdown = await uploadFuture;
+
+      if (!mounted) return;
+
+      final buf = StringBuffer()
+        ..writeln('## 设备信息')
+        ..writeln('```')
+        ..writeln(deviceInfo)
+        ..writeln('```')
+        ..writeln();
+
+      // 完整日志附件
+      if (attachmentMarkdown != null) {
+        buf
+          ..writeln('## 完整日志')
+          ..writeln(attachmentMarkdown)
+          ..writeln();
+      }
+
+      // 行内日志摘要（截断避免超长）
+      buf.writeln('## 日志摘要');
+      buf.writeln('```');
+      const maxLogLength = 30000;
+      if (logContent.length > maxLogLength) {
+        buf.writeln('... (已截断，仅保留最近日志)');
+        buf.writeln(logContent.substring(logContent.length - maxLogLength));
+      } else {
+        buf.writeln(logContent.isEmpty ? '(无日志)' : logContent);
+      }
+      buf.writeln('```');
+
+      showReplySheet(
+        context: context,
+        targetUsername: 'pyteng',
+        initialTitle: S.current.appLogs_feedbackTitle,
+        initialContent: buf.toString(),
+      );
+    } on DioException catch (_) {
+      // 网络错误已由 ErrorInterceptor 处理
+    } catch (e, s) {
+      AppErrorHandler.handleUnexpected(e, s);
+    }
+  }
+
+  /// 上传完整日志文件（.txt），返回附件 markdown；失败返回 null
+  Future<String?> _uploadLogFile() async {
+    try {
+      final jsonlPath = await LoggerUtils.getShareFilePath();
+      // 复制为 .txt，避免 .jsonl 不在服务器 authorized_extensions 中
+      final txtPath = jsonlPath.replaceAll('.jsonl', '.txt');
+      await File(jsonlPath).copy(txtPath);
+      final result = await DiscourseService().uploadFile(txtPath);
+      return result.toAutoMarkdown();
+    } catch (e) {
+      debugPrint('[AppLogsPage] 上传日志文件失败: $e');
+      return null;
     }
   }
 
@@ -481,6 +555,8 @@ class _AppLogsPageState extends State<AppLogsPage> {
                   _copyAll();
                 case 'share':
                   _shareLog();
+                case 'feedback':
+                  _sendFeedback();
                 case 'clear':
                   _clearLogs();
               }
@@ -509,6 +585,15 @@ class _AppLogsPageState extends State<AppLogsPage> {
                 child: ListTile(
                   leading: const Icon(Icons.share),
                   title: Text(context.l10n.appLogs_shareLogs),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'feedback',
+                child: ListTile(
+                  leading: const Icon(Icons.mail_outline),
+                  title: Text(context.l10n.appLogs_sendFeedback),
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                 ),

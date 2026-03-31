@@ -3656,6 +3656,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appLogs_shareSubject => 'App Logs';
 
   @override
+  String get appLogs_sendFeedback => 'Send logs via PM';
+
+  @override
+  String get appLogs_feedbackSending => 'Sending feedback...';
+
+  @override
+  String get appLogs_feedbackSent => 'Feedback sent';
+
+  @override
+  String get appLogs_feedbackTitle => 'App Log Feedback';
+
+  @override
   String get preferences_title => 'Preferences';
 
   @override

@@ -1305,6 +1305,10 @@
   "appLogs_logoutActive": "主动退出",
   "appLogs_logoutPassive": "被动退出",
   "appLogs_shareSubject": "应用日志",
+  "appLogs_sendFeedback": "私信反馈日志",
+  "appLogs_feedbackSending": "正在发送反馈…",
+  "appLogs_feedbackSent": "反馈已发送",
+  "appLogs_feedbackTitle": "应用日志反馈",
 
   "preferences_title": "功能设置",
   "preferences_basic": "基础",

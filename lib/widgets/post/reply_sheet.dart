@@ -25,6 +25,7 @@ import '../common/loading_spinner.dart';
 /// [targetUsername] 可选，私信目标用户名 (创建私信时必需)
 /// [preloadedDraftFuture] 预加载的草稿 Future（在点击回复按钮时就发起请求）
 /// [initialContent] 可选，预填内容（划词引用时使用）
+/// [initialTitle] 可选，预填标题（私信模式时使用）
 /// 返回创建的 Post 对象，取消或失败返回 null
 Future<Post?> showReplySheet({
   required BuildContext context,
@@ -34,6 +35,7 @@ Future<Post?> showReplySheet({
   String? targetUsername,
   Future<Draft?>? preloadedDraftFuture,
   String? initialContent,
+  String? initialTitle,
 }) async {
   final result = await showAppBottomSheet<Post?>(
     context: context,
@@ -47,6 +49,7 @@ Future<Post?> showReplySheet({
       targetUsername: targetUsername,
       preloadedDraftFuture: preloadedDraftFuture,
       initialContent: initialContent,
+      initialTitle: initialTitle,
     ),
   );
   return result;
@@ -85,6 +88,7 @@ class ReplySheet extends ConsumerStatefulWidget {
   final Post? editPost; // 编辑模式：要编辑的帖子
   final Future<Draft?>? preloadedDraftFuture; // 预加载的草稿
   final String? initialContent; // 预填内容（划词引用时使用）
+  final String? initialTitle; // 预填标题（私信模式时使用）
 
   const ReplySheet({
     super.key,
@@ -95,6 +99,7 @@ class ReplySheet extends ConsumerStatefulWidget {
     this.editPost,
     this.preloadedDraftFuture,
     this.initialContent,
+    this.initialTitle,
   });
 
   @override
@@ -141,6 +146,10 @@ class _ReplySheetState extends ConsumerState<ReplySheet> {
         _contentController.selection = TextSelection.fromPosition(
           TextPosition(offset: _contentController.text.length),
         );
+      }
+      // 预填标题（私信模式）
+      if (widget.initialTitle != null && widget.initialTitle!.isNotEmpty) {
+        _titleController.text = widget.initialTitle!;
       }
       // 非编辑模式：初始化草稿控制器并加载草稿
       _initDraftController();
