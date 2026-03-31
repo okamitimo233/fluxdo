@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:super_clipboard/super_clipboard.dart';
 import 'package:path_provider/path_provider.dart';
@@ -796,6 +797,41 @@ class MarkdownToolbarState extends State<MarkdownToolbar> {
     }
   }
 
+  /// 选择并上传附件（支持任意文件类型）
+  Future<void> _pickAndUploadFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles();
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      if (file.path == null) return;
+
+      setState(() => _uploadingCount++);
+
+      try {
+        final service = DiscourseService();
+        final uploadResult = await service.uploadFile(file.path!);
+
+        if (!mounted) return;
+
+        final selection = widget.controller.selection;
+        final text = widget.controller.text;
+        final needsLeadingNewline = selection.isValid &&
+            selection.start > 0 &&
+            text[selection.start - 1] != '\n';
+        final prefix = needsLeadingNewline ? '\n' : '';
+        insertText('$prefix${uploadResult.toAutoMarkdown()}\n');
+      } finally {
+        if (mounted) {
+          setState(() => _uploadingCount--);
+        }
+      }
+    } on DioException catch (_) {
+      // 网络错误已由 ErrorInterceptor 处理
+    } catch (e, s) {
+      AppErrorHandler.handleUnexpected(e, s);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -850,6 +886,11 @@ class MarkdownToolbarState extends State<MarkdownToolbar> {
                           onPressed: _isUploading ? null : _pickAndUploadImages,
                           isLoading: _isUploading,
                           label: _uploadProgress,
+                        ),
+                        _ToolbarButton(
+                          icon: FontAwesomeIcons.paperclip,
+                          onPressed: _isUploading ? null : _pickAndUploadFile,
+                          tooltip: S.current.toolbar_attachFileTooltip,
                         ),
                         // 标题按钮（带弹出菜单）
                         SwipeDismissiblePopupMenuButton<int>(

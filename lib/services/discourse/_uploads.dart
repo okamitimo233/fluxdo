@@ -27,7 +27,7 @@ class ResolvedUploadUrl {
   }
 }
 
-/// 图片上传结果
+/// 上传结果
 class UploadResult {
   final String shortUrl;
   final String? url;
@@ -36,6 +36,9 @@ class UploadResult {
   final int? height;
   final int? thumbnailWidth;
   final int? thumbnailHeight;
+  final int? filesize;
+  final String? humanFilesize;
+  final String? extension;
 
   UploadResult({
     required this.shortUrl,
@@ -45,7 +48,18 @@ class UploadResult {
     this.height,
     this.thumbnailWidth,
     this.thumbnailHeight,
+    this.filesize,
+    this.humanFilesize,
+    this.extension,
   });
+
+  static final _imageExts = RegExp(r'\.(png|webp|jpe?g|gif|svg|ico|heic|heif|avif)$', caseSensitive: false);
+  static final _videoExts = RegExp(r'\.(mov|mp4|webm|m4v|3gp|ogv|avi|mpeg)$', caseSensitive: false);
+  static final _audioExts = RegExp(r'\.(mp3|og[ga]|opus|wav|m4[abpr]|aac|flac)$', caseSensitive: false);
+
+  bool get isImage => _imageExts.hasMatch(originalFilename);
+  bool get isVideo => _videoExts.hasMatch(originalFilename);
+  bool get isAudio => _audioExts.hasMatch(originalFilename);
 
   /// 生成 Discourse 格式的 Markdown 图片语法
   /// 格式: ![alt|widthxheight](url)
@@ -54,11 +68,48 @@ class UploadResult {
     // 优先使用缩略图尺寸，否则使用原图尺寸
     final w = thumbnailWidth ?? width;
     final h = thumbnailHeight ?? height;
-    
+
     if (w != null && h != null) {
       return '![$displayAlt|${w}x$h]($shortUrl)';
     }
     return '![$displayAlt]($shortUrl)';
+  }
+
+  /// 根据文件类型自动生成正确的 Markdown
+  String toAutoMarkdown({String? alt}) {
+    if (isImage) return toMarkdown(alt: alt);
+    final name = alt ?? originalFilename;
+    if (isVideo) return '![$name|video]($shortUrl)';
+    if (isAudio) return '![$name|audio]($shortUrl)';
+    // 附件格式: [filename|attachment](short_url) (human_filesize)
+    final sizeStr = filesize != null ? formatFileSize(filesize!) : '';
+    return '[$originalFilename|attachment]($shortUrl)${sizeStr.isNotEmpty ? ' ($sizeStr)' : ''}';
+  }
+
+  /// 客户端本地化文件大小格式化（对齐 Discourse i18n）
+  static String formatFileSize(int bytes) {
+    if (bytes < 1024) {
+      return S.current.common_sizeBytes(bytes.toString());
+    }
+    if (bytes < 1024 * 1024) {
+      final kb = bytes / 1024;
+      final str = kb == kb.roundToDouble()
+          ? kb.toInt().toString()
+          : kb.toStringAsFixed(1);
+      return S.current.common_sizeKB(str);
+    }
+    if (bytes < 1024 * 1024 * 1024) {
+      final mb = bytes / (1024 * 1024);
+      final str = mb == mb.roundToDouble()
+          ? mb.toInt().toString()
+          : mb.toStringAsFixed(1);
+      return S.current.common_sizeMB(str);
+    }
+    final gb = bytes / (1024 * 1024 * 1024);
+    final str = gb == gb.roundToDouble()
+        ? gb.toInt().toString()
+        : gb.toStringAsFixed(1);
+    return S.current.common_sizeGB(str);
   }
 }
 
@@ -161,8 +212,8 @@ mixin _UploadsMixin on _DiscourseServiceBase {
     return false;
   }
 
-  /// 上传图片（内置速率限制重试）
-  Future<UploadResult> uploadImage(String filePath) async {
+  /// 上传文件（内置速率限制重试，支持图片和附件）
+  Future<UploadResult> uploadFile(String filePath) async {
     const maxRetries = 3;
 
     for (int attempt = 0; attempt <= maxRetries; attempt++) {
@@ -195,6 +246,9 @@ mixin _UploadsMixin on _DiscourseServiceBase {
               height: data['height'] as int?,
               thumbnailWidth: data['thumbnail_width'] as int?,
               thumbnailHeight: data['thumbnail_height'] as int?,
+              filesize: data['filesize'] as int?,
+              humanFilesize: data['human_filesize'] as String?,
+              extension: data['extension'] as String?,
             );
           }
           // 兜底：使用完整 URL
@@ -209,6 +263,9 @@ mixin _UploadsMixin on _DiscourseServiceBase {
               height: data['height'] as int?,
               thumbnailWidth: data['thumbnail_width'] as int?,
               thumbnailHeight: data['thumbnail_height'] as int?,
+              filesize: data['filesize'] as int?,
+              humanFilesize: data['human_filesize'] as String?,
+              extension: data['extension'] as String?,
             );
           }
         }
@@ -250,6 +307,9 @@ mixin _UploadsMixin on _DiscourseServiceBase {
     // 不可达，但编译器需要
     throw Exception(S.current.error_uploadNoUrl);
   }
+
+  /// 上传图片（uploadFile 的别名，保持向后兼容）
+  Future<UploadResult> uploadImage(String filePath) => uploadFile(filePath);
 
   /// 批量解析 short_url
   Future<List<Map<String, dynamic>>> lookupUrls(List<String> shortUrls) async {

@@ -129,6 +129,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get common_preview => '预览';
 
   @override
+  String common_sizeBytes(String size) {
+    return '$size 字节';
+  }
+
+  @override
+  String common_sizeKB(String size) {
+    return '$size KB';
+  }
+
+  @override
+  String common_sizeMB(String size) {
+    return '$size MB';
+  }
+
+  @override
+  String common_sizeGB(String size) {
+    return '$size GB';
+  }
+
+  @override
   String get common_later => '稍后';
 
   @override
@@ -1899,6 +1919,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toolbar_imageGridTooltip => '图片网格';
+
+  @override
+  String get toolbar_attachFileTooltip => '上传附件';
 
   @override
   String get toolbar_mixOptimize => '混排优化';
@@ -5772,6 +5795,26 @@ class AppLocalizationsZhHk extends AppLocalizationsZh {
   String get common_preview => '預覽';
 
   @override
+  String common_sizeBytes(String size) {
+    return '$size 字節';
+  }
+
+  @override
+  String common_sizeKB(String size) {
+    return '$size KB';
+  }
+
+  @override
+  String common_sizeMB(String size) {
+    return '$size MB';
+  }
+
+  @override
+  String common_sizeGB(String size) {
+    return '$size GB';
+  }
+
+  @override
   String get common_later => '稍後';
 
   @override
@@ -7542,6 +7585,9 @@ class AppLocalizationsZhHk extends AppLocalizationsZh {
 
   @override
   String get toolbar_imageGridTooltip => '圖片網格';
+
+  @override
+  String get toolbar_attachFileTooltip => '上傳附件';
 
   @override
   String get toolbar_mixOptimize => '混排優化';
@@ -11294,6 +11340,26 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get common_preview => '預覽';
 
   @override
+  String common_sizeBytes(String size) {
+    return '$size 位元組';
+  }
+
+  @override
+  String common_sizeKB(String size) {
+    return '$size KB';
+  }
+
+  @override
+  String common_sizeMB(String size) {
+    return '$size MB';
+  }
+
+  @override
+  String common_sizeGB(String size) {
+    return '$size GB';
+  }
+
+  @override
   String get common_later => '稍後';
 
   @override
@@ -13064,6 +13130,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get toolbar_imageGridTooltip => '圖片網格';
+
+  @override
+  String get toolbar_attachFileTooltip => '上傳附件';
 
   @override
   String get toolbar_mixOptimize => '混排最佳化';

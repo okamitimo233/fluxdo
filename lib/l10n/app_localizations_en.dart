@@ -129,6 +129,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get common_preview => 'Preview';
 
   @override
+  String common_sizeBytes(String size) {
+    return '$size Bytes';
+  }
+
+  @override
+  String common_sizeKB(String size) {
+    return '$size KB';
+  }
+
+  @override
+  String common_sizeMB(String size) {
+    return '$size MB';
+  }
+
+  @override
+  String common_sizeGB(String size) {
+    return '$size GB';
+  }
+
+  @override
   String get common_later => 'Later';
 
   @override
@@ -1935,6 +1955,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toolbar_imageGridTooltip => 'Image grid';
+
+  @override
+  String get toolbar_attachFileTooltip => 'Upload attachment';
 
   @override
   String get toolbar_mixOptimize => 'CJK spacing';

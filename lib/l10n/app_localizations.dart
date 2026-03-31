@@ -340,6 +340,30 @@ abstract class AppLocalizations {
   /// **'预览'**
   String get common_preview;
 
+  /// No description provided for @common_sizeBytes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{size} 字节'**
+  String common_sizeBytes(String size);
+
+  /// No description provided for @common_sizeKB.
+  ///
+  /// In zh, this message translates to:
+  /// **'{size} KB'**
+  String common_sizeKB(String size);
+
+  /// No description provided for @common_sizeMB.
+  ///
+  /// In zh, this message translates to:
+  /// **'{size} MB'**
+  String common_sizeMB(String size);
+
+  /// No description provided for @common_sizeGB.
+  ///
+  /// In zh, this message translates to:
+  /// **'{size} GB'**
+  String common_sizeGB(String size);
+
   /// No description provided for @common_later.
   ///
   /// In zh, this message translates to:
@@ -3490,6 +3514,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'图片网格'**
   String get toolbar_imageGridTooltip;
+
+  /// No description provided for @toolbar_attachFileTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传附件'**
+  String get toolbar_attachFileTooltip;
 
   /// No description provided for @toolbar_mixOptimize.
   ///
