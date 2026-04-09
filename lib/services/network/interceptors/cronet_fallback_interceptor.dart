@@ -45,7 +45,10 @@ class CronetFallbackInterceptor extends Interceptor {
     // 重试请求
     _isRetrying = true;
     try {
-      final response = await _dio.fetch(err.requestOptions);
+      final retryOptions = err.requestOptions;
+      retryOptions.headers.remove('cookie');
+      retryOptions.headers.remove('Cookie');
+      final response = await _dio.fetch(retryOptions);
       handler.resolve(response);
     } catch (e) {
       debugPrint('[Cronet] Retry failed: $e');

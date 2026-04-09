@@ -28,6 +28,7 @@ class DiscourseDio {
     int? maxConcurrent = 3,
     bool enableRetry = true,
     bool enableCfChallenge = true,
+    bool enableCookies = true,
   }) {
     final dio = Dio(
       BaseOptions(
@@ -57,7 +58,7 @@ class DiscourseDio {
 
     // 4. Cookie 管理
     final cookieJarService = CookieJarService();
-    if (cookieJarService.isInitialized) {
+    if (enableCookies && cookieJarService.isInitialized) {
       dio.interceptors.add(AppCookieManager(cookieJarService.cookieJar));
     }
 

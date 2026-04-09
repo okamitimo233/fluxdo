@@ -219,20 +219,11 @@ class AppCookieManager extends Interceptor {
         rethrow;
       }
     }
-    final previousCookies =
-        options.headers[HttpHeaders.cookieHeader] as String?;
-    final allCookies = [
-      ...?previousCookies
-          ?.split(';')
-          .where((e) => e.isNotEmpty)
-          .map((c) => Cookie.fromSetCookieValue(c)),
-      ...savedCookies,
-    ];
     final requestCookies = _isCfChallengePlatformRequest(options)
-        ? allCookies
+        ? savedCookies
             .where((cookie) => _isCloudflareCookieName(cookie.name))
             .toList(growable: false)
-        : allCookies;
+        : savedCookies;
 
     if (_isCfChallengePlatformRequest(options)) {
       final cookieNames = requestCookies.map((cookie) => cookie.name).toSet().toList()

@@ -15,7 +15,8 @@ mixin _AuthMixin on _DiscourseServiceBase {
             _credentialsLoaded = true;
           }
 
-          final liveToken = await _cookieJar.getTToken();
+          final sessionState = await _readSessionCookieState();
+          final liveToken = sessionState.tToken;
           if (liveToken != _tToken) {
             if ((liveToken == null || liveToken.isEmpty) &&
                 _tToken != null &&
@@ -36,6 +37,8 @@ mixin _AuthMixin on _DiscourseServiceBase {
                 ? liveToken
                 : null;
           }
+
+          options.extra['_sessionCookieFingerprint'] = sessionState.fingerprint;
 
           if (_tToken != null && _tToken!.isNotEmpty) {
             options.headers['Discourse-Logged-In'] = 'true';
@@ -68,22 +71,16 @@ mixin _AuthMixin on _DiscourseServiceBase {
             return handler.next(response);
           }
 
-          final tToken = await _cookieJar.getTToken();
-          if (tToken != null && tToken.isNotEmpty) {
-            _tToken = tToken;
-          } else if (_tToken != null && _tToken!.isNotEmpty) {
-            LogWriter.instance.write({
-              'timestamp': DateTime.now().toIso8601String(),
-              'level': 'warning',
-              'type': 'auth',
-              'event': 'token_missing_after_response',
-              'message': '响应后 CookieJar 中未检测到 _t，已清空内存 token',
-              'method': response.requestOptions.method,
-              'url': response.requestOptions.uri.toString(),
-              'memTokenLen': _tToken?.length,
-            });
-            _tToken = null;
-          }
+          final sessionState = await _syncSessionStateFromResponse(
+            response.requestOptions,
+            response: response,
+            phase: 'response',
+          );
+          _syncMemoryTokenFromSessionState(
+            sessionState,
+            logWhenCleared: true,
+            requestOptions: response.requestOptions,
+          );
 
           final username = response.headers.value('x-discourse-username');
           if (username != null &&
@@ -117,6 +114,8 @@ mixin _AuthMixin on _DiscourseServiceBase {
             // 用新 token 重试原请求
             final options = error.requestOptions;
             options.extra['_csrfRetried'] = true;
+            options.headers.remove('cookie');
+            options.headers.remove('Cookie');
             final csrf = _cookieSync.csrfToken;
             options.headers['X-CSRF-Token'] = (csrf == null || csrf.isEmpty)
                 ? 'undefined'
@@ -147,10 +146,20 @@ mixin _AuthMixin on _DiscourseServiceBase {
             return handler.next(error);
           }
 
+          final sessionState = await _syncSessionStateFromResponse(
+            error.requestOptions,
+            response: error.response,
+            phase: 'error',
+          );
+          _syncMemoryTokenFromSessionState(
+            sessionState,
+            requestOptions: error.requestOptions,
+          );
+
           if (!skipAuthCheck &&
               data is Map &&
               data['error_type'] == 'not_logged_in') {
-            final jarTToken = await _cookieJar.getTToken();
+            final jarTToken = sessionState.tToken;
             await AuthLogService().logAuthInvalid(
               source: 'error_response',
               reason: data['error_type']?.toString() ?? 'not_logged_in',
@@ -179,6 +188,140 @@ mixin _AuthMixin on _DiscourseServiceBase {
         },
       ),
     );
+  }
+
+  Future<SessionSnapshot> _readSessionCookieState() async {
+    final tToken = await _cookieJar.getTToken();
+    final forumSession = await _cookieJar.getCookieValue('_forum_session');
+
+    return SessionSnapshot.fromValues(
+      tToken: tToken,
+      forumSession: forumSession,
+    );
+  }
+
+  Future<SessionSnapshot> _syncSessionStateFromResponse(
+    RequestOptions requestOptions, {
+    Response? response,
+    required String phase,
+  }) async {
+    final sessionState = await _readSessionStateAfterResponse(response);
+    final beforeFingerprint =
+        requestOptions.extra['_sessionCookieFingerprint'] as String?;
+    final afterFingerprint = sessionState.fingerprint;
+
+    if (beforeFingerprint == afterFingerprint) {
+      return sessionState;
+    }
+
+    final requestGeneration = requestOptions.extra['_sessionGeneration'] as int?;
+    if (requestGeneration != null && !AuthSession().isValid(requestGeneration)) {
+      return sessionState;
+    }
+
+    requestOptions.extra['_sessionCookieFingerprint'] = afterFingerprint;
+
+    LogWriter.instance.write({
+      'timestamp': DateTime.now().toIso8601String(),
+      'level': 'info',
+      'type': 'auth',
+      'event': 'session_cookie_rotated',
+      'message': '检测到会话 Cookie 变化，后续请求将使用新的 _t',
+      'phase': phase,
+      'method': requestOptions.method,
+      'url': requestOptions.uri.toString(),
+      'hadSessionBefore': beforeFingerprint != null && beforeFingerprint.isNotEmpty,
+      'hasSessionAfter': afterFingerprint != null && afterFingerprint.isNotEmpty,
+      'beforeTLen': beforeFingerprint?.length,
+      'afterTLen': afterFingerprint?.length,
+      'hasForumSessionAfter': sessionState.hasForumSession,
+    });
+
+    return sessionState;
+  }
+
+  Future<SessionSnapshot> _readSessionStateAfterResponse(
+    Response? response,
+  ) async {
+    final tTokenFromResponse = _extractTTokenFromSetCookie(response);
+    if (tTokenFromResponse != null || _hasExplicitTDeletion(response)) {
+      final forumSession = await _cookieJar.getCookieValue('_forum_session');
+      return SessionSnapshot.fromValues(
+        tToken: tTokenFromResponse,
+        forumSession: forumSession,
+      );
+    }
+
+    return _readSessionCookieState();
+  }
+
+  String? _extractTTokenFromSetCookie(Response? response) {
+    final headers = _flattenSetCookieHeaders(response);
+    String? token;
+
+    for (final header in headers) {
+      if (!header.toLowerCase().startsWith('_t=')) continue;
+      final value = header.substring(3).split(';').first;
+      if (value.isEmpty || value == 'del') {
+        token = null;
+      } else {
+        token = value;
+      }
+    }
+
+    return token;
+  }
+
+  bool _hasExplicitTDeletion(Response? response) {
+    final headers = _flattenSetCookieHeaders(response);
+    for (final header in headers) {
+      if (!header.toLowerCase().startsWith('_t=')) continue;
+      final value = header.substring(3).split(';').first;
+      if (value.isEmpty || value == 'del') {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  List<String> _flattenSetCookieHeaders(Response? response) {
+    final rawHeaders = response?.headers[HttpHeaders.setCookieHeader];
+    if (rawHeaders == null || rawHeaders.isEmpty) return const [];
+
+    return rawHeaders
+        .map((str) => str.split(RegExp('(?<=)(,)(?=[^;]+?=)')))
+        .expand((cookie) => cookie)
+        .where((cookie) => cookie.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  void _syncMemoryTokenFromSessionState(
+    SessionSnapshot sessionState, {
+    bool logWhenCleared = false,
+    RequestOptions? requestOptions,
+  }) {
+    final tToken = sessionState.tToken;
+
+    if (tToken != null && tToken.isNotEmpty) {
+      _tToken = tToken;
+      return;
+    }
+
+    if (_tToken != null && _tToken!.isNotEmpty) {
+      if (logWhenCleared && requestOptions != null) {
+        LogWriter.instance.write({
+          'timestamp': DateTime.now().toIso8601String(),
+          'level': 'warning',
+          'type': 'auth',
+          'event': 'token_missing_after_response',
+          'message': '响应后会话 Cookie 已缺失，已清空内存 token',
+          'method': requestOptions.method,
+          'url': requestOptions.uri.toString(),
+          'memTokenLen': _tToken?.length,
+        });
+      }
+      _tToken = null;
+    }
   }
 
   /// 收到 discourse-logged-out header 时的处理

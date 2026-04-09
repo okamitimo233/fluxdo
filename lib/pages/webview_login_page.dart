@@ -50,11 +50,12 @@ class _WebViewLoginPageState extends ConsumerState<WebViewLoginPage> {
   String _url = AppConstants.baseUrl;
   double _progress = 0;
   String? _savedUsername;
+  Future<int>? _initialCookieFlushFuture;
 
   @override
   void initState() {
     super.initState();
-    RawSetCookieQueue.instance.flushToWebView();
+    _initialCookieFlushFuture = RawSetCookieQueue.instance.flushToWebView();
     HCaptchaAccessibilityService().syncToWebView();
     _loadSavedUsername();
   }
@@ -399,21 +400,30 @@ class _WebViewLoginPageState extends ConsumerState<WebViewLoginPage> {
       }
 
       currentUrl ??= (await controller.getUrl())?.toString();
+      await _awaitInitialCookieFlush();
       if (mounted && !_isCompletingLogin) {
         setState(() {
           _isCompletingLogin = true;
           _isLoading = true;
         });
       }
+
       await BoundarySyncService.instance.syncFromWebView(
         currentUrl: currentUrl,
         controller: controller,
+        allowLowConfidenceSessionCookies: true,
       );
       final tToken = await _readTTokenFromWebView(
         controller,
         currentUrl: currentUrl,
       );
       if (tToken == null || tToken.isEmpty) {
+        if (mounted && _isCompletingLogin) {
+          setState(() {
+            _isCompletingLogin = false;
+            _isLoading = false;
+          });
+        }
         debugPrint('[Login] 已检测到 currentUser=$username，但尚未读到 _t，等待后续同步');
         _scheduleLoginRecheck(controller);
         return;
@@ -455,6 +465,8 @@ class _WebViewLoginPageState extends ConsumerState<WebViewLoginPage> {
     await BoundarySyncService.instance.syncFromWebView(
       currentUrl: currentUrl,
       controller: controller,
+      cookieNames: CookieJarService.sessionCookieNames,
+      allowLowConfidenceSessionCookies: true,
     );
 
     final jarToken = await _cookieJar.getTToken();
@@ -583,6 +595,16 @@ class _WebViewLoginPageState extends ConsumerState<WebViewLoginPage> {
     await _checkLoginStatus(controller, currentUrl: resourceUrl);
   }
 
+  Future<void> _awaitInitialCookieFlush() async {
+    final future = _initialCookieFlushFuture;
+    if (future == null) return;
+    try {
+      await future.timeout(const Duration(seconds: 2));
+    } catch (e) {
+      debugPrint('[Login] 等待初始 Cookie 回放完成失败: $e');
+    }
+  }
+
   Future<String?> _readTTokenFromWebView(
     InAppWebViewController controller, {
     String? currentUrl,
@@ -605,12 +627,11 @@ class _WebViewLoginPageState extends ConsumerState<WebViewLoginPage> {
       }
     }
 
-    final jarToken = await _cookieJar.getTToken();
-    if (jarToken != null && jarToken.isNotEmpty) {
-      return jarToken;
-    }
-
-    return null;
+    return _cookieJar.readCookieValueFromController(
+      controller,
+      '_t',
+      currentUrl: currentUrl,
+    );
   }
 
   int _recheckCount = 0;

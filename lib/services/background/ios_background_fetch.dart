@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
+import '../../constants.dart';
 import '../local_notification_service.dart';
 import '../network/cookie/cookie_jar_service.dart';
 import '../network/cookie/csrf_token_service.dart';
@@ -53,6 +54,10 @@ void callbackDispatcher() {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         baseUrl: longPollingBaseUrl,
+        enableCookies: !_shouldDisableMessageBusCookies(
+          longPollingBaseUrl: longPollingBaseUrl,
+          sharedSessionKey: sharedSessionKey,
+        ),
       );
 
       // 生成简单的 clientId
@@ -144,6 +149,27 @@ void callbackDispatcher() {
       return false;
     }
   });
+}
+
+bool _shouldDisableMessageBusCookies({
+  String? longPollingBaseUrl,
+  String? sharedSessionKey,
+}) {
+  if (sharedSessionKey != null && sharedSessionKey.isNotEmpty) {
+    return true;
+  }
+
+  if (longPollingBaseUrl == null || longPollingBaseUrl.isEmpty) {
+    return false;
+  }
+
+  final pollingUri = Uri.tryParse(longPollingBaseUrl);
+  if (pollingUri == null) {
+    return false;
+  }
+
+  final appUri = Uri.parse(AppConstants.baseUrl);
+  return pollingUri.origin != appUri.origin;
 }
 
 /// 保存 userId 到 SharedPreferences（主 Isolate 调用）

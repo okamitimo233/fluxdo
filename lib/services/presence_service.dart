@@ -25,6 +25,13 @@ class PresenceService {
   // 防抖计时器
   Timer? _debounceTimer;
   static const _debounceDelay = Duration(milliseconds: 500);
+  static const _minUpdateInterval = Duration(seconds: 1);
+
+  Timer? _throttleTimer;
+  DateTime? _lastUpdateAt;
+  final Set<String> _pendingPresentChannels = {};
+  final Set<String> _pendingLeaveChannels = {};
+  bool _updateInFlight = false;
 
   PresenceService(this._service) : _enabled = _checkEnabled();
 
@@ -59,7 +66,7 @@ class PresenceService {
     
     debugPrint('[PresenceService] 离开频道: $channel');
     _activeChannels.remove(channel);
-    _updatePresence(leaveChannels: [channel]);
+    _queuePresenceUpdate(leaveChannels: [channel]);
     
     if (_activeChannels.isEmpty) {
       _stopHeartbeat();
@@ -70,7 +77,7 @@ class PresenceService {
   void _debouncedUpdate() {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(_debounceDelay, () {
-      _updatePresence(presentChannels: _activeChannels.toList());
+      _queuePresenceUpdate(presentChannels: _activeChannels.toList());
     });
   }
   
@@ -80,7 +87,7 @@ class PresenceService {
     _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
       if (_activeChannels.isNotEmpty) {
         debugPrint('[PresenceService] 心跳: ${_activeChannels.length} 个频道');
-        _updatePresence(presentChannels: _activeChannels.toList());
+        _queuePresenceUpdate(presentChannels: _activeChannels.toList());
       }
     });
   }
@@ -91,6 +98,74 @@ class PresenceService {
     _heartbeatTimer = null;
   }
   
+  void _queuePresenceUpdate({
+    List<String>? presentChannels,
+    List<String>? leaveChannels,
+  }) {
+    if (presentChannels != null) {
+      for (final channel in presentChannels) {
+        _pendingLeaveChannels.remove(channel);
+        _pendingPresentChannels.add(channel);
+      }
+    }
+
+    if (leaveChannels != null) {
+      for (final channel in leaveChannels) {
+        _pendingPresentChannels.remove(channel);
+        _pendingLeaveChannels.add(channel);
+      }
+    }
+
+    _scheduleQueuedUpdate();
+  }
+
+  void _scheduleQueuedUpdate() {
+    if (_updateInFlight) return;
+
+    final now = DateTime.now();
+    final lastUpdateAt = _lastUpdateAt;
+
+    if (lastUpdateAt == null ||
+        now.difference(lastUpdateAt) >= _minUpdateInterval) {
+      _throttleTimer?.cancel();
+      unawaited(_flushQueuedUpdate());
+      return;
+    }
+
+    final wait = _minUpdateInterval - now.difference(lastUpdateAt);
+    _throttleTimer?.cancel();
+    _throttleTimer = Timer(wait, () {
+      _throttleTimer = null;
+      unawaited(_flushQueuedUpdate());
+    });
+  }
+
+  Future<void> _flushQueuedUpdate() async {
+    if (_pendingPresentChannels.isEmpty && _pendingLeaveChannels.isEmpty) {
+      return;
+    }
+    if (_updateInFlight) return;
+
+    final presentChannels = _pendingPresentChannels.toList(growable: false);
+    final leaveChannels = _pendingLeaveChannels.toList(growable: false);
+    _pendingPresentChannels.clear();
+    _pendingLeaveChannels.clear();
+    _lastUpdateAt = DateTime.now();
+    _updateInFlight = true;
+
+    try {
+      await _updatePresence(
+        presentChannels: presentChannels.isEmpty ? null : presentChannels,
+        leaveChannels: leaveChannels.isEmpty ? null : leaveChannels,
+      );
+    } finally {
+      _updateInFlight = false;
+      if (_pendingPresentChannels.isNotEmpty || _pendingLeaveChannels.isNotEmpty) {
+        _scheduleQueuedUpdate();
+      }
+    }
+  }
+
   /// 发送更新请求
   Future<void> _updatePresence({
     List<String>? presentChannels,
@@ -111,6 +186,7 @@ class PresenceService {
     debugPrint('[PresenceService] 释放资源');
     _debounceTimer?.cancel();
     _heartbeatTimer?.cancel();
+    _throttleTimer?.cancel();
     
     // 离开所有频道
     if (_activeChannels.isNotEmpty) {

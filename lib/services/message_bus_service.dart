@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../constants.dart';
 import '../utils/client_id_generator.dart';
 import 'network/discourse_dio.dart';
 
@@ -63,7 +64,9 @@ class MessageBusService {
   static const Duration _backgroundPollInterval = Duration(seconds: 60);
   // 对齐 Discourse message-bus minPollInterval (100ms)
   static const Duration _minPollInterval = Duration(milliseconds: 100);
+  static const Duration _restartDebounce = Duration(milliseconds: 350);
   DateTime? _lastPollTime;
+  Timer? _restartPollTimer;
 
   // MessageBus 独立域名配置
   String? _baseUrl;  // 独立域名（如 https://ping.linux.do），null 表示用主站
@@ -77,15 +80,7 @@ class MessageBusService {
 
   MessageBusService._internal()
       : _clientId = ClientIdGenerator.generate(),
-        _dio = DiscourseDio.create(
-          receiveTimeout: const Duration(seconds: 60),
-          defaultHeaders: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          // 长轮询不受并发限制，避免占用 API 请求的并发槽位
-          maxConcurrent: null,
-        );
+        _dio = _createPollingDio();
 
   /// 配置 MessageBus 独立域名（登录后从预加载数据获取）
   void configure({String? baseUrl, String? sharedSessionKey}) {
@@ -95,28 +90,54 @@ class MessageBusService {
 
     if (changed && baseUrl != null) {
       // 独立域名需要重建 Dio（不同 baseUrl）
-      _dio = DiscourseDio.create(
-        receiveTimeout: const Duration(seconds: 60),
-        defaultHeaders: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        baseUrl: baseUrl,
-        maxConcurrent: null,
-      );
+      _dio = _createPollingDio(baseUrl: baseUrl, sharedSessionKey: sharedSessionKey);
       debugPrint('[MessageBus] 配置独立域名: $baseUrl');
     } else if (changed && baseUrl == null) {
       // 恢复主站
-      _dio = DiscourseDio.create(
-        receiveTimeout: const Duration(seconds: 60),
-        defaultHeaders: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        maxConcurrent: null,
-      );
+      _dio = _createPollingDio(sharedSessionKey: sharedSessionKey);
       debugPrint('[MessageBus] 恢复主站轮询');
     }
+  }
+
+  static Dio _createPollingDio({
+    String? baseUrl,
+    String? sharedSessionKey,
+  }) {
+    return DiscourseDio.create(
+      receiveTimeout: const Duration(seconds: 60),
+      defaultHeaders: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      baseUrl: baseUrl,
+      // 长轮询不受并发限制，避免占用 API 请求的并发槽位
+      maxConcurrent: null,
+      enableCookies: !_shouldDisableCookiesForPolling(
+        baseUrl: baseUrl,
+        sharedSessionKey: sharedSessionKey,
+      ),
+    );
+  }
+
+  static bool _shouldDisableCookiesForPolling({
+    String? baseUrl,
+    String? sharedSessionKey,
+  }) {
+    if (sharedSessionKey != null && sharedSessionKey.isNotEmpty) {
+      return true;
+    }
+
+    if (baseUrl == null || baseUrl.isEmpty) {
+      return false;
+    }
+
+    final pollingUri = Uri.tryParse(baseUrl);
+    if (pollingUri == null) {
+      return false;
+    }
+
+    final appUri = Uri.parse(AppConstants.baseUrl);
+    return pollingUri.origin != appUri.origin;
   }
 
   /// 订阅频道
@@ -132,10 +153,7 @@ class MessageBusService {
     if (!_isPolling) {
       _startPolling();
     } else {
-      // 中止当前请求，轮询循环会自然重启并包含新频道
-      final token = _currentCancelToken;
-      _currentCancelToken = null;
-      token?.cancel();
+      _schedulePollingRefresh();
     }
   }
 
@@ -155,6 +173,8 @@ class MessageBusService {
     // 无订阅时停止轮询
     if (_subscriptions.isEmpty) {
       _stopPolling();
+    } else {
+      _schedulePollingRefresh();
     }
   }
 
@@ -176,10 +196,7 @@ class MessageBusService {
     if (!_isPolling) {
       _startPolling();
     } else {
-      // 中止当前请求，轮询循环会自然重启并包含新频道
-      final token = _currentCancelToken;
-      _currentCancelToken = null;
-      token?.cancel();
+      _schedulePollingRefresh();
     }
   }
 
@@ -198,8 +215,24 @@ class MessageBusService {
     _shouldStop = true;
     _isPolling = false;
     _pollGeneration++; // 确保旧循环在任何 await 恢复后立即退出
+    _restartPollTimer?.cancel();
+    _restartPollTimer = null;
     _currentCancelToken?.cancel('[MessageBus] 停止轮询');
     _currentCancelToken = null;
+  }
+
+  void _schedulePollingRefresh() {
+    if (!_isPolling || _shouldStop) return;
+
+    _restartPollTimer?.cancel();
+    _restartPollTimer = Timer(_restartDebounce, () {
+      _restartPollTimer = null;
+      if (!_isPolling || _shouldStop) return;
+
+      final token = _currentCancelToken;
+      _currentCancelToken = null;
+      token?.cancel('[MessageBus] 订阅集合变更，重新轮询');
+    });
   }
 
   /// 可被 CancelToken 中断的延迟
@@ -457,6 +490,7 @@ class MessageBusService {
   /// 释放资源
   void dispose() {
     _stopPolling();
+    _restartPollTimer?.cancel();
     _messageController.close();
   }
 }

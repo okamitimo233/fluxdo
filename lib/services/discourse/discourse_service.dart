@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart' hide Badge;
 import 'dart:async';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import '../../models/topic.dart';
 import '../../models/topic_vote.dart';
@@ -23,6 +24,7 @@ import '../auth_session.dart';
 import '../cf_clearance_refresh_service.dart';
 import '../network/cookie/csrf_token_service.dart';
 import '../network/cookie/cookie_jar_service.dart';
+import '../network/cookie/session_snapshot.dart';
 import '../cf_challenge_service.dart';
 import '../message_bus_service.dart';
 import '../network/discourse_dio.dart';
