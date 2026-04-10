@@ -1,77 +1,141 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
+import 'package:enhanced_cookie_jar/enhanced_cookie_jar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../../../constants.dart';
+import '../cookie/boundary_sync_service.dart';
+import '../cookie/cookie_jar_service.dart';
 import '../cookie/raw_set_cookie_queue.dart';
 import '../../webview_settings.dart';
 import '../../windows_webview_environment_service.dart';
 
 /// WebView HTTP 适配器
-/// 使用 InAppWebView 发起 HTTP 请求，完全绕过 Cloudflare 验证
+///
+/// 使用 InAppWebView 的 JS fetch() 发起 HTTP 请求。
+/// 请求经过真正的 Chrome/WebKit 内核，TLS 指纹与浏览器完全一致，
+/// 可绕过 Cloudflare Bot Management 等基于指纹的检测。
+///
+/// 全平台支持：Android (Chrome WebView)、iOS/macOS (WKWebView)、
+/// Windows (WebView2)、Linux (WebKitGTK)。
 class WebViewHttpAdapter implements HttpClientAdapter {
+  static const Set<String> _forbiddenBrowserHeaders = {
+    'accept-charset',
+    'accept-encoding',
+    'access-control-request-headers',
+    'access-control-request-method',
+    'connection',
+    'content-length',
+    'cookie',
+    'cookie2',
+    'date',
+    'dnt',
+    'expect',
+    'host',
+    'keep-alive',
+    'origin',
+    'referer',
+    'te',
+    'trailer',
+    'transfer-encoding',
+    'upgrade',
+    'user-agent',
+    'via',
+  };
+
   HeadlessInAppWebView? _headlessWebView;
   InAppWebViewController? _controller;
   bool _isInitialized = false;
   Completer<void>? _initCompleter;
+  Future<void>? _activeCriticalCookieSync;
+  DateTime? _lastCriticalCookieSyncAt;
 
-  // 用于接收 JS 回调结果
   final Map<String, Completer<String>> _pendingRequests = {};
   int _requestId = 0;
 
   /// 初始化 WebView
   Future<void> initialize() async {
     if (_isInitialized && _controller != null) return;
+    if (_initCompleter != null && !_initCompleter!.isCompleted) {
+      await _initCompleter!.future;
+      return;
+    }
 
-    _initCompleter = Completer<void>();
+    final initCompleter = Completer<void>();
+    _initCompleter = initCompleter;
 
-    _headlessWebView = HeadlessInAppWebView(
-      webViewEnvironment: WindowsWebViewEnvironmentService.instance.environment,
-      initialUrlRequest: URLRequest(url: WebUri(AppConstants.baseUrl)),
-      initialSettings: WebViewSettings.headless,
-      onReceivedServerTrustAuthRequest: (_, challenge) =>
-          WebViewSettings.handleServerTrustAuthRequest(challenge),
-      onWebViewCreated: (controller) {
-        _controller = controller;
+    try {
+      _headlessWebView = HeadlessInAppWebView(
+        // Windows 需要 WebView2 环境，其他平台传 null
+        webViewEnvironment: Platform.isWindows
+            ? WindowsWebViewEnvironmentService.instance.environment
+            : null,
+        // 加载主站页面（而非 about:blank），确保 cookie store 已初始化
+        initialUrlRequest: URLRequest(url: WebUri(AppConstants.baseUrl)),
+        initialSettings: WebViewSettings.headless,
+        onReceivedServerTrustAuthRequest: (_, challenge) =>
+            WebViewSettings.handleServerTrustAuthRequest(challenge),
+        onWebViewCreated: (controller) {
+          _controller = controller;
 
-        // 添加 JS Handler 来接收异步结果
-        controller.addJavaScriptHandler(
-          handlerName: 'fetchResult',
-          callback: (args) {
-            if (args.isNotEmpty && args[0] is Map) {
-              final data = args[0] as Map;
-              final requestId = data['requestId']?.toString();
-              final result = data['result']?.toString() ?? '';
+          controller.addJavaScriptHandler(
+            handlerName: 'fetchResult',
+            callback: (args) {
+              if (args.isNotEmpty && args[0] is Map) {
+                final data = args[0] as Map;
+                final requestId = data['requestId']?.toString();
+                final result = data['result']?.toString() ?? '';
 
-              if (requestId != null &&
-                  _pendingRequests.containsKey(requestId)) {
-                _pendingRequests[requestId]!.complete(result);
-                _pendingRequests.remove(requestId);
+                if (requestId != null &&
+                    _pendingRequests.containsKey(requestId)) {
+                  _pendingRequests[requestId]!.complete(result);
+                  _pendingRequests.remove(requestId);
+                }
               }
-            }
-          },
-        );
+            },
+          );
 
-        debugPrint('[WebViewAdapter] Controller created');
-      },
-      onLoadStop: (controller, url) {
-        debugPrint('[WebViewAdapter] Page loaded: $url');
-        if (_initCompleter != null && !_initCompleter!.isCompleted) {
-          _isInitialized = true;
-          _initCompleter!.complete();
-        }
-      },
-    );
+          debugPrint('[WebViewAdapter] Controller created');
+        },
+        onLoadStop: (controller, url) {
+          debugPrint('[WebViewAdapter] Page loaded: $url');
+          if (!initCompleter.isCompleted) {
+            initCompleter.complete();
+          }
+        },
+        onReceivedError: (controller, request, error) {
+          if (request.isForMainFrame != false && !initCompleter.isCompleted) {
+            initCompleter.completeError(
+              StateError(
+                'WebView init failed: ${error.type} ${error.description}',
+              ),
+            );
+          }
+        },
+      );
 
-    await _headlessWebView!.run();
+      await _headlessWebView!.run();
 
-    await _initCompleter!.future.timeout(
-      const Duration(seconds: 30),
-      onTimeout: () => debugPrint('[WebViewAdapter] Init timeout'),
-    );
+      await initCompleter.future.timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('WebView init timeout');
+        },
+      );
 
-    debugPrint('[WebViewAdapter] Initialized');
+      _isInitialized = true;
+      debugPrint('[WebViewAdapter] Initialized');
+    } catch (e) {
+      debugPrint('[WebViewAdapter] Init failed: $e');
+      close(force: true);
+      rethrow;
+    } finally {
+      if (identical(_initCompleter, initCompleter) && !_isInitialized) {
+        _initCompleter = null;
+      }
+    }
   }
 
   @override
@@ -100,54 +164,22 @@ class WebViewHttpAdapter implements HttpClientAdapter {
     final shouldSyncAppCookies = _shouldSyncAppCookies(requestUri, baseUri);
 
     if (shouldSyncAppCookies) {
-      await RawSetCookieQueue.instance.flushToWebView();
+      final written = await RawSetCookieQueue.instance.flushToWebView();
+      if (written == 0) {
+        await _syncCookiesFromJar(requestUri);
+      }
     }
 
-    // 非应用站点的备选路径：根据请求头尽力补 Cookie。
-    // 应用站点统一依赖 RawSetCookieQueue 的 WebView 同步，避免 header 与 CookieStore 脱节。
+    // 非应用站点的备选路径：通过 CookieManager 写入 cookie
     final cookieHeader = options.headers['Cookie']?.toString();
     if (!shouldSyncAppCookies &&
         cookieHeader != null &&
         cookieHeader.isNotEmpty) {
-      // 1. 仅在同域时通过 JS 设置 (避免跨域写入到当前页面域)
-      if (requestUri.host == baseUri.host) {
-        final setCookieJs = cookieHeader
-            .split('; ')
-            .map((c) => "document.cookie = '$c';")
-            .join('\n');
-        await _controller!.evaluateJavascript(source: setCookieJs);
-      }
-
-      // 2. 尝试通过 CookieManager 设置 (对 HttpOnly 有效，关键！)
-      try {
-        final cookieManager =
-            WindowsWebViewEnvironmentService.instance.cookieManager;
-        final webUri = WebUri(url);
-        final cookies = cookieHeader.split('; ');
-        for (final cookie in cookies) {
-          final parts = cookie.split('=');
-          if (parts.length >= 2) {
-            final name = parts[0].trim();
-            final value = parts.sublist(1).join('=').trim();
-            await cookieManager.setCookie(
-              url: webUri,
-              name: name,
-              value: value,
-            );
-          }
-        }
-      } catch (e) {
-        debugPrint(
-          '[WebViewAdapter] Failed to sync cookies via CookieManager: $e',
-        );
-      }
+      await _syncCookiesViaCookieManager(url, cookieHeader);
     }
 
     // 构建 headers（移除 Cookie，由 WebView 自动处理）
-    final headersMap = <String, String>{};
-    options.headers.forEach((key, value) {
-      if (value != null && key != 'Cookie') headersMap[key] = value.toString();
-    });
+    final headersMap = _buildBrowserSafeHeaders(options.headers);
 
     // 构建 body
     String? bodyJson;
@@ -159,16 +191,12 @@ class WebViewHttpAdapter implements HttpClientAdapter {
       }
     }
 
-    // 创建等待器
     final completer = Completer<String>();
     _pendingRequests[requestId] = completer;
 
-    // 检查是否需要二进制响应
     final isBinary = options.responseType == ResponseType.bytes;
 
-    // 构建脚本 - 使用 JS Handler 回调
-    final script =
-        '''
+    final script = '''
       (async function() {
         try {
           const fetchOptions = {
@@ -177,12 +205,12 @@ class WebViewHttpAdapter implements HttpClientAdapter {
             credentials: 'include'
           };
           ${bodyJson != null ? "fetchOptions.body = ${jsonEncode(bodyJson)};" : ""}
-          
+
           const response = await fetch('$url', fetchOptions);
-          
+
           let bodyData;
           let isBase64 = false;
-          
+
           if ($isBinary) {
             const buffer = await response.arrayBuffer();
             let binary = '';
@@ -196,10 +224,10 @@ class WebViewHttpAdapter implements HttpClientAdapter {
           } else {
             bodyData = await response.text();
           }
-          
+
           const headersObj = {};
           response.headers.forEach((v, k) => headersObj[k] = v);
-          
+
           const result = JSON.stringify({
             ok: true,
             status: response.status,
@@ -208,7 +236,7 @@ class WebViewHttpAdapter implements HttpClientAdapter {
             body: bodyData,
             isBase64: isBase64
           });
-          
+
           window.flutter_inappwebview.callHandler('fetchResult', {
             requestId: '$requestId',
             result: result
@@ -228,20 +256,23 @@ class WebViewHttpAdapter implements HttpClientAdapter {
 
     await _controller!.evaluateJavascript(source: script);
 
-    // 等待结果
+    // 超时从 RequestOptions 读取，默认 30 秒
+    final timeout =
+        options.receiveTimeout ??
+        options.connectTimeout ??
+        const Duration(seconds: 30);
+
     final resultStr = await completer.future.timeout(
-      const Duration(seconds: 30),
+      timeout,
       onTimeout: () {
         _pendingRequests.remove(requestId);
         throw DioException(
           requestOptions: options,
-          error: 'Request timeout',
-          type: DioExceptionType.connectionTimeout,
+          error: 'WebView request timeout',
+          type: DioExceptionType.receiveTimeout,
         );
       },
     );
-
-    // print('[WebViewAdapter] Got result: ${resultStr.substring(0, resultStr.length > 100 ? 100 : resultStr.length)}...');
 
     final responseData = jsonDecode(resultStr) as Map<String, dynamic>;
 
@@ -263,6 +294,13 @@ class WebViewHttpAdapter implements HttpClientAdapter {
       (responseData['headers'] as Map).forEach((key, value) {
         responseHeaders[key.toString()] = [value.toString()];
       });
+    }
+
+    if (shouldSyncAppCookies) {
+      await _syncCriticalCookiesBackToJar(
+        url,
+        force: method != 'GET' && method != 'HEAD',
+      );
     }
 
     debugPrint('[WebViewAdapter] Response: $statusCode (binary: $isBase64)');
@@ -289,6 +327,17 @@ class WebViewHttpAdapter implements HttpClientAdapter {
     _headlessWebView = null;
     _controller = null;
     _isInitialized = false;
+    if (_initCompleter != null && !_initCompleter!.isCompleted) {
+      _initCompleter!.completeError(StateError('WebView adapter closed'));
+    }
+    _initCompleter = null;
+    _activeCriticalCookieSync = null;
+    _lastCriticalCookieSyncAt = null;
+    for (final completer in _pendingRequests.values) {
+      if (!completer.isCompleted) {
+        completer.completeError('WebView adapter closed');
+      }
+    }
     _pendingRequests.clear();
   }
 
@@ -299,5 +348,167 @@ class WebViewHttpAdapter implements HttpClientAdapter {
       return false;
     }
     return requestHost == baseHost || requestHost.endsWith('.$baseHost');
+  }
+
+  /// 通过全平台 CookieManager API 写入 cookie
+  Future<void> _syncCookiesViaCookieManager(
+    String url,
+    String cookieHeader,
+  ) async {
+    try {
+      final cookieManager = _resolveCookieManager();
+      final webUri = WebUri(url);
+      final cookies = cookieHeader.split('; ');
+      for (final cookie in cookies) {
+        final parts = cookie.split('=');
+        if (parts.length >= 2) {
+          final name = parts[0].trim();
+          final value = parts.sublist(1).join('=').trim();
+          await cookieManager.setCookie(
+            url: webUri,
+            name: name,
+            value: value,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[WebViewAdapter] Failed to sync cookies: $e');
+    }
+  }
+
+  Map<String, String> _buildBrowserSafeHeaders(Map<String, dynamic> headers) {
+    final headersMap = <String, String>{};
+    final droppedHeaders = <String>[];
+
+    headers.forEach((key, value) {
+      if (value == null) return;
+      if (_isForbiddenBrowserHeader(key)) {
+        droppedHeaders.add(key);
+        return;
+      }
+      headersMap[key] = value.toString();
+    });
+
+    if (droppedHeaders.isNotEmpty) {
+      debugPrint(
+        '[WebViewAdapter] Dropped browser-managed headers: '
+        '${droppedHeaders.join(', ')}',
+      );
+    }
+
+    return headersMap;
+  }
+
+  bool _isForbiddenBrowserHeader(String key) {
+    final normalized = key.trim().toLowerCase();
+    if (_forbiddenBrowserHeaders.contains(normalized)) {
+      return true;
+    }
+    return normalized.startsWith('sec-') || normalized.startsWith('proxy-');
+  }
+
+  CookieManager _resolveCookieManager() {
+    return Platform.isWindows
+        ? WindowsWebViewEnvironmentService.instance.cookieManager
+        : CookieManager.instance();
+  }
+
+  Future<void> _syncCookiesFromJar(Uri requestUri) async {
+    final jar = CookieJarService();
+    if (!jar.isInitialized) {
+      await jar.initialize();
+    }
+
+    final cookies = await jar.loadCanonicalCookiesForRequest(requestUri);
+    if (cookies.isEmpty) return;
+
+    final cookieManager = _resolveCookieManager();
+    var synced = 0;
+
+    for (final cookie in cookies) {
+      try {
+        final cookieUri = Uri(
+          scheme: requestUri.scheme,
+          host: requestUri.host,
+          port: requestUri.hasPort ? requestUri.port : null,
+          path: cookie.path.isEmpty ? '/' : cookie.path,
+        );
+
+        await cookieManager.setCookie(
+          url: WebUri(cookieUri.toString()),
+          name: cookie.name,
+          value: cookie.value,
+          path: cookie.path.isEmpty ? '/' : cookie.path,
+          domain: cookie.hostOnly ? null : cookie.domain,
+          expiresDate: cookie.expiresAt?.millisecondsSinceEpoch,
+          maxAge: cookie.maxAge,
+          isSecure: cookie.secure,
+          isHttpOnly: cookie.httpOnly,
+          sameSite: _toWebViewSameSite(cookie.sameSite),
+        );
+        synced++;
+      } catch (e) {
+        debugPrint(
+          '[WebViewAdapter] Failed to backfill cookie ${cookie.name} to WebView: $e',
+        );
+      }
+    }
+
+    if (synced > 0) {
+      debugPrint('[WebViewAdapter] Backfilled $synced cookies from jar');
+    }
+  }
+
+  HTTPCookieSameSitePolicy? _toWebViewSameSite(CookieSameSite sameSite) {
+    switch (sameSite) {
+      case CookieSameSite.lax:
+        return HTTPCookieSameSitePolicy.LAX;
+      case CookieSameSite.strict:
+        return HTTPCookieSameSitePolicy.STRICT;
+      case CookieSameSite.none:
+        return HTTPCookieSameSitePolicy.NONE;
+      case CookieSameSite.unspecified:
+        return null;
+    }
+  }
+
+  Future<void> _syncCriticalCookiesBackToJar(
+    String currentUrl, {
+    bool force = false,
+  }) async {
+    final controller = _controller;
+    if (controller == null) return;
+
+    if (!force) {
+      final lastSyncAt = _lastCriticalCookieSyncAt;
+      if (lastSyncAt != null &&
+          DateTime.now().difference(lastSyncAt) <
+              const Duration(milliseconds: 800)) {
+        final active = _activeCriticalCookieSync;
+        if (active != null) {
+          await active;
+        }
+        return;
+      }
+    }
+
+    final active = _activeCriticalCookieSync;
+    if (active != null) {
+      await active;
+      return;
+    }
+
+    final future = BoundarySyncService.instance.syncFromWebView(
+      currentUrl: currentUrl,
+      controller: controller,
+      cookieNames: CookieJarService.criticalCookieNames,
+    );
+
+    _activeCriticalCookieSync = future.whenComplete(() {
+      _lastCriticalCookieSyncAt = DateTime.now();
+      _activeCriticalCookieSync = null;
+    });
+
+    await _activeCriticalCookieSync!;
   }
 }

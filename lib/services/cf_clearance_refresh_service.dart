@@ -458,6 +458,7 @@ class CfClearanceRefreshService {
             'skipCsrf': true,
             'isSilent': true,
             'isCfChallengePlatform': true,
+            'skipWebViewAdapter': true,
           },
           validateStatus: (status) => status != null,
         ),

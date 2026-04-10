@@ -8,6 +8,7 @@ import 'package:native_dio_adapter/native_dio_adapter.dart';
 import '../doh/network_settings_service.dart';
 import '../proxy/proxy_settings_service.dart';
 import '../rhttp/rhttp_settings_service.dart';
+import '../webview/webview_adapter_settings_service.dart';
 import 'cronet_fallback_service.dart';
 import 'network_http_adapter.dart';
 import '../../../l10n/s.dart';
@@ -196,6 +197,11 @@ class _GatewayAdapterWrapper implements HttpClientAdapter {
   _GatewayAdapterWrapper(this._inner);
 
   final HttpClientAdapter _inner;
+  WebViewHttpAdapter? _webViewAdapter;
+
+  WebViewHttpAdapter _getWebViewAdapter() {
+    return _webViewAdapter ??= WebViewHttpAdapter();
+  }
 
   @override
   Future<ResponseBody> fetch(
@@ -203,6 +209,11 @@ class _GatewayAdapterWrapper implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
+    // WebView 适配器：主域名 API 请求走 WebView 内核（真正的浏览器 TLS 指纹）
+    if (_shouldUseWebView(options, requestStream)) {
+      return _getWebViewAdapter().fetch(options, requestStream, cancelFuture);
+    }
+
     final settings = NetworkSettingsService.instance;
     final proxySettings = ProxySettingsService.instance;
     final rhttpSettings = RhttpSettingsService.instance;
@@ -254,7 +265,72 @@ class _GatewayAdapterWrapper implements HttpClientAdapter {
   }
 
   @override
-  void close({bool force = false}) => _inner.close(force: force);
+  void close({bool force = false}) {
+    _webViewAdapter?.close(force: force);
+    _webViewAdapter = null;
+    _inner.close(force: force);
+  }
+
+  bool _shouldUseWebView(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+  ) {
+    final uri = options.uri;
+    if (!WebViewAdapterSettingsService.instance.shouldUseWebView(uri)) {
+      return false;
+    }
+    if (options.extra['skipWebViewAdapter'] == true) {
+      return false;
+    }
+    if (options.extra['isCfChallengePlatform'] == true ||
+        uri.path.startsWith('/cdn-cgi/')) {
+      return false;
+    }
+    if (requestStream != null) {
+      return false;
+    }
+    if (options.data is FormData) {
+      return false;
+    }
+    if (options.responseType == ResponseType.stream ||
+        options.responseType == ResponseType.bytes) {
+      return false;
+    }
+
+    final method = options.method.toUpperCase();
+    final accept = _headerValue(options.headers, 'Accept').toLowerCase();
+    final requestedWith = _headerValue(options.headers, 'X-Requested-With');
+    final explicitlyHtml =
+        accept.contains('text/html') ||
+        accept.contains('application/xhtml+xml');
+    if (explicitlyHtml) {
+      return false;
+    }
+    final apiLikeGet =
+        requestedWith == 'XMLHttpRequest' ||
+        uri.path.endsWith('.json') ||
+        accept.contains('application/json') ||
+        accept.contains('text/javascript');
+    if ((method == 'GET' || method == 'HEAD') && !apiLikeGet) {
+      return false;
+    }
+
+    return method == 'GET' ||
+        method == 'HEAD' ||
+        method == 'POST' ||
+        method == 'PUT' ||
+        method == 'PATCH' ||
+        method == 'DELETE';
+  }
+
+  String _headerValue(Map<String, dynamic> headers, String name) {
+    for (final entry in headers.entries) {
+      if (entry.key.toString().toLowerCase() == name.toLowerCase()) {
+        return entry.value?.toString() ?? '';
+      }
+    }
+    return '';
+  }
 }
 
 /// 动态适配器：每次请求时根据设置 version 变化自动切换底层适配器
