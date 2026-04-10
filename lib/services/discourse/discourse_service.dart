@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import '../../models/topic.dart';
+import '../../models/nested_topic.dart';
 import '../../models/topic_vote.dart';
 import '../../models/user.dart';
 import '../../models/user_action.dart';
@@ -49,6 +50,7 @@ part '_categories.dart';
 part '_utils.dart';
 part '_drafts.dart';
 part '_templates.dart';
+part '_nested.dart';
 
 /// 基类，包含所有共享字段
 abstract class _DiscourseServiceBase {
@@ -106,7 +108,8 @@ class DiscourseService extends _DiscourseServiceBase
         _CategoriesMixin,
         _UtilsMixin,
         _DraftsMixin,
-        _TemplatesMixin {
+        _TemplatesMixin,
+        _NestedMixin {
   static const String baseUrl = AppConstants.baseUrl;
   static const String _usernameKey = 'linux_do_username';
   static const _summaryCacheDuration = Duration(minutes: 5);

@@ -3060,6 +3060,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get topicDetail_viewAll => '查看全部';
 
   @override
+  String get topicDetail_filter => '筛选';
+
+  @override
   String get topicDetail_hotOnly => '只看热门';
 
   @override
@@ -5795,6 +5798,32 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get boost_limitReached => '此帖子的 Boost 数量已达上限';
+
+  @override
+  String get nested_title => '树形视图';
+
+  @override
+  String get nested_loadMore => '加载更多';
+
+  @override
+  String get nested_loadMoreReplies => '加载更多回复';
+
+  @override
+  String get nested_sortTop => '热门';
+
+  @override
+  String get nested_sortNew => '最新';
+
+  @override
+  String get nested_sortOld => '最旧';
+
+  @override
+  String nested_repliesCount(int count) {
+    return '$count 条回复';
+  }
+
+  @override
+  String get nested_flatView => '切换平铺视图';
 }
 
 /// The translations for Chinese, as used in Hong Kong (`zh_HK`).

@@ -41,7 +41,9 @@ import '../../widgets/common/emoji_text.dart';
 import '../../widgets/common/error_view.dart';
 import '../../widgets/content/discourse_html_content/chunked/chunked_html_content.dart';
 import '../../widgets/content/discourse_html_content/discourse_html_content_widget.dart';
+import '../../providers/nested_topic_provider.dart';
 import 'controllers/topic_detail_controller.dart';
+import 'widgets/nested_post_list.dart';
 import 'widgets/topic_detail_overlay.dart';
 import 'widgets/topic_post_list.dart';
 import 'widgets/topic_detail_header.dart';
@@ -136,6 +138,7 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage>
     false,
   );
   bool _isSwitchingMode = false; // 切换热门回复模式
+  bool _isNestedView = false; // 嵌套视图模式
   // 搜索相关
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
@@ -1217,11 +1220,13 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage>
                     isSummaryMode: notifier.isSummaryMode,
                     isAuthorOnlyMode: notifier.isAuthorOnlyMode,
                     isTopLevelMode: notifier.isTopLevelMode,
+                    isNestedMode: _isNestedView,
                     isLoading: _isSwitchingMode,
                     onShowTopReplies: _handleShowTopReplies,
                     onShowAuthorOnly: _handleShowAuthorOnly,
                     onShowTopLevelReplies: _handleShowTopLevelReplies,
                     onCancelFilter: _handleCancelFilter,
+                    onShowNestedView: _toggleNestedView,
                   );
                 },
               );
@@ -1344,6 +1349,37 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage>
     }
 
     final centerPostIndex = _controller.findCenterPostIndex(posts);
+
+    // 嵌套视图模式
+    if (_isNestedView) {
+      final nestedParams = NestedTopicParams(topicId: widget.topicId);
+      final nestedAsync = ref.watch(nestedTopicProvider(nestedParams));
+
+      Widget nestedView = nestedAsync.when(
+        loading: () => PostListSkeleton(withHeader: true),
+        error: (e, s) => Center(child: Text('$e')),
+        data: (nestedState) => NestedPostList(
+          nestedState: nestedState,
+          params: nestedParams,
+          detail: detail,
+          topicId: widget.topicId,
+          scrollController: _controller.scrollController,
+          headerKey: _headerKey,
+          isLoggedIn: isLoggedIn,
+          onReply: _handleReply,
+          onEdit: _handleEdit,
+          onRefreshPost: _handleRefreshPost,
+          onJumpToPost: _scrollToPost,
+          onVoteChanged: _handleVoteChanged,
+          onNotificationLevelChanged: (level) => _handleNotificationLevelChanged(notifier, level),
+          onSolutionChanged: _handleSolutionChanged,
+          onScrollNotification: _controller.handleScrollNotification,
+          onVisiblePostsChanged: _updateVisiblePosts,
+        ),
+      );
+
+      return _wrapWithConstraint(nestedView);
+    }
 
     // 使用 Consumer + select 隔离 typingUsers 状态变化，避免整页重建
     Widget scrollView = Consumer(

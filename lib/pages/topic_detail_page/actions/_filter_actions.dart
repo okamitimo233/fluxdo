@@ -81,6 +81,12 @@ extension _FilterActions on _TopicDetailPageState {
   }
 
   Future<void> _handleCancelFilter() async {
+    // 嵌套模式：直接退出，不需要重新加载
+    if (_isNestedView) {
+      setState(() => _isNestedView = false);
+      return;
+    }
+
     final params = _params;
     final notifier = ref.read(topicDetailProvider(params).notifier);
 

@@ -977,6 +977,7 @@
   "topicDetail_generateShareImage": "Generate share image",
   "topicDetail_exportArticle": "Export article",
   "topicDetail_viewAll": "View all",
+  "topicDetail_filter": "Filter",
   "topicDetail_hotOnly": "Hot only",
   "topicDetail_authorOnly": "OP only",
   "topicDetail_topLevelOnly": "Top-level only",
@@ -1999,5 +2000,20 @@
       }
     }
   },
-  "boost_limitReached": "Boost limit reached for this post"
+  "boost_limitReached": "Boost limit reached for this post",
+  "nested_title": "Threaded View",
+  "nested_loadMore": "Load more",
+  "nested_loadMoreReplies": "Load more replies",
+  "nested_sortTop": "Top",
+  "nested_sortNew": "New",
+  "nested_sortOld": "Old",
+  "nested_repliesCount": "{count} replies",
+  "@nested_repliesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nested_flatView": "Switch to flat view"
 }

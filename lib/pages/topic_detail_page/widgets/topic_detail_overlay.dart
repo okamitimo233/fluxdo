@@ -21,11 +21,13 @@ class TopicDetailOverlay extends StatelessWidget {
   final bool isSummaryMode;
   final bool isAuthorOnlyMode;
   final bool isTopLevelMode;
+  final bool isNestedMode;
   final bool isLoading;
   final VoidCallback? onShowTopReplies;
   final VoidCallback? onShowAuthorOnly;
   final VoidCallback? onShowTopLevelReplies;
   final VoidCallback? onCancelFilter;
+  final VoidCallback? onShowNestedView;
 
   const TopicDetailOverlay({
     super.key,
@@ -44,11 +46,13 @@ class TopicDetailOverlay extends StatelessWidget {
     this.isSummaryMode = false,
     this.isAuthorOnlyMode = false,
     this.isTopLevelMode = false,
+    this.isNestedMode = false,
     this.isLoading = false,
     this.onShowTopReplies,
     this.onShowAuthorOnly,
     this.onShowTopLevelReplies,
     this.onCancelFilter,
+    this.onShowNestedView,
   });
 
   @override
@@ -60,22 +64,23 @@ class TopicDetailOverlay extends StatelessWidget {
 
     return Stack(
       children: [
-        // 固定的进度栏
-        AnimatedPositioned(
-          key: const ValueKey('progress_bar'),
-          duration: const Duration(milliseconds: 200),
-          bottom: showBottomBar ? 96 : 24 + bottomPadding,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: TopicProgress(
-              currentIndex: currentStreamIndex,
-              totalCount: totalCount,
-              progressPercent: progressPercent,
-              onTap: onProgressTap,
+        // 固定的进度栏（嵌套模式下隐藏）
+        if (!isNestedMode)
+          AnimatedPositioned(
+            key: const ValueKey('progress_bar'),
+            duration: const Duration(milliseconds: 200),
+            bottom: showBottomBar ? 96 : 24 + bottomPadding,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: TopicProgress(
+                currentIndex: currentStreamIndex,
+                totalCount: totalCount,
+                progressPercent: progressPercent,
+                onTap: onProgressTap,
+              ),
             ),
           ),
-        ),
         // 底部操作栏
         AnimatedPositioned(
           key: const ValueKey('bottom_bar'),
@@ -93,11 +98,13 @@ class TopicDetailOverlay extends StatelessWidget {
             isSummaryMode: isSummaryMode,
             isAuthorOnlyMode: isAuthorOnlyMode,
             isTopLevelMode: isTopLevelMode,
+            isNestedMode: isNestedMode,
             isLoading: isLoading,
             onShowTopReplies: onShowTopReplies,
             onShowAuthorOnly: onShowAuthorOnly,
             onShowTopLevelReplies: onShowTopLevelReplies,
             onCancelFilter: onCancelFilter,
+            onShowNestedView: onShowNestedView,
           ),
         ),
         // 悬浮回复按钮

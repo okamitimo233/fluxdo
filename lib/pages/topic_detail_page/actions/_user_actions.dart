@@ -461,4 +461,9 @@ extension _UserActions on _TopicDetailPageState {
       notifier.reloadTopicMetadata();
     }
   }
+
+  /// 切换嵌套视图
+  void _toggleNestedView() {
+    setState(() => _isNestedView = !_isNestedView);
+  }
 }

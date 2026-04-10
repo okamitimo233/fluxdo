@@ -3108,6 +3108,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topicDetail_viewAll => 'View all';
 
   @override
+  String get topicDetail_filter => 'Filter';
+
+  @override
   String get topicDetail_hotOnly => 'Hot only';
 
   @override
@@ -5931,4 +5934,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get boost_limitReached => 'Boost limit reached for this post';
+
+  @override
+  String get nested_title => 'Threaded View';
+
+  @override
+  String get nested_loadMore => 'Load more';
+
+  @override
+  String get nested_loadMoreReplies => 'Load more replies';
+
+  @override
+  String get nested_sortTop => 'Top';
+
+  @override
+  String get nested_sortNew => 'New';
+
+  @override
+  String get nested_sortOld => 'Old';
+
+  @override
+  String nested_repliesCount(int count) {
+    return '$count replies';
+  }
+
+  @override
+  String get nested_flatView => 'Switch to flat view';
 }

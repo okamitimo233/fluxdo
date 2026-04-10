@@ -1114,6 +1114,7 @@
   "topicDetail_generateShareImage": "生成分享图片",
   "topicDetail_exportArticle": "导出文章",
   "topicDetail_viewAll": "查看全部",
+  "topicDetail_filter": "筛选",
   "topicDetail_hotOnly": "只看热门",
   "topicDetail_authorOnly": "只看题主",
   "topicDetail_topLevelOnly": "只看顶层",
@@ -2181,5 +2182,20 @@
       }
     }
   },
-  "boost_limitReached": "此帖子的 Boost 数量已达上限"
+  "boost_limitReached": "此帖子的 Boost 数量已达上限",
+  "nested_title": "树形视图",
+  "nested_loadMore": "加载更多",
+  "nested_loadMoreReplies": "加载更多回复",
+  "nested_sortTop": "热门",
+  "nested_sortNew": "最新",
+  "nested_sortOld": "最旧",
+  "nested_repliesCount": "{count} 条回复",
+  "@nested_repliesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nested_flatView": "切换平铺视图"
 }

@@ -5621,6 +5621,12 @@ abstract class AppLocalizations {
   /// **'查看全部'**
   String get topicDetail_viewAll;
 
+  /// No description provided for @topicDetail_filter.
+  ///
+  /// In zh, this message translates to:
+  /// **'筛选'**
+  String get topicDetail_filter;
+
   /// No description provided for @topicDetail_hotOnly.
   ///
   /// In zh, this message translates to:
@@ -10828,6 +10834,54 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'此帖子的 Boost 数量已达上限'**
   String get boost_limitReached;
+
+  /// No description provided for @nested_title.
+  ///
+  /// In zh, this message translates to:
+  /// **'树形视图'**
+  String get nested_title;
+
+  /// No description provided for @nested_loadMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载更多'**
+  String get nested_loadMore;
+
+  /// No description provided for @nested_loadMoreReplies.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载更多回复'**
+  String get nested_loadMoreReplies;
+
+  /// No description provided for @nested_sortTop.
+  ///
+  /// In zh, this message translates to:
+  /// **'热门'**
+  String get nested_sortTop;
+
+  /// No description provided for @nested_sortNew.
+  ///
+  /// In zh, this message translates to:
+  /// **'最新'**
+  String get nested_sortNew;
+
+  /// No description provided for @nested_sortOld.
+  ///
+  /// In zh, this message translates to:
+  /// **'最旧'**
+  String get nested_sortOld;
+
+  /// No description provided for @nested_repliesCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 条回复'**
+  String nested_repliesCount(int count);
+
+  /// No description provided for @nested_flatView.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换平铺视图'**
+  String get nested_flatView;
 }
 
 class _AppLocalizationsDelegate

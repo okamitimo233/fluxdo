@@ -13,11 +13,13 @@ class TopicBottomBar extends StatelessWidget {
   final bool isSummaryMode;
   final bool isAuthorOnlyMode;
   final bool isTopLevelMode;
+  final bool isNestedMode;
   final bool isLoading;
   final VoidCallback? onShowTopReplies;
   final VoidCallback? onShowAuthorOnly;
   final VoidCallback? onShowTopLevelReplies;
   final VoidCallback? onCancelFilter;
+  final VoidCallback? onShowNestedView;
 
   const TopicBottomBar({
     super.key,
@@ -30,12 +32,16 @@ class TopicBottomBar extends StatelessWidget {
     this.isSummaryMode = false,
     this.isAuthorOnlyMode = false,
     this.isTopLevelMode = false,
+    this.isNestedMode = false,
     this.isLoading = false,
     this.onShowTopReplies,
     this.onShowAuthorOnly,
     this.onShowTopLevelReplies,
     this.onCancelFilter,
+    this.onShowNestedView,
   });
+
+  bool get _hasActiveFilter => isSummaryMode || isAuthorOnlyMode || isTopLevelMode || isNestedMode;
 
   @override
   Widget build(BuildContext context) {
@@ -57,13 +63,11 @@ class TopicBottomBar extends StatelessWidget {
             icon: const Icon(Icons.vertical_align_top),
             tooltip: context.l10n.topicDetail_scrollToTop,
           ),
-          // 热门回复切换
-          if (hasSummary)
-            _buildTopRepliesButton(context),
-          // 只看题主
-          _buildAuthorOnlyButton(context),
-          // 只看顶层
-          _buildTopLevelButton(context),
+          // 筛选
+          if (_hasActiveFilter)
+            _buildActiveFilterChip(context, theme)
+          else
+            _buildFilterMenuButton(context, theme),
           // 分享菜单
           _buildShareMenu(context, theme),
           // 在浏览器打开
@@ -74,6 +78,91 @@ class TopicBottomBar extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  /// 激活态：紧凑图标按钮 + 小关闭按钮
+  Widget _buildActiveFilterChip(BuildContext context, ThemeData theme) {
+    final (icon, _) = _activeFilterInfo(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          onPressed: isLoading ? null : onCancelFilter,
+          icon: Icon(icon, color: theme.colorScheme.primary),
+          style: IconButton.styleFrom(
+            backgroundColor: theme.colorScheme.primaryContainer,
+          ),
+          iconSize: 20,
+          visualDensity: VisualDensity.compact,
+        ),
+      ],
+    );
+  }
+
+  (IconData, String) _activeFilterInfo(BuildContext context) {
+    if (isSummaryMode) return (Icons.local_fire_department, context.l10n.topicDetail_hotOnly);
+    if (isAuthorOnlyMode) return (Icons.person, context.l10n.topicDetail_authorOnly);
+    if (isTopLevelMode) return (Icons.account_tree, context.l10n.topicDetail_topLevelOnly);
+    if (isNestedMode) return (Icons.forum, context.l10n.nested_title);
+    return (Icons.filter_list, '');
+  }
+
+  /// 未激活：筛选菜单按钮
+  Widget _buildFilterMenuButton(BuildContext context, ThemeData theme) {
+    return IconButton(
+      onPressed: isLoading ? null : () => _showFilterMenu(context),
+      icon: const Icon(Icons.filter_list),
+      tooltip: context.l10n.topicDetail_filter,
+    );
+  }
+
+  void _showFilterMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (hasSummary)
+                ListTile(
+                  leading: const Icon(Icons.local_fire_department_outlined),
+                  title: Text(context.l10n.topicDetail_hotOnly),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    onShowTopReplies?.call();
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.person_outline),
+                title: Text(context.l10n.topicDetail_authorOnly),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onShowAuthorOnly?.call();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.account_tree_outlined),
+                title: Text(context.l10n.topicDetail_topLevelOnly),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onShowTopLevelReplies?.call();
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.forum_outlined),
+                title: Text(context.l10n.nested_title),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onShowNestedView?.call();
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -100,11 +189,7 @@ class TopicBottomBar extends StatelessWidget {
           value: 'link',
           child: Row(
             children: [
-              Icon(
-                Icons.link,
-                size: 20,
-                color: theme.colorScheme.onSurface,
-              ),
+              Icon(Icons.link, size: 20, color: theme.colorScheme.onSurface),
               const SizedBox(width: 12),
               Text(context.l10n.topicDetail_shareLink),
             ],
@@ -114,11 +199,7 @@ class TopicBottomBar extends StatelessWidget {
           value: 'image',
           child: Row(
             children: [
-              Icon(
-                Icons.image_outlined,
-                size: 20,
-                color: theme.colorScheme.onSurface,
-              ),
+              Icon(Icons.image_outlined, size: 20, color: theme.colorScheme.onSurface),
               const SizedBox(width: 12),
               Text(context.l10n.topicDetail_generateShareImage),
             ],
@@ -128,71 +209,13 @@ class TopicBottomBar extends StatelessWidget {
           value: 'export',
           child: Row(
             children: [
-              Icon(
-                Icons.download_outlined,
-                size: 20,
-                color: theme.colorScheme.onSurface,
-              ),
+              Icon(Icons.download_outlined, size: 20, color: theme.colorScheme.onSurface),
               const SizedBox(width: 12),
               Text(context.l10n.topicDetail_exportArticle),
             ],
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildTopRepliesButton(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return IconButton(
-      onPressed: isLoading ? null : (isSummaryMode ? onCancelFilter : onShowTopReplies),
-      icon: Icon(
-        isSummaryMode
-            ? Icons.local_fire_department
-            : Icons.local_fire_department_outlined,
-        color: isSummaryMode ? theme.colorScheme.primary : null,
-      ),
-      style: IconButton.styleFrom(
-        backgroundColor: isSummaryMode ? theme.colorScheme.primaryContainer : null,
-      ),
-      tooltip: isSummaryMode ? context.l10n.topicDetail_viewAll : context.l10n.topicDetail_hotOnly,
-    );
-  }
-
-  Widget _buildAuthorOnlyButton(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return IconButton(
-      onPressed: isLoading ? null : (isAuthorOnlyMode ? onCancelFilter : onShowAuthorOnly),
-      icon: Icon(
-        isAuthorOnlyMode
-            ? Icons.person
-            : Icons.person_outline,
-        color: isAuthorOnlyMode ? theme.colorScheme.primary : null,
-      ),
-      style: IconButton.styleFrom(
-        backgroundColor: isAuthorOnlyMode ? theme.colorScheme.primaryContainer : null,
-      ),
-      tooltip: isAuthorOnlyMode ? context.l10n.topicDetail_viewAll : context.l10n.topicDetail_authorOnly,
-    );
-  }
-
-  Widget _buildTopLevelButton(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return IconButton(
-      onPressed: isLoading ? null : (isTopLevelMode ? onCancelFilter : onShowTopLevelReplies),
-      icon: Icon(
-        isTopLevelMode
-            ? Icons.account_tree
-            : Icons.account_tree_outlined,
-        color: isTopLevelMode ? theme.colorScheme.primary : null,
-      ),
-      style: IconButton.styleFrom(
-        backgroundColor: isTopLevelMode ? theme.colorScheme.primaryContainer : null,
-      ),
-      tooltip: isTopLevelMode ? context.l10n.topicDetail_viewAll : context.l10n.topicDetail_topLevelOnly,
     );
   }
 }

@@ -93,7 +93,6 @@ class _PostItemState extends ConsumerState<PostItem> {
     }
 
     final isModeratorAction = post.postType == PostTypes.moderatorAction;
-
     return PostSegmentFrame(
       post: post,
       highlight: widget.highlight,
