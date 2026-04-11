@@ -97,9 +97,9 @@ Future<void> main() async {
   // 初始化本地通知服务（请求权限）
   LocalNotificationService().initialize(); // 不需要 await，后台初始化
 
-  // Android：启用 WebView DevTools 调试，允许通过 CDP 读取完整 cookie 属性
+  // Android：临时关闭 WebView DevTools 调试，停用原生 CDP 链路
   if (Platform.isAndroid) {
-    InAppWebViewController.setWebContentsDebuggingEnabled(true);
+    InAppWebViewController.setWebContentsDebuggingEnabled(false);
   }
 
   // 阶段 1：并行执行所有不相互依赖的初始化
@@ -147,6 +147,9 @@ Future<void> main() async {
       });
     }
   }
+
+  // 数据迁移：在所有依赖 prefs 的网络相关服务启动之前执行
+  await MigrationService.runAll(prefs);
 
   // 阶段 2：依赖 prefs 的步骤并行
   final crashlyticsEnabled = prefs.getBool('pref_crashlytics') ?? true;
@@ -212,9 +215,6 @@ Future<void> main() async {
       ]);
     }
   }
-
-  // 数据迁移：在所有网络请求之前执行
-  await MigrationService.runAll(prefs);
 
   // 提前触发预加载数据请求，与 runApp 并行执行
   // PreheatGate 中的 ensureLoaded() 会复用这个已在进行的请求

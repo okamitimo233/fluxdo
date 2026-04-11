@@ -8,13 +8,29 @@ class AndroidCdpFeature {
   AndroidCdpFeature._();
 
   static const String prefKey = 'pref_android_native_cdp';
+  static const bool _forceDisabled = true;
   static bool _enabled = false;
   static bool _initialized = false;
 
-  static bool get isEnabled => Platform.isAndroid && _enabled;
+  static bool get isEnabled =>
+      Platform.isAndroid && !_forceDisabled && _enabled;
 
   static Future<void> initialize(SharedPreferences prefs) async {
-    _enabled = prefs.getBool(prefKey) ?? false;
+    final storedEnabled = prefs.getBool(prefKey) ?? false;
+    if (_forceDisabled) {
+      _enabled = false;
+      if (storedEnabled) {
+        await prefs.setBool(prefKey, false);
+      }
+      _initialized = true;
+      AppLogger.info(
+        'Android native CDP disabled by rollout stop',
+        tag: 'AndroidCdp',
+      );
+      return;
+    }
+
+    _enabled = storedEnabled;
     _initialized = true;
     AppLogger.info(
       'Android native CDP ${_enabled ? 'enabled' : 'disabled'}',
@@ -23,6 +39,18 @@ class AndroidCdpFeature {
   }
 
   static Future<void> setEnabled(bool enabled) async {
+    if (_forceDisabled) {
+      _enabled = false;
+      _initialized = true;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(prefKey, false);
+      AppLogger.warning(
+        'Android native CDP is temporarily disabled; forcing off',
+        tag: 'AndroidCdp',
+      );
+      return;
+    }
+
     _enabled = enabled;
     _initialized = true;
     final prefs = await SharedPreferences.getInstance();

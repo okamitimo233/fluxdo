@@ -36,10 +36,10 @@ class FluxdoApplication : Application() {
         super.onCreate()
         appInstance = this
         try {
-            WebView.setWebContentsDebuggingEnabled(true)
-            Log.i("AndroidCdp", "WebView debugging enabled in Application.onCreate")
+            WebView.setWebContentsDebuggingEnabled(false)
+            Log.i("AndroidCdp", "WebView debugging disabled in Application.onCreate")
         } catch (e: Throwable) {
-            Log.e("AndroidCdp", "Failed to enable WebView debugging early: ${e.message}", e)
+            Log.e("AndroidCdp", "Failed to disable WebView debugging early: ${e.message}", e)
         }
         // 不在此处初始化 Firebase，等待用户主动开启
     }
