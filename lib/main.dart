@@ -13,9 +13,11 @@ import 'package:flutter_acrylic/flutter_acrylic.dart' as acrylic;
 import 'pages/topics_page.dart';
 import 'pages/topics_screen.dart';
 import 'pages/profile_page.dart';
+import 'pages/data_management_page.dart';
 import 'providers/discourse_providers.dart';
 import 'providers/locale_provider.dart';
 import 'providers/message_bus_providers.dart';
+import 'services/auth_issue_notice_service.dart';
 import 'services/discourse/discourse_service.dart';
 import 'providers/app_state_refresher.dart';
 import 'services/highlighter_service.dart';
@@ -122,6 +124,7 @@ Future<void> main() async {
   }
   final results = await Future.wait(futures);
   final prefs = results[0] as SharedPreferences;
+  await AuthIssueNoticeService.instance.initialize(prefs);
 
   // 桌面平台：恢复窗口状态后再显示，避免默认位置闪烁
   if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
@@ -168,17 +171,13 @@ Future<void> main() async {
   await RhttpSettingsService.instance.initialize(prefs);
   // WebView 适配器设置
   await WebViewAdapterSettingsService.instance.initialize(prefs);
-  if (WebViewAdapterSettingsService.instance.shouldUseWebView(
-    Uri.parse(AppConstants.baseUrl),
-  )) {
-    unawaited(
-      WebViewHttpAdapter()
-          .runStartupSessionCookieSelfCheckOnce()
-          .catchError((Object e, StackTrace _) {
-            debugPrint('[Main] WebView session cookie 自检失败: $e');
-          }),
-    );
-  }
+  unawaited(
+    WebViewHttpAdapter()
+        .runStartupSessionCookieSelfCheckOnce()
+        .catchError((Object e, StackTrace _) {
+          debugPrint('[Main] WebView session cookie 自检失败: $e');
+        }),
+  );
   try {
     final rhttp = await Future.any([
       _initRhttp(),
@@ -472,6 +471,11 @@ class MainPage extends ConsumerStatefulWidget {
   ConsumerState<MainPage> createState() => _MainPageState();
 }
 
+enum _AuthErrorDialogAction {
+  confirm,
+  clearData,
+}
+
 class _MainPageState extends ConsumerState<MainPage>
     with WidgetsBindingObserver {
   int _currentIndex = 0;
@@ -708,15 +712,30 @@ class _MainPageState extends ConsumerState<MainPage>
   Future<void> _handleAuthError(String message) async {
     if (!mounted) return;
 
-    await showAppDialog<void>(
+    final advice =
+        AuthIssueNoticeService.instance.consumeLatestPassiveLogoutAdvice();
+    final content = _buildAuthErrorDialogMessage(message, advice);
+
+    final action = await showAppDialog<_AuthErrorDialogAction>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Text(S.current.auth_loginExpiredTitle),
-        content: Text(message),
+        content: Text(content),
         actions: [
+          if (advice.suggestClearData)
+            TextButton(
+              onPressed: () => Navigator.pop(
+                context,
+                _AuthErrorDialogAction.clearData,
+              ),
+              child: Text(S.current.auth_clearDataAction),
+            ),
           FilledButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(
+              context,
+              _AuthErrorDialogAction.confirm,
+            ),
             child: Text(S.current.common_confirm),
           ),
         ],
@@ -731,6 +750,28 @@ class _MainPageState extends ConsumerState<MainPage>
       Navigator.of(context).popUntil((route) => route.isFirst);
       navigatorKey.currentState?.popUntil((route) => route.isFirst);
     }
+    if (mounted && action == _AuthErrorDialogAction.clearData) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const DataManagementPage()),
+      );
+    }
+  }
+
+  String _buildAuthErrorDialogMessage(
+    String message,
+    PassiveLogoutAdvice advice,
+  ) {
+    final buffer = StringBuffer(message);
+
+    if (advice.mentionCookieRepair) {
+      buffer.write('\n\n${S.current.auth_cookieRepairLogoutHint}');
+    }
+
+    if (advice.suggestClearData) {
+      buffer.write('\n\n${S.current.auth_frequentLogoutClearDataHint}');
+    }
+
+    return buffer.toString();
   }
 
   @override

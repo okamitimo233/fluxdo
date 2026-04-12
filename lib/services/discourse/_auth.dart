@@ -418,18 +418,19 @@ mixin _AuthMixin on _DiscourseServiceBase {
       'event': 'logout_passive',
       'message': '登录失效被动退出',
       'reason': message,
-      if (source != null) 'source': source,
-      if (triggerInfo != null) 'trigger': triggerInfo,
+      'source': source,
+      'trigger': triggerInfo,
       // _t cookie 诊断（仅记录有无和长度，不记录实际值）
       'memHasToken': _tToken != null && _tToken!.isNotEmpty,
       'jarHasToken': jarTToken != null && jarTToken.isNotEmpty,
       'jarTokenLen': jarTToken?.length,
       'hasCsrf': csrfToken != null && csrfToken.isNotEmpty,
       // 实际请求中 Cookie header 的 _t 状态（仅 discourse-logged-out 触发时有值）
-      if (sentHasT != null) 'sentHasT': sentHasT,
-      if (sentTLen != null) 'sentTLen': sentTLen,
+      'sentHasT': sentHasT,
+      'sentTLen': sentTLen,
     });
 
+    await AuthIssueNoticeService.instance.recordPassiveLogout();
     await logout(callApi: false, refreshPreload: true);
     _isLoggingOut = false;
     _authErrorController.add(message);
@@ -455,6 +456,7 @@ mixin _AuthMixin on _DiscourseServiceBase {
   void onLoginSuccess(String tToken) {
     _tToken = tToken;
     _credentialsLoaded = false;
+    AuthIssueNoticeService.instance.clearSessionCookieRepairHint();
     _authStateController.add(null);
   }
 

@@ -15,6 +15,7 @@ import '../services/network/cookie/boundary_sync_service.dart';
 import '../services/network/cookie/cookie_jar_service.dart';
 import '../services/network/cookie/csrf_token_service.dart';
 import '../services/network/cookie/raw_set_cookie_queue.dart';
+import '../services/network/adapters/webview_http_adapter.dart';
 import '../services/toast_service.dart';
 import '../services/hcaptcha_accessibility_service.dart';
 import '../services/webview_settings.dart';
@@ -55,7 +56,12 @@ class _WebViewLoginPageState extends ConsumerState<WebViewLoginPage> {
   @override
   void initState() {
     super.initState();
-    _initialCookieFlushFuture = RawSetCookieQueue.instance.flushToWebView();
+    _initialCookieFlushFuture = () async {
+      await WebViewHttpAdapter().runStartupSessionCookieSelfCheckOnce(
+        reason: 'login_page',
+      );
+      return RawSetCookieQueue.instance.flushToWebView();
+    }();
     HCaptchaAccessibilityService().syncToWebView();
     _loadSavedUsername();
   }

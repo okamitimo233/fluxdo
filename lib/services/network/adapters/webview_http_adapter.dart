@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../../../constants.dart';
 import '../../auth_session.dart';
+import '../../auth_issue_notice_service.dart';
 import '../../log/log_writer.dart';
 import '../cookie/boundary_sync_service.dart';
 import '../cookie/cookie_jar_service.dart';
@@ -76,12 +77,13 @@ class WebViewHttpAdapter implements HttpClientAdapter {
       return active;
     }
 
-    final future = _runStartupSessionCookieSelfCheck(
-      reason: reason,
-    ).whenComplete(() {
-      _startupSessionCookieSelfCheckDone = true;
-      _startupSessionCookieSelfCheckFuture = null;
-    });
+    final future = _runStartupSessionCookieSelfCheck(reason: reason)
+        .then((_) {
+          _startupSessionCookieSelfCheckDone = true;
+        })
+        .whenComplete(() {
+          _startupSessionCookieSelfCheckFuture = null;
+        });
     _startupSessionCookieSelfCheckFuture = future;
     return future;
   }
@@ -923,6 +925,12 @@ class WebViewHttpAdapter implements HttpClientAdapter {
       requestUri,
       preloadedDuplicates: duplicates,
     );
+    if (repaired) {
+      await AuthIssueNoticeService.instance.recordSessionCookieRepair(
+        cookieNames: duplicateNames,
+        source: reason,
+      );
+    }
     LogWriter.instance.write({
       'timestamp': DateTime.now().toIso8601String(),
       'level': repaired ? 'warning' : 'error',

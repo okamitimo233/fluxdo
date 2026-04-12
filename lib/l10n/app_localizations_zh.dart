@@ -353,6 +353,17 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get auth_clearDataAction => '清理数据';
+
+  @override
+  String get auth_cookieRepairLogoutHint =>
+      '检测到历史登录 Cookie 异常，应用已自动清理相关脏数据。这可能会让旧的无效登录态立即失效，请重新登录。';
+
+  @override
+  String get auth_frequentLogoutClearDataHint =>
+      '最近 24 小时内多次触发登录失效。如果重新登录后仍反复发生，建议前往“数据管理”清除 Cookie 或全部数据后再登录。';
+
+  @override
   String get time_justNow => '刚刚';
 
   @override
@@ -6187,6 +6198,17 @@ class AppLocalizationsZhHk extends AppLocalizationsZh {
   }
 
   @override
+  String get auth_clearDataAction => '清理數據';
+
+  @override
+  String get auth_cookieRepairLogoutHint =>
+      '檢測到歷史登錄 Cookie 異常，應用已自動清理相關髒數據。這可能會讓舊的無效登錄態立即失效，請重新登錄。';
+
+  @override
+  String get auth_frequentLogoutClearDataHint =>
+      '最近 24 小時內多次觸發登錄失效。如果重新登錄後仍反覆發生，建議前往「數據管理」清除 Cookie 或全部數據後再登錄。';
+
+  @override
   String get time_justNow => '剛剛';
 
   @override
@@ -11822,6 +11844,17 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String auth_oauthExpired(String serviceName) {
     return '$serviceName 授權已過期';
   }
+
+  @override
+  String get auth_clearDataAction => '清理資料';
+
+  @override
+  String get auth_cookieRepairLogoutHint =>
+      '檢測到歷史登入 Cookie 異常，應用已自動清理相關髒資料。這可能會讓舊的無效登入態立即失效，請重新登入。';
+
+  @override
+  String get auth_frequentLogoutClearDataHint =>
+      '最近 24 小時內多次觸發登入失效。如果重新登入後仍反覆發生，建議前往「資料管理」清除 Cookie 或全部資料後再登入。';
 
   @override
   String get time_justNow => '剛剛';

@@ -760,6 +760,24 @@ abstract class AppLocalizations {
   /// **'{serviceName} 授权已过期'**
   String auth_oauthExpired(String serviceName);
 
+  /// No description provided for @auth_clearDataAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'清理数据'**
+  String get auth_clearDataAction;
+
+  /// No description provided for @auth_cookieRepairLogoutHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'检测到历史登录 Cookie 异常，应用已自动清理相关脏数据。这可能会让旧的无效登录态立即失效，请重新登录。'**
+  String get auth_cookieRepairLogoutHint;
+
+  /// No description provided for @auth_frequentLogoutClearDataHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近 24 小时内多次触发登录失效。如果重新登录后仍反复发生，建议前往“数据管理”清除 Cookie 或全部数据后再登录。'**
+  String get auth_frequentLogoutClearDataHint;
+
   /// No description provided for @time_justNow.
   ///
   /// In zh, this message translates to:

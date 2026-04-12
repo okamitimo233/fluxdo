@@ -357,6 +357,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get auth_clearDataAction => 'Clear data';
+
+  @override
+  String get auth_cookieRepairLogoutHint =>
+      'The app detected invalid legacy login cookies and automatically cleaned related stale data. This can immediately invalidate an old broken session. Please log in again.';
+
+  @override
+  String get auth_frequentLogoutClearDataHint =>
+      'Session invalidation has occurred multiple times in the last 24 hours. If it still keeps happening after you log in again, go to Data Management and clear cookies or all app data before logging in again.';
+
+  @override
   String get time_justNow => 'Just now';
 
   @override
