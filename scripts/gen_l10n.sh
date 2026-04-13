@@ -9,7 +9,7 @@ set -e
 #   bash scripts/gen_l10n.sh --merge  # 仅合并 ARB，不生成 Dart（快速，用于 git hook）
 
 echo "==> 合并模块化 ARB..."
-dart run tool/merge_l10n.dart
+dart tool/merge_l10n.dart
 
 if [ "$1" = "--merge" ]; then
   echo "==> 完成（仅合并）"
