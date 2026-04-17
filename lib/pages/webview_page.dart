@@ -261,6 +261,14 @@ class _WebViewPageState extends ConsumerState<WebViewPage> {
                                       URLRequest(url: WebUri(widget.url)),
                                 );
                               }
+                              // Android: 启用 WebAuthn/PassKey 支持
+                              if (io.Platform.isAndroid) {
+                                WidgetsBinding.instance
+                                    .addPostFrameCallback((_) {
+                                  const MethodChannel('com.fluxdo/webauthn')
+                                      .invokeMethod('enableWebAuthentication');
+                                });
+                              }
                             },
                             onLoadStart: (controller, url) {
                               setState(() {

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -199,6 +200,13 @@ class _WebViewLoginPageState extends ConsumerState<WebViewLoginPage> {
                           }
                         },
                       );
+                      // Android: 启用 WebAuthn/PassKey 支持
+                      if (Platform.isAndroid) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          const MethodChannel('com.fluxdo/webauthn')
+                              .invokeMethod('enableWebAuthentication');
+                        });
+                      }
                     },
                     onLoadStart: (controller, url) => setState(() {
                       _isLoading = true;

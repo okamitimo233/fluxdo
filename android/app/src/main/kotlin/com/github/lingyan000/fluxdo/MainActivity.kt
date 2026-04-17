@@ -12,7 +12,12 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.util.Log
+import android.view.View
+import android.view.ViewGroup
 import android.webkit.CookieManager as WebCookieManager
+import android.webkit.WebView
+import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebViewFeature
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -25,6 +30,7 @@ class MainActivity : FlutterActivity() {
         private const val TAG = "AppLink"
         private const val RAW_COOKIE_CHANNEL = "com.fluxdo/raw_cookie"
         private const val ANDROID_CDP_CHANNEL = "com.fluxdo/android_cdp"
+        private const val WEBAUTHN_CHANNEL = "com.fluxdo/webauthn"
     }
 
     private val androidCdpBridge = AndroidCdpBridge()
@@ -263,6 +269,49 @@ class MainActivity : FlutterActivity() {
                     }
                 }
                 else -> result.notImplemented()
+            }
+        }
+
+        // WebAuthn/PassKey 支持通道
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, WEBAUTHN_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "enableWebAuthentication" -> {
+                    result.success(enableWebAuthenticationForAllWebViews())
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    // ======================== WebAuthn/PassKey ========================
+
+    /**
+     * 遍历 View 树找到所有 WebView 实例并启用 WebAuthn 支持。
+     * 依赖 flutter_inappwebview 自带的 androidx.webkit 库。
+     */
+    private fun enableWebAuthenticationForAllWebViews(): Boolean {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_AUTHENTICATION)) {
+            Log.w(TAG, "WebAuthn: 当前 WebView 版本不支持 WEB_AUTHENTICATION")
+            return false
+        }
+        val webViews = mutableListOf<WebView>()
+        findWebViews(window.decorView, webViews)
+        for (wv in webViews) {
+            WebSettingsCompat.setWebAuthenticationSupport(
+                wv.settings,
+                WebSettingsCompat.WEB_AUTHENTICATION_SUPPORT_FOR_APP
+            )
+        }
+        Log.i(TAG, "WebAuthn: 已为 ${webViews.size} 个 WebView 启用 PassKey 支持")
+        return webViews.isNotEmpty()
+    }
+
+    private fun findWebViews(view: View, result: MutableList<WebView>) {
+        if (view is WebView) {
+            result.add(view)
+        } else if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                findWebViews(view.getChildAt(i), result)
             }
         }
     }
