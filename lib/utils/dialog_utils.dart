@@ -1,11 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/preferences_provider.dart';
 import 'blur_config.dart';
-import 'responsive.dart';
 
 /// 根据用户偏好判断是否启用模糊
 bool _isBlurEnabled(BuildContext context) {
@@ -25,8 +22,6 @@ Widget _buildAnimatedBlurBarrier({
   required Widget barrier,
   required Animation<double> animation,
 }) {
-  final hasAcrylicRail = Platform.isMacOS || Platform.isWindows;
-
   return AnimatedBuilder(
     animation: animation,
     builder: (context, child) {
@@ -35,36 +30,6 @@ Widget _buildAnimatedBlurBarrier({
 
       final sigma = (blurSigma * t).clamp(0.01, blurSigma);
       final filter = createBlurFilter(sigma);
-
-      // acrylic 模式下 NavigationRail 背景透明，需跳过并补底
-      final showRail = hasAcrylicRail && Responsive.showNavigationRail(context);
-      if (showRail) {
-        const railWidth = 72.0;
-        return Stack(
-          children: [
-            // Rail 区域：surfaceDim 底色填充
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: railWidth,
-              child: ColoredBox(
-                color: Theme.of(context).colorScheme.surfaceDim,
-              ),
-            ),
-            // Body 区域：模糊
-            Positioned.fill(
-              left: railWidth,
-              child: BackdropFilter(
-                filter: filter,
-                child: const SizedBox.expand(),
-              ),
-            ),
-            // 原始 barrier（遮罩颜色 + 手势 + 无障碍）
-            child!,
-          ],
-        );
-      }
 
       return BackdropFilter(filter: filter, child: child);
     },
@@ -85,6 +50,7 @@ Future<T?> showAppDialog<T>({
   bool useRootNavigator = true,
   RouteSettings? routeSettings,
   bool blur = true,
+  Duration transitionDuration = const Duration(milliseconds: 150),
 }) {
   final enableBlur = blur && _isBlurEnabled(context);
 
@@ -107,7 +73,7 @@ Future<T?> showAppDialog<T>({
       barrierLabel:
           barrierLabel ??
           MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      transitionDuration: const Duration(milliseconds: 150),
+      transitionDuration: transitionDuration,
       transitionBuilder: _buildMaterialDialogTransitions,
       settings: routeSettings,
       enableBlur: enableBlur,
