@@ -56,6 +56,10 @@ class _WebViewPageState extends ConsumerState<WebViewPage> {
   bool _canGoForward = false;
   late final Future<void> _cookieSyncFuture;
 
+  /// 对话框期间用静态截图盖住 WebView，避免 BackdropFilter 对
+  /// hybrid composition（Android）/HWND（Windows）实时回读造成卡顿。
+  Uint8List? _webViewSnapshot;
+
 
   @override
   void initState() {
@@ -232,7 +236,12 @@ class _WebViewPageState extends ConsumerState<WebViewPage> {
                     backgroundColor: theme.colorScheme.surfaceContainerHighest,
                   ),
                 Expanded(
-                  child: WebViewSettings.wrapWithScrollFix(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Offstage(
+                        offstage: _webViewSnapshot != null,
+                        child: WebViewSettings.wrapWithScrollFix(
                       InAppWebView(
                             webViewEnvironment: windowsWebViewEnvironment,
                             // Windows：不自动加载 URL，先在 onWebViewCreated 中写入 cookie
@@ -340,6 +349,19 @@ class _WebViewPageState extends ConsumerState<WebViewPage> {
                           ),
                           getController: () => _controller,
                         ),
+                      ),
+                      if (_webViewSnapshot != null)
+                        Positioned.fill(
+                          child: RepaintBoundary(
+                            child: Image.memory(
+                              _webViewSnapshot!,
+                              fit: BoxFit.cover,
+                              gaplessPlayback: true,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ],
             );
@@ -418,47 +440,64 @@ class _WebViewPageState extends ConsumerState<WebViewPage> {
     }
   }
 
-  /// 在 Android 上截图替换 WebView 后再弹对话框，避免 PlatformView 合成卡顿；
-  /// 其他平台直接弹对话框。
-  void _showUrlInput() {
-    final controller = TextEditingController(text: _currentUrl);
-    showAppDialog(
-      context: context,
-      // 跳过过渡动画，避免 Hybrid Composition 下逐帧合成卡顿
-      transitionDuration: Duration.zero,
-      builder: (ctx) => AlertDialog(
-        title: Text(S.current.webview_inputUrl),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.url,
-          decoration: InputDecoration(
-            hintText: 'https://',
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.clear, size: 18),
-              onPressed: () => controller.clear(),
+  /// 弹出 URL 输入对话框。
+  ///
+  /// 为避免 BackdropFilter 对实时 WebView 做高斯模糊导致的掉帧，
+  /// 先截图盖在 WebView 之上，让对话框模糊的是静态图像。
+  /// 截图覆盖后 WebView 也不再持有 InputConnection，键盘可立即弹出。
+  Future<void> _showUrlInput() async {
+    final snapshot = await _controller?.takeScreenshot();
+    if (!mounted) return;
+    if (snapshot != null) {
+      setState(() => _webViewSnapshot = snapshot);
+    }
+
+    final textController = TextEditingController(text: _currentUrl);
+    final focusNode = FocusNode();
+    try {
+      await showAppDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(S.current.webview_inputUrl),
+          content: TextField(
+            controller: textController,
+            focusNode: focusNode,
+            autofocus: true,
+            keyboardType: TextInputType.url,
+            decoration: InputDecoration(
+              hintText: 'https://',
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.clear, size: 18),
+                onPressed: () => textController.clear(),
+              ),
             ),
-          ),
-          onSubmitted: (value) {
-            Navigator.pop(ctx);
-            _navigateToUrl(value);
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(S.current.common_cancel),
-          ),
-          FilledButton(
-            onPressed: () {
+            onSubmitted: (value) {
               Navigator.pop(ctx);
-              _navigateToUrl(controller.text);
+              _navigateToUrl(value);
             },
-            child: Text(S.current.webview_go),
           ),
-        ],
-      ),
-    );
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(S.current.common_cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _navigateToUrl(textController.text);
+              },
+              child: Text(S.current.webview_go),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      focusNode.dispose();
+      textController.dispose();
+      if (mounted && _webViewSnapshot != null) {
+        setState(() => _webViewSnapshot = null);
+      }
+    }
   }
 
   void _navigateToUrl(String input) {

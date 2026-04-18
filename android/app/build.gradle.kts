@@ -107,4 +107,5 @@ dependencies {
     implementation("com.google.firebase:firebase-crashlytics-ndk")
     implementation("com.google.firebase:firebase-analytics")
     implementation("org.json:json:20240303")
+    implementation("androidx.webkit:webkit:1.15.0")
 }

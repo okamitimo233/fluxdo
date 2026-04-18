@@ -55,6 +55,10 @@ class _WebViewLoginPageState extends ConsumerState<WebViewLoginPage> {
   String? _savedUsername;
   Future<int>? _initialCookieFlushFuture;
 
+  /// 对话框期间用静态截图盖住 WebView，避免 BackdropFilter 对
+  /// hybrid composition 实时回读造成的卡顿。
+  Uint8List? _webViewSnapshot;
+
   @override
   void initState() {
     super.initState();
@@ -163,7 +167,9 @@ class _WebViewLoginPageState extends ConsumerState<WebViewLoginPage> {
           Expanded(
             child: Stack(
               children: [
-                WebViewSettings.wrapWithScrollFix(
+                Offstage(
+                  offstage: _webViewSnapshot != null,
+                  child: WebViewSettings.wrapWithScrollFix(
                   InAppWebView(
                     webViewEnvironment: windowsWebViewEnvironment,
                     initialUrlRequest: URLRequest(
@@ -246,6 +252,17 @@ class _WebViewLoginPageState extends ConsumerState<WebViewLoginPage> {
                   ),
                   getController: () => _controller,
                 ),
+                ),
+                if (_webViewSnapshot != null)
+                  Positioned.fill(
+                    child: RepaintBoundary(
+                      child: Image.memory(
+                        _webViewSnapshot!,
+                        fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                      ),
+                    ),
+                  ),
                 if (_isCompletingLogin)
                   Positioned.fill(
                     child: ColoredBox(
@@ -278,23 +295,35 @@ class _WebViewLoginPageState extends ConsumerState<WebViewLoginPage> {
   }
 
   Future<void> _clearCredentials() async {
-    final confirmed = await showAppDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.webviewLogin_clearSavedTitle),
-        content: Text(context.l10n.webviewLogin_clearSavedContent),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(context.l10n.common_cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(context.l10n.common_delete),
-          ),
-        ],
-      ),
-    );
+    final snapshot = await _controller?.takeScreenshot();
+    if (!mounted) return;
+    if (snapshot != null) {
+      setState(() => _webViewSnapshot = snapshot);
+    }
+    final bool? confirmed;
+    try {
+      confirmed = await showAppDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.webviewLogin_clearSavedTitle),
+          content: Text(context.l10n.webviewLogin_clearSavedContent),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(context.l10n.common_cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(context.l10n.common_delete),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted && _webViewSnapshot != null) {
+        setState(() => _webViewSnapshot = null);
+      }
+    }
     if (confirmed == true) {
       await _credentialStore.clear();
       if (mounted) setState(() => _savedUsername = null);

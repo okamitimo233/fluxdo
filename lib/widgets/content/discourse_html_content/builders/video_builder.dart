@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart' as lib;
 import 'package:window_manager/window_manager.dart';
 
 import '../../../../providers/preferences_provider.dart';
+import '../../../../services/navigation/app_route_observer.dart';
 import '../../../../utils/layout_lock.dart';
 import '../../../../utils/platform_utils.dart';
 
@@ -59,11 +60,16 @@ class DiscourseVideoPlayer extends StatefulWidget {
 }
 
 class _DiscourseVideoPlayerState extends State<DiscourseVideoPlayer>
-    with WidgetsBindingObserver, WindowListener {
+    with WidgetsBindingObserver, WindowListener, RouteAware {
   lib.ChewieController? _controller;
   dynamic _error;
   lib.VideoPlayerController? _vpc;
   bool _didLockLayout = false;
+
+  /// 上层路由（对话框/BottomSheet）弹出时自动暂停视频，
+  /// 避免 BackdropFilter 对视频纹理每帧重做高斯模糊造成卡顿。
+  /// 只有在被我们主动暂停时才在路由返回后恢复播放。
+  bool _pausedByRouteOverlay = false;
 
   /// 退出全屏时，标记等待屏幕尺寸恢复后再释放 LayoutLock。
   /// 移动端：等 chewie 恢复屏幕方向后尺寸变化回调触发；
@@ -92,7 +98,35 @@ class _DiscourseVideoPlayerState extends State<DiscourseVideoPlayer>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPushNext() {
+    // 上层 push 了对话框/BottomSheet：暂停播放以省掉 BackdropFilter 的代价
+    final vpc = _vpc;
+    if (vpc != null && vpc.value.isPlaying) {
+      vpc.pause();
+      _pausedByRouteOverlay = true;
+    }
+  }
+
+  @override
+  void didPopNext() {
+    if (_pausedByRouteOverlay) {
+      _pausedByRouteOverlay = false;
+      _vpc?.play();
+    }
+  }
+
+  @override
   void dispose() {
+    appRouteObserver.unsubscribe(this);
     WidgetsBinding.instance.removeObserver(this);
     if (_isDesktop) {
       windowManager.removeListener(this);

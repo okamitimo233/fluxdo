@@ -9,6 +9,7 @@ import '../../../../utils/layout_lock.dart';
 import '../../../../utils/url_helper.dart';
 import '../../../../pages/webview_page.dart';
 import '../../../../l10n/s.dart';
+import '../../../../services/navigation/app_route_observer.dart';
 import '../../../../services/webview_settings.dart';
 import '../../../../services/windows_webview_environment_service.dart';
 
@@ -156,7 +157,7 @@ class IframeWidget extends StatefulWidget {
   State<IframeWidget> createState() => _IframeWidgetState();
 }
 
-class _IframeWidgetState extends State<IframeWidget> {
+class _IframeWidgetState extends State<IframeWidget> with RouteAware {
   bool _isLoaded = false;
   bool _hasError = false;
   bool _didLockLayout = false;
@@ -165,13 +166,37 @@ class _IframeWidgetState extends State<IframeWidget> {
   bool _interacting = false;
   OverlayEntry? _overlayEntry;
 
+  /// 上层路由（对话框/BottomSheet）出现时隐藏 WebView，
+  /// 避免 hybrid composition 持续脏帧触发 BackdropFilter 全屏重算。
+  bool _routeOverlayed = false;
+
   @override
   void initState() {
     super.initState();
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPushNext() {
+    if (!_routeOverlayed) setState(() => _routeOverlayed = true);
+  }
+
+  @override
+  void didPopNext() {
+    if (_routeOverlayed) setState(() => _routeOverlayed = false);
+  }
+
+  @override
   void dispose() {
+    appRouteObserver.unsubscribe(this);
     _removeOverlay();
     _unlockLayoutIfNeeded();
     super.dispose();
@@ -245,7 +270,9 @@ class _IframeWidgetState extends State<IframeWidget> {
         children: [
           // WebView - 始终渲染
           // 直接加载 URL，通过设置 Referer 头解决 origin 验证问题
-          InAppWebView(
+          Offstage(
+            offstage: _routeOverlayed,
+            child: InAppWebView(
             webViewEnvironment: windowsWebViewEnvironment,
             initialUrlRequest: URLRequest(
               url: WebUri(attrs.fullUrl),
@@ -319,6 +346,7 @@ class _IframeWidgetState extends State<IframeWidget> {
               }
               return NavigationActionPolicy.CANCEL;
             },
+          ),
           ),
           // 加载指示器
           if (!_isLoaded && !_hasError)
