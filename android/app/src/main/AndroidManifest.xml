@@ -8,6 +8,14 @@
     <!-- 前台服务权限（后台通知保活） -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+    <!--
+        WebAuthn/PassKey: WebView FOR_BROWSER 模式下 Chromium 会把 origin 传给
+        Credential Manager，需要此权限才能通过 setOrigin 检查。
+        保护级别为 signature|privileged，普通 app 理论上拿不到，但 Via 等
+        WebView-based 浏览器实测声明后可正常使用 —— 具体授予机制可能由
+        Android 14+ 的浏览器 role / APP_BROWSER 标签触发。
+    -->
+    <uses-permission android:name="android.permission.CREDENTIAL_MANAGER_SET_ORIGIN"/>
     <application
         android:label="FluxDO"
         android:name=".FluxdoApplication"
