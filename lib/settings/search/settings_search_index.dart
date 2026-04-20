@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/s.dart';
 import '../../pages/appearance_page.dart';
+import '../../pages/bottom_nav_settings_page.dart';
 import '../../pages/data_management_page.dart';
 import '../../pages/network_settings_page/network_settings_page.dart';
 import '../../pages/preferences_page.dart';
@@ -9,6 +10,7 @@ import '../../pages/reading_settings_page.dart';
 import '../../pages/shortcut_settings_page.dart';
 import '../../utils/platform_utils.dart';
 import '../definitions/appearance_defs.dart';
+import '../definitions/bottom_nav_defs.dart';
 import '../definitions/data_management_defs.dart';
 import '../definitions/network_defs.dart';
 import '../definitions/preferences_defs.dart';
@@ -78,6 +80,14 @@ List<SettingsSearchResult> buildSearchIndex(BuildContext context) {
       categoryColor: Colors.deepPurple,
       pageBuilder: ({highlightId}) =>
           PreferencesPage(highlightId: highlightId),
+    ),
+    ...fromGroups(
+      buildBottomNavGroups(context),
+      categoryName: l10n.settings_bottomNav,
+      categoryIcon: Icons.view_day_rounded,
+      categoryColor: Colors.amber,
+      pageBuilder: ({highlightId}) =>
+          BottomNavSettingsPage(highlightId: highlightId),
     ),
     ...fromGroups(
       buildAppearanceGroups(context),

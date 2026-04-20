@@ -450,6 +450,11 @@ extension _UserActions on _TopicDetailPageState {
           notifier.removeBoostFromPost(update.postId, update.boostId!);
         }
         break;
+      case TopicMessageType.policyChanged:
+        // policy 接受/撤销不改 post 内容，用 preserveCooked 避免重新跑 cook。
+        // 不传 updatedAt：policy_change 服务端不会更新 post.updated_at。
+        notifier.refreshPost(update.postId, preserveCooked: true);
+        break;
       default:
         break;
     }

@@ -170,8 +170,7 @@ OneboxType detectOneboxType(dynamic element) {
   }
 
   // Discourse 话题
-  if (classes.contains('discoursetopic-onebox') ||
-      classes.contains('discourse-local-date')) {
+  if (classes.contains('discoursetopic-onebox')) {
     return OneboxType.discourseTopic;
   }
 

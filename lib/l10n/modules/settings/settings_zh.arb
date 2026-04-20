@@ -1,5 +1,46 @@
 {
   "@@locale": "zh",
+  "bottomNav_actionPickerTitle": "选择动作",
+  "bottomNav_customizeLayout": "自定义底栏项",
+  "bottomNav_customizeLayoutDesc": "选择显示哪些入口、调整顺序",
+  "bottomNav_doubleTapAction": "双击已选中项",
+  "bottomNav_doubleTapActionDesc": "300ms 内第二次点击时执行的动作",
+  "bottomNav_editorAvailable": "可添加",
+  "bottomNav_editorEmptyAvailable": "没有可添加的入口",
+  "bottomNav_editorEnabled": "已启用",
+  "bottomNav_editorEnabledHint": "{count}/{max} 项，至少 {min} 项",
+  "@bottomNav_editorEnabledHint": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "min": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "bottomNav_editorLockedHint": "必备项，不可移除",
+  "bottomNav_editorMaxReached": "最多 {max} 项",
+  "@bottomNav_editorMaxReached": {
+    "placeholders": {
+      "max": {"type": "int"}
+    }
+  },
+  "bottomNav_editorMinReached": "至少保留 {min} 项",
+  "@bottomNav_editorMinReached": {
+    "placeholders": {
+      "min": {"type": "int"}
+    }
+  },
+  "bottomNav_editorPreviewHint": "拖动调整顺序，首页始终保持在第一位",
+  "bottomNav_editorRequiresLogin": "需要登录",
+  "bottomNav_editorRestoreDefault": "恢复默认",
+  "bottomNav_editorRestoreDefaultConfirm": "确定要恢复为默认布局吗？",
+  "bottomNav_editorTitle": "底栏布局",
+  "bottomNav_gesturesGroup": "手势",
+  "bottomNav_singleTapAction": "单击已选中项",
+  "bottomNav_singleTapActionDesc": "再次点击已选中的标签时执行的动作",
+  "bottomNav_title": "底栏",
+  "navTapAction_none": "无",
+  "navTapAction_refresh": "刷新",
+  "navTapAction_scrollToTop": "回到顶部",
   "config_seedUserTitle": "种子用户",
   "preferences_advanced": "高级",
   "preferences_androidNativeCdp": "WebView Cookie 同步",
@@ -31,6 +72,7 @@
   "preferences_title": "功能设置",
   "settings_about": "关于 FluxDO",
   "settings_appearance": "外观设置",
+  "settings_bottomNav": "底栏设置",
   "settings_dataManagement": "数据管理",
   "settings_network": "网络设置",
   "settings_preferences": "功能设置",

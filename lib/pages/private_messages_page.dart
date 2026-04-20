@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// ignore: depend_on_referenced_packages
+import 'package:flutter_riverpod/legacy.dart';
 import '../models/topic.dart';
+import '../navigation/nav_action_bus.dart';
 import '../providers/user_content_providers.dart';
 import '../providers/preferences_provider.dart';
 import '../widgets/topic/topic_item_builder.dart';
@@ -10,9 +13,29 @@ import '../widgets/desktop_refresh_indicator.dart';
 import '../l10n/s.dart';
 import 'topic_detail_page/topic_detail_page.dart';
 
+/// 内部 tab 动作：外层根据当前激活 filter 派发给对应子 widget。
+/// 用 nonce 让连续同类事件也能触发 Riverpod 监听。
+enum _PmTabAction { scrollToTop, refresh }
+
+class _PmTabEvent {
+  final _PmTabAction action;
+  final int nonce;
+  const _PmTabEvent(this.action, this.nonce);
+}
+
+final _pmTabEventNonceProvider = StateProvider<int>((ref) => 0);
+
+final _pmTabEventProvider =
+    StateProvider.family<_PmTabEvent?, PrivateMessageFilter>(
+  (ref, filter) => null,
+);
+
 /// 私信列表页面
 class PrivateMessagesPage extends ConsumerStatefulWidget {
-  const PrivateMessagesPage({super.key});
+  const PrivateMessagesPage({super.key, this.isActive = true});
+
+  /// 是否为当前活跃的 tab（嵌入底栏时用于决定是否响应 NavActionBus）
+  final bool isActive;
 
   @override
   ConsumerState<PrivateMessagesPage> createState() =>
@@ -41,26 +64,59 @@ class _PrivateMessagesPageState extends ConsumerState<PrivateMessagesPage>
     super.dispose();
   }
 
+  bool _onScrollNotification(ScrollNotification n) {
+    if (n.metrics.axis != Axis.vertical) return false;
+    final raw = n.metrics.pixels;
+    final progress = raw < 0 ? 0.0 : raw;
+    final current = ref.read(navScrollProgressProvider(NavEntryIds.messages));
+    final atZero = progress == 0 && current != 0;
+    final crossed = (progress >= navScrollIconThreshold) !=
+        (current >= navScrollIconThreshold);
+    if (!atZero && !crossed && (progress - current).abs() < 4.0) return false;
+    ref
+        .read(navScrollProgressProvider(NavEntryIds.messages).notifier)
+        .state = progress;
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.privateMessages_title),
-        bottom: TabBar(
+    // 底栏派发的快捷动作：查询当前激活 tab 的 filter，转发到对应子 widget。
+    ref.listen(navActionBusProvider, (_, event) {
+      if (event == null) return;
+      if (event.targetId != NavEntryIds.messages) return;
+      if (!widget.isActive) return;
+      final filter = _filters[_tabController.index];
+      final nextNonce = ref.read(_pmTabEventNonceProvider) + 1;
+      ref.read(_pmTabEventNonceProvider.notifier).state = nextNonce;
+      final tabAction = event.action == NavAction.scrollToTop
+          ? _PmTabAction.scrollToTop
+          : _PmTabAction.refresh;
+      ref.read(_pmTabEventProvider(filter).notifier).state =
+          _PmTabEvent(tabAction, nextNonce);
+    });
+
+    return NotificationListener<ScrollNotification>(
+      onNotification: _onScrollNotification,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(context.l10n.privateMessages_title),
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: [
+              Tab(text: context.l10n.privateMessages_inbox),
+              Tab(text: context.l10n.privateMessages_sent),
+              Tab(text: context.l10n.privateMessages_archive),
+            ],
+          ),
+        ),
+        body: TabBarView(
           controller: _tabController,
-          tabs: [
-            Tab(text: context.l10n.privateMessages_inbox),
-            Tab(text: context.l10n.privateMessages_sent),
-            Tab(text: context.l10n.privateMessages_archive),
+          children: [
+            for (final filter in _filters)
+              _PrivateMessageTabView(filter: filter),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          for (final filter in _filters)
-            _PrivateMessageTabView(filter: filter),
-        ],
       ),
     );
   }
@@ -149,6 +205,34 @@ class _PrivateMessageTabViewState
   @override
   Widget build(BuildContext context) {
     super.build(context);
+
+    // 响应外层派发的快捷动作（只对当前激活 tab 生效：外层按 _tabController.index 派发）
+    ref.listen(_pmTabEventProvider(widget.filter), (_, event) {
+      if (event == null) return;
+      switch (event.action) {
+        case _PmTabAction.scrollToTop:
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+          break;
+        case _PmTabAction.refresh:
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+          _onRefresh();
+          ref.resetNavScrollProgress(NavEntryIds.messages);
+          break;
+      }
+    });
+
     final (messagesAsync, notifier) = _watchMessages();
 
     return DesktopRefreshIndicator(

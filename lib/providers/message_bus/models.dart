@@ -80,6 +80,7 @@ enum TopicMessageType {
   moveToInbox,    // 私信移入收件箱
   archived,       // 私信被归档
   removeAllowedUser, // 用户被移出私信
+  policyChanged, // Policy 接受/撤销状态变更（discourse-policy）
 }
 
 /// 帖子更新信息

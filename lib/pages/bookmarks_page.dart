@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/search_filter.dart';
 import '../models/topic.dart';
+import '../navigation/nav_action_bus.dart';
 import '../providers/discourse_providers.dart';
 import '../providers/preferences_provider.dart';
 import '../providers/user_content_search_provider.dart';
@@ -23,7 +24,10 @@ import 'topic_detail_page/topic_detail_page.dart';
 
 /// 我的书签页面
 class BookmarksPage extends ConsumerStatefulWidget {
-  const BookmarksPage({super.key});
+  const BookmarksPage({super.key, this.isActive = true});
+
+  /// 是否为当前活跃的 tab（嵌入底栏时用于决定是否响应 NavActionBus）
+  final bool isActive;
 
   @override
   ConsumerState<BookmarksPage> createState() => _BookmarksPageState();
@@ -48,10 +52,24 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
   }
 
   void _onScroll() {
+    _publishScrollProgress();
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       ref.read(bookmarksProvider.notifier).loadMore();
     }
+  }
+
+  void _publishScrollProgress() {
+    if (!_scrollController.hasClients) return;
+    final raw = _scrollController.offset;
+    final progress = raw < 0 ? 0.0 : raw;
+    final current = ref.read(navScrollProgressProvider(NavEntryIds.bookmarks));
+    final atZero = progress == 0 && current != 0;
+    final crossed = (progress >= navScrollIconThreshold) !=
+        (current >= navScrollIconThreshold);
+    if (!atZero && !crossed && (progress - current).abs() < 4.0) return;
+    ref.read(navScrollProgressProvider(NavEntryIds.bookmarks).notifier).state =
+        progress;
   }
 
   Future<void> _onRefresh() async {
@@ -77,6 +95,34 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
   Widget build(BuildContext context) {
     final bookmarksAsync = ref.watch(bookmarksProvider);
     final searchState = ref.watch(userContentSearchProvider(SearchInType.bookmarks));
+
+    // 嵌入底栏时响应快捷动作（仅活跃 tab 响应）
+    ref.listen(navActionBusProvider, (_, event) {
+      if (event == null || event.targetId != NavEntryIds.bookmarks) return;
+      if (!widget.isActive) return;
+      switch (event.action) {
+        case NavAction.scrollToTop:
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+          break;
+        case NavAction.refresh:
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+          _onRefresh();
+          ref.resetNavScrollProgress(NavEntryIds.bookmarks);
+          break;
+      }
+    });
 
     return PopScope(
       canPop: !searchState.isSearchMode,

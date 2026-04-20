@@ -166,6 +166,15 @@ class TopicChannelNotifier extends Notifier<TopicChannelState> {
           }
           break;
 
+        case 'policy_change':
+          // discourse-policy 插件：接受/撤销状态变更。
+          // 服务端 publish 时 post.updated_at 不会改（policy 不改帖子内容），
+          // 所以不传 updatedAt，避免下游 refreshPost 因 updated_at 未变 short-circuit。
+          if (postId != null) {
+            _addPostUpdate(postId, TopicMessageType.policyChanged, DateTime.now());
+          }
+          break;
+
         default:
           debugPrint('[TopicChannel] 未知消息类型: $type');
       }

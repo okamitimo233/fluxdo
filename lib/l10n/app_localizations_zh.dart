@@ -2732,10 +2732,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get metaverse_title => '元宇宙';
 
   @override
+  String get nav_bookmarks => '书签';
+
+  @override
+  String get nav_drafts => '草稿';
+
+  @override
+  String get nav_history => '浏览历史';
+
+  @override
   String get nav_home => '首页';
 
   @override
+  String get nav_messages => '私信';
+
+  @override
   String get nav_mine => '我的';
+
+  @override
+  String get nav_notifications => '通知';
 
   @override
   String toast_authorizationFailed(String error) {
@@ -4450,6 +4465,84 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hcaptcha_webviewTitle => 'hCaptcha 无障碍';
 
   @override
+  String get bottomNav_actionPickerTitle => '选择动作';
+
+  @override
+  String get bottomNav_customizeLayout => '自定义底栏项';
+
+  @override
+  String get bottomNav_customizeLayoutDesc => '选择显示哪些入口、调整顺序';
+
+  @override
+  String get bottomNav_doubleTapAction => '双击已选中项';
+
+  @override
+  String get bottomNav_doubleTapActionDesc => '300ms 内第二次点击时执行的动作';
+
+  @override
+  String get bottomNav_editorAvailable => '可添加';
+
+  @override
+  String get bottomNav_editorEmptyAvailable => '没有可添加的入口';
+
+  @override
+  String get bottomNav_editorEnabled => '已启用';
+
+  @override
+  String bottomNav_editorEnabledHint(int count, int min, int max) {
+    return '$count/$max 项，至少 $min 项';
+  }
+
+  @override
+  String get bottomNav_editorLockedHint => '必备项，不可移除';
+
+  @override
+  String bottomNav_editorMaxReached(int max) {
+    return '最多 $max 项';
+  }
+
+  @override
+  String bottomNav_editorMinReached(int min) {
+    return '至少保留 $min 项';
+  }
+
+  @override
+  String get bottomNav_editorPreviewHint => '拖动调整顺序，首页始终保持在第一位';
+
+  @override
+  String get bottomNav_editorRequiresLogin => '需要登录';
+
+  @override
+  String get bottomNav_editorRestoreDefault => '恢复默认';
+
+  @override
+  String get bottomNav_editorRestoreDefaultConfirm => '确定要恢复为默认布局吗？';
+
+  @override
+  String get bottomNav_editorTitle => '底栏布局';
+
+  @override
+  String get bottomNav_gesturesGroup => '手势';
+
+  @override
+  String get bottomNav_singleTapAction => '单击已选中项';
+
+  @override
+  String get bottomNav_singleTapActionDesc => '再次点击已选中的标签时执行的动作';
+
+  @override
+  String get bottomNav_title => '底栏';
+
+  @override
+  String get navTapAction_none => '无';
+
+  @override
+  String get navTapAction_refresh => '刷新';
+
+  @override
+  String get navTapAction_scrollToTop => '回到顶部';
+
+  @override
   String get config_seedUserTitle => '种子用户';
 
   @override
@@ -4543,6 +4636,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settings_appearance => '外观设置';
+
+  @override
+  String get settings_bottomNav => '底栏设置';
 
   @override
   String get settings_dataManagement => '数据管理';
@@ -8619,10 +8715,25 @@ class AppLocalizationsZhHk extends AppLocalizationsZh {
   String get metaverse_title => '元宇宙';
 
   @override
+  String get nav_bookmarks => '書籤';
+
+  @override
+  String get nav_drafts => '草稿';
+
+  @override
+  String get nav_history => '瀏覽記錄';
+
+  @override
   String get nav_home => '首頁';
 
   @override
+  String get nav_messages => '私訊';
+
+  @override
   String get nav_mine => '我的';
+
+  @override
+  String get nav_notifications => '通知';
 
   @override
   String toast_authorizationFailed(String error) {
@@ -10264,6 +10375,84 @@ class AppLocalizationsZhHk extends AppLocalizationsZh {
   String get hcaptcha_webviewTitle => 'hCaptcha 無障礙';
 
   @override
+  String get bottomNav_actionPickerTitle => '選擇動作';
+
+  @override
+  String get bottomNav_customizeLayout => '自訂底欄項';
+
+  @override
+  String get bottomNav_customizeLayoutDesc => '選擇顯示哪些入口、調整順序';
+
+  @override
+  String get bottomNav_doubleTapAction => '雙擊已選中項';
+
+  @override
+  String get bottomNav_doubleTapActionDesc => '300ms 內第二次點擊時執行的動作';
+
+  @override
+  String get bottomNav_editorAvailable => '可添加';
+
+  @override
+  String get bottomNav_editorEmptyAvailable => '沒有可添加的入口';
+
+  @override
+  String get bottomNav_editorEnabled => '已啟用';
+
+  @override
+  String bottomNav_editorEnabledHint(int count, int min, int max) {
+    return '$count/$max 項，至少 $min 項';
+  }
+
+  @override
+  String get bottomNav_editorLockedHint => '必備項，不可移除';
+
+  @override
+  String bottomNav_editorMaxReached(int max) {
+    return '最多 $max 項';
+  }
+
+  @override
+  String bottomNav_editorMinReached(int min) {
+    return '至少保留 $min 項';
+  }
+
+  @override
+  String get bottomNav_editorPreviewHint => '拖動調整順序，首頁永遠固定第一位';
+
+  @override
+  String get bottomNav_editorRequiresLogin => '需要登入';
+
+  @override
+  String get bottomNav_editorRestoreDefault => '恢復預設';
+
+  @override
+  String get bottomNav_editorRestoreDefaultConfirm => '確定要恢復為預設佈局嗎？';
+
+  @override
+  String get bottomNav_editorTitle => '底欄佈局';
+
+  @override
+  String get bottomNav_gesturesGroup => '手勢';
+
+  @override
+  String get bottomNav_singleTapAction => '單擊已選中項';
+
+  @override
+  String get bottomNav_singleTapActionDesc => '再次點擊已選中的標籤時執行的動作';
+
+  @override
+  String get bottomNav_title => '底欄';
+
+  @override
+  String get navTapAction_none => '無';
+
+  @override
+  String get navTapAction_refresh => '重新載入';
+
+  @override
+  String get navTapAction_scrollToTop => '回到頂部';
+
+  @override
   String get config_seedUserTitle => '種子用户';
 
   @override
@@ -10357,6 +10546,9 @@ class AppLocalizationsZhHk extends AppLocalizationsZh {
 
   @override
   String get settings_appearance => '外觀設定';
+
+  @override
+  String get settings_bottomNav => '底欄設定';
 
   @override
   String get settings_dataManagement => '資料管理';
@@ -14309,10 +14501,25 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get metaverse_title => '元宇宙';
 
   @override
+  String get nav_bookmarks => '書籤';
+
+  @override
+  String get nav_drafts => '草稿';
+
+  @override
+  String get nav_history => '瀏覽紀錄';
+
+  @override
   String get nav_home => '首頁';
 
   @override
+  String get nav_messages => '私訊';
+
+  @override
   String get nav_mine => '我的';
+
+  @override
+  String get nav_notifications => '通知';
 
   @override
   String toast_authorizationFailed(String error) {
@@ -15954,6 +16161,84 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get hcaptcha_webviewTitle => 'hCaptcha 無障礙';
 
   @override
+  String get bottomNav_actionPickerTitle => '選擇動作';
+
+  @override
+  String get bottomNav_customizeLayout => '自訂底欄項目';
+
+  @override
+  String get bottomNav_customizeLayoutDesc => '選擇顯示哪些入口、調整順序';
+
+  @override
+  String get bottomNav_doubleTapAction => '雙擊已選取項目';
+
+  @override
+  String get bottomNav_doubleTapActionDesc => '300ms 內第二次點擊時執行的動作';
+
+  @override
+  String get bottomNav_editorAvailable => '可加入';
+
+  @override
+  String get bottomNav_editorEmptyAvailable => '沒有可加入的項目';
+
+  @override
+  String get bottomNav_editorEnabled => '已啟用';
+
+  @override
+  String bottomNav_editorEnabledHint(int count, int min, int max) {
+    return '$count/$max 項，至少 $min 項';
+  }
+
+  @override
+  String get bottomNav_editorLockedHint => '必備項，無法移除';
+
+  @override
+  String bottomNav_editorMaxReached(int max) {
+    return '最多 $max 項';
+  }
+
+  @override
+  String bottomNav_editorMinReached(int min) {
+    return '至少保留 $min 項';
+  }
+
+  @override
+  String get bottomNav_editorPreviewHint => '拖曳調整順序，首頁永遠固定第一位';
+
+  @override
+  String get bottomNav_editorRequiresLogin => '需要登入';
+
+  @override
+  String get bottomNav_editorRestoreDefault => '還原預設';
+
+  @override
+  String get bottomNav_editorRestoreDefaultConfirm => '要還原為預設配置嗎？';
+
+  @override
+  String get bottomNav_editorTitle => '底欄配置';
+
+  @override
+  String get bottomNav_gesturesGroup => '手勢';
+
+  @override
+  String get bottomNav_singleTapAction => '單擊已選取項目';
+
+  @override
+  String get bottomNav_singleTapActionDesc => '再次點擊已選取的標籤時執行的動作';
+
+  @override
+  String get bottomNav_title => '底欄';
+
+  @override
+  String get navTapAction_none => '無';
+
+  @override
+  String get navTapAction_refresh => '重新整理';
+
+  @override
+  String get navTapAction_scrollToTop => '回到頂端';
+
+  @override
   String get config_seedUserTitle => '種子使用者';
 
   @override
@@ -16047,6 +16332,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settings_appearance => '外觀設定';
+
+  @override
+  String get settings_bottomNav => '底欄設定';
 
   @override
   String get settings_dataManagement => '資料管理';

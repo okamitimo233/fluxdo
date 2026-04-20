@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../l10n/s.dart';
+import '../navigation/nav_action_bus.dart';
 import '../providers/preferences_provider.dart';
 import '../providers/selected_topic_provider.dart';
 import '../providers/shortcut_provider.dart';
@@ -126,6 +127,25 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen> {
     final selectedTopic = ref.watch(selectedTopicProvider);
     final canShowDetailPane = MasterDetailLayout.canShowBothPanesFor(context);
     final user = ref.watch(currentUserProvider).value;
+
+    // 监听底栏派发的快捷动作（仅活跃 tab 响应）
+    ref.listen(navActionBusProvider, (_, event) {
+      if (event == null) return;
+      if (event.targetId != NavEntryIds.home) return;
+      if (!widget.isActive) return;
+      switch (event.action) {
+        case NavAction.scrollToTop:
+          ref.read(fabRefreshModeProvider.notifier).state = false;
+          ref.read(scrollToTopProvider.notifier).trigger();
+          break;
+        case NavAction.refresh:
+          ref.read(fabRefreshModeProvider.notifier).state = false;
+          ref.read(scrollToTopProvider.notifier).trigger();
+          ref.read(fabRefreshSignalProvider.notifier).trigger();
+          ref.resetNavScrollProgress(NavEntryIds.home);
+          break;
+      }
+    });
 
     _maybePushDetail(selectedTopic, canShowDetailPane);
 

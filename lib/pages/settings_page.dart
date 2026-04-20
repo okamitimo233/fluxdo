@@ -6,6 +6,7 @@ import '../settings/search/settings_search_index.dart';
 import '../utils/platform_utils.dart';
 import 'about_page.dart';
 import 'appearance_page.dart';
+import 'bottom_nav_settings_page.dart';
 import 'data_management_page.dart';
 import 'network_settings_page/network_settings_page.dart';
 import 'preferences_page.dart';
@@ -220,6 +221,16 @@ class _SettingsPageState extends State<SettingsPage> {
                     context,
                     MaterialPageRoute(
                         builder: (_) => const PreferencesPage())),
+              ),
+              _buildDivider(theme),
+              _buildOptionTile(
+                icon: Icons.view_day_rounded,
+                iconColor: Colors.amber,
+                title: l10n.settings_bottomNav,
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const BottomNavSettingsPage())),
               ),
               _buildDivider(theme),
               _buildOptionTile(

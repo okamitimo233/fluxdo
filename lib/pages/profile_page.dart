@@ -39,6 +39,7 @@ import 'profile_stats_edit_page.dart';
 import '../services/ldc_oauth_service.dart';
 import '../services/cdk_oauth_service.dart';
 import '../l10n/s.dart';
+import '../navigation/nav_action_bus.dart';
 import '../services/toast_service.dart';
 import '../utils/dialog_utils.dart';
 import '../utils/responsive.dart';
@@ -135,6 +136,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   void _onScroll() {
     if (!_scrollController.hasClients) return;
 
+    // 发布"距顶进度"给底栏图标（NavActionBus 的 progress provider）
+    _publishProfileScrollProgress();
+
     // 双栏模式下头像始终可见，无需标题动画
     if (MasterDetailLayout.canShowBothPanesFor(context)) {
       if (_showTitle) setState(() => _showTitle = false);
@@ -149,6 +153,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         _showTitle = show;
       });
     }
+  }
+
+  void _publishProfileScrollProgress() {
+    final raw = _scrollController.offset;
+    final progress = raw < 0 ? 0.0 : raw;
+    final current = ref.read(navScrollProgressProvider(NavEntryIds.profile));
+    final atZero = progress == 0 && current != 0;
+    final crossed = (progress >= navScrollIconThreshold) !=
+        (current >= navScrollIconThreshold);
+    if (!atZero && !crossed && (progress - current).abs() < 4.0) return;
+    ref.read(navScrollProgressProvider(NavEntryIds.profile).notifier).state =
+        progress;
   }
 
   Future<void> _goToLogin() async {
@@ -298,6 +314,35 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
     final isOffline = userState.hasError && userState.hasValue && userState.value != null;
     final showWideLayout = MasterDetailLayout.canShowBothPanesFor(context);
+
+    // 监听底栏派发的快捷动作（仅活跃 tab 响应）
+    ref.listen(navActionBusProvider, (_, event) {
+      if (event == null) return;
+      if (event.targetId != NavEntryIds.profile) return;
+      if (!widget.isActive) return;
+      switch (event.action) {
+        case NavAction.scrollToTop:
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+          break;
+        case NavAction.refresh:
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+          _refreshData();
+          ref.resetNavScrollProgress(NavEntryIds.profile);
+          break;
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(

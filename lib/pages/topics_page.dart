@@ -27,6 +27,7 @@ import '../widgets/topic/topic_item_builder.dart';
 import '../widgets/topic/topic_notification_button.dart';
 import '../widgets/topic/category_tab_manager_sheet.dart';
 import '../widgets/common/tag_selection_sheet.dart';
+import '../navigation/nav_action_bus.dart';
 import '../providers/app_state_refresher.dart';
 import '../providers/preferences_provider.dart';
 import '../utils/responsive.dart';
@@ -669,6 +670,13 @@ class _TopicsPageState extends ConsumerState<TopicsPage>
   }
 
   bool _handleOuterScrollNotification(ScrollNotification notification) {
+    // 追踪内层列表滚动，发布"距顶进度"到 NavActionBus 的 progress provider，
+    // 底栏根据进度做动态图标切换（见 _ActiveDestinationIcon）。
+    if (notification.depth > 0 &&
+        notification.metrics.axis == Axis.vertical) {
+      _publishHomeScrollProgress(notification.metrics.pixels);
+    }
+
     // 用 UserScrollNotification 追踪用户主动滚动方向，避免回弹/惯性误触发
     if (notification is UserScrollNotification &&
         notification.metrics.axis == Axis.vertical) {
@@ -776,6 +784,18 @@ class _TopicsPageState extends ConsumerState<TopicsPage>
   /// 松手后根据阈值吸附到完全展开或完全折叠。
   /// 使用 forcePixels 直接更新像素值，不通过 animateTo，
   /// 避免触发 coordinator 的 beginActivity/goIdle 导致内部列表位置重置。
+  void _publishHomeScrollProgress(double pixels) {
+    final progress = pixels < 0 ? 0.0 : pixels;
+    final current = ref.read(navScrollProgressProvider(NavEntryIds.home));
+    // 节流：变化 >= 4 像素 才更新；或跨越"回顶"阈值 / 过 0 时立即同步
+    final atZero = progress == 0 && current != 0;
+    final crossed = (progress >= navScrollIconThreshold) !=
+        (current >= navScrollIconThreshold);
+    if (!atZero && !crossed && (progress - current).abs() < 4.0) return;
+    ref.read(navScrollProgressProvider(NavEntryIds.home).notifier).state =
+        progress;
+  }
+
   void _snapOuterScroll() {
     if (!_outerScrollController.hasClients) return;
     if (_outerScrollController.positions.length != 1) return;

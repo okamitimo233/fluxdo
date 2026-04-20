@@ -1,7 +1,12 @@
 {
   "@@locale": "zh_TW",
+  "nav_bookmarks": "書籤",
+  "nav_drafts": "草稿",
+  "nav_history": "瀏覽紀錄",
   "nav_home": "首頁",
+  "nav_messages": "私訊",
   "nav_mine": "我的",
+  "nav_notifications": "通知",
   "toast_authorizationFailed": "授權失敗: {error}",
   "@toast_authorizationFailed": {
     "placeholders": {

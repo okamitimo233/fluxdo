@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/search_filter.dart';
 import '../models/topic.dart';
+import '../navigation/nav_action_bus.dart';
 import '../providers/discourse_providers.dart';
 import '../providers/user_content_search_provider.dart';
 import '../widgets/search/searchable_app_bar.dart';
@@ -16,7 +17,10 @@ import 'topic_detail_page/topic_detail_page.dart';
 
 /// 浏览历史页面
 class BrowsingHistoryPage extends ConsumerStatefulWidget {
-  const BrowsingHistoryPage({super.key});
+  const BrowsingHistoryPage({super.key, this.isActive = true});
+
+  /// 是否为当前活跃的 tab（嵌入底栏时用于决定是否响应 NavActionBus）
+  final bool isActive;
 
   @override
   ConsumerState<BrowsingHistoryPage> createState() => _BrowsingHistoryPageState();
@@ -42,10 +46,24 @@ class _BrowsingHistoryPageState extends ConsumerState<BrowsingHistoryPage> {
   }
 
   void _onScroll() {
+    _publishScrollProgress();
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       ref.read(browsingHistoryProvider.notifier).loadMore();
     }
+  }
+
+  void _publishScrollProgress() {
+    if (!_scrollController.hasClients) return;
+    final raw = _scrollController.offset;
+    final progress = raw < 0 ? 0.0 : raw;
+    final current = ref.read(navScrollProgressProvider(NavEntryIds.history));
+    final atZero = progress == 0 && current != 0;
+    final crossed = (progress >= navScrollIconThreshold) !=
+        (current >= navScrollIconThreshold);
+    if (!atZero && !crossed && (progress - current).abs() < 4.0) return;
+    ref.read(navScrollProgressProvider(NavEntryIds.history).notifier).state =
+        progress;
   }
 
   Future<void> _onRefresh() async {
@@ -68,6 +86,34 @@ class _BrowsingHistoryPageState extends ConsumerState<BrowsingHistoryPage> {
   Widget build(BuildContext context) {
     final historyAsync = ref.watch(browsingHistoryProvider);
     final searchState = ref.watch(userContentSearchProvider(SearchInType.seen));
+
+    // 嵌入底栏时响应快捷动作（仅活跃 tab 响应）
+    ref.listen(navActionBusProvider, (_, event) {
+      if (event == null || event.targetId != NavEntryIds.history) return;
+      if (!widget.isActive) return;
+      switch (event.action) {
+        case NavAction.scrollToTop:
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+          break;
+        case NavAction.refresh:
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+          _onRefresh();
+          ref.resetNavScrollProgress(NavEntryIds.history);
+          break;
+      }
+    });
 
     return PopScope(
       canPop: !searchState.isSearchMode,

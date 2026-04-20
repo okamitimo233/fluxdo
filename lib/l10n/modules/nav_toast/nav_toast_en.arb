@@ -1,7 +1,12 @@
 {
   "@@locale": "en",
+  "nav_bookmarks": "Bookmarks",
+  "nav_drafts": "Drafts",
+  "nav_history": "History",
   "nav_home": "Home",
+  "nav_messages": "Messages",
   "nav_mine": "Me",
+  "nav_notifications": "Notifications",
   "toast_authorizationFailed": "Authorization failed: {error}",
   "toast_credentialCleared": "Credentials cleared",
   "toast_credentialIncomplete": "Please fill in all credential fields",

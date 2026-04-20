@@ -585,6 +585,17 @@ class Post {
   final List<Boost>? boosts;
   final bool canBoost;
 
+  // Policy 插件（discourse-policy）：
+  // 当前用户能否接受/撤销；接受/撤销状态；已/未接受用户摘要列表与计数。
+  final bool policyAccepted;
+  final bool policyRevoked;
+  final bool policyCanAccept;
+  final bool policyCanRevoke;
+  final List<PolicyUser>? policyAcceptedBy;
+  final List<PolicyUser>? policyNotAcceptedBy;
+  final int? policyAcceptedByCount;
+  final int? policyNotAcceptedByCount;
+
   Post({
     required this.id,
     this.name,
@@ -644,6 +655,14 @@ class Post {
     this.notice,
     this.boosts,
     this.canBoost = false,
+    this.policyAccepted = false,
+    this.policyRevoked = false,
+    this.policyCanAccept = false,
+    this.policyCanRevoke = false,
+    this.policyAcceptedBy,
+    this.policyNotAcceptedBy,
+    this.policyAcceptedByCount,
+    this.policyNotAcceptedByCount,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
@@ -735,6 +754,20 @@ class Post {
           .map((e) => Boost.fromJson(e))
           .toList(),
       canBoost: json['can_boost'] as bool? ?? false,
+      policyAccepted: json['policy_accepted'] as bool? ?? false,
+      policyRevoked: json['policy_revoked'] as bool? ?? false,
+      policyCanAccept: json['policy_can_accept'] as bool? ?? false,
+      policyCanRevoke: json['policy_can_revoke'] as bool? ?? false,
+      policyAcceptedBy: (json['policy_accepted_by'] as List<dynamic>?)
+          ?.whereType<Map<String, dynamic>>()
+          .map((e) => PolicyUser.fromJson(e))
+          .toList(),
+      policyNotAcceptedBy: (json['policy_not_accepted_by'] as List<dynamic>?)
+          ?.whereType<Map<String, dynamic>>()
+          .map((e) => PolicyUser.fromJson(e))
+          .toList(),
+      policyAcceptedByCount: json['policy_accepted_by_count'] as int?,
+      policyNotAcceptedByCount: json['policy_not_accepted_by_count'] as int?,
     );
   }
 
@@ -843,6 +876,14 @@ class Post {
     List<Boost>? boosts,
     bool? canBoost,
     bool clearCurrentUserReaction = false,
+    bool? policyAccepted,
+    bool? policyRevoked,
+    bool? policyCanAccept,
+    bool? policyCanRevoke,
+    List<PolicyUser>? policyAcceptedBy,
+    List<PolicyUser>? policyNotAcceptedBy,
+    int? policyAcceptedByCount,
+    int? policyNotAcceptedByCount,
   }) {
     return Post(
       id: id ?? this.id,
@@ -903,8 +944,53 @@ class Post {
       notice: notice ?? this.notice,
       boosts: boosts ?? this.boosts,
       canBoost: canBoost ?? this.canBoost,
+      policyAccepted: policyAccepted ?? this.policyAccepted,
+      policyRevoked: policyRevoked ?? this.policyRevoked,
+      policyCanAccept: policyCanAccept ?? this.policyCanAccept,
+      policyCanRevoke: policyCanRevoke ?? this.policyCanRevoke,
+      policyAcceptedBy: policyAcceptedBy ?? this.policyAcceptedBy,
+      policyNotAcceptedBy: policyNotAcceptedBy ?? this.policyNotAcceptedBy,
+      policyAcceptedByCount: policyAcceptedByCount ?? this.policyAcceptedByCount,
+      policyNotAcceptedByCount:
+          policyNotAcceptedByCount ?? this.policyNotAcceptedByCount,
     );
   }
+}
+
+/// Policy 用户摘要（精简字段：id / username / avatar_template）
+class PolicyUser {
+  final int id;
+  final String username;
+  final String avatarTemplate;
+
+  const PolicyUser({
+    required this.id,
+    required this.username,
+    required this.avatarTemplate,
+  });
+
+  factory PolicyUser.fromJson(Map<String, dynamic> json) {
+    return PolicyUser(
+      id: json['id'] as int? ?? 0,
+      username: json['username'] as String? ?? '',
+      avatarTemplate: json['avatar_template'] as String? ?? '',
+    );
+  }
+
+  String getAvatarUrl({int size = 40}) {
+    final template = avatarTemplate.replaceAll('{size}', '$size');
+    return UrlHelper.resolveUrlWithCdn(template);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PolicyUser &&
+          id == other.id &&
+          username == other.username;
+
+  @override
+  int get hashCode => Object.hash(id, username);
 }
 
 /// Boost（微反应气泡）

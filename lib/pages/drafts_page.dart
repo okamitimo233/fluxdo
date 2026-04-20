@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/draft.dart';
+import '../navigation/nav_action_bus.dart';
 import '../providers/discourse_providers.dart';
 import '../widgets/desktop_refresh_indicator.dart';
 import '../services/discourse/discourse_service.dart';
@@ -23,14 +24,43 @@ final draftsProvider = FutureProvider.autoDispose<List<Draft>>((ref) async {
 
 /// 草稿列表页面
 class DraftsPage extends ConsumerStatefulWidget {
-  const DraftsPage({super.key});
+  const DraftsPage({super.key, this.isActive = true});
+
+  /// 是否为当前活跃的 tab（嵌入底栏时用于决定是否响应 NavActionBus）
+  final bool isActive;
 
   @override
   ConsumerState<DraftsPage> createState() => _DraftsPageState();
 }
 
 class _DraftsPageState extends ConsumerState<DraftsPage> {
+  final ScrollController _scrollController = ScrollController();
+
   @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_publishScrollProgress);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _publishScrollProgress() {
+    if (!_scrollController.hasClients) return;
+    final raw = _scrollController.offset;
+    final progress = raw < 0 ? 0.0 : raw;
+    final current = ref.read(navScrollProgressProvider(NavEntryIds.drafts));
+    final atZero = progress == 0 && current != 0;
+    final crossed = (progress >= navScrollIconThreshold) !=
+        (current >= navScrollIconThreshold);
+    if (!atZero && !crossed && (progress - current).abs() < 4.0) return;
+    ref.read(navScrollProgressProvider(NavEntryIds.drafts).notifier).state =
+        progress;
+  }
+
   Future<void> _onRefresh() async {
     ref.invalidate(draftsProvider);
     await ref.read(draftsProvider.future);
@@ -39,6 +69,34 @@ class _DraftsPageState extends ConsumerState<DraftsPage> {
   @override
   Widget build(BuildContext context) {
     final draftsAsync = ref.watch(draftsProvider);
+
+    // 嵌入底栏时响应快捷动作（仅活跃 tab 响应）
+    ref.listen(navActionBusProvider, (_, event) {
+      if (event == null || event.targetId != NavEntryIds.drafts) return;
+      if (!widget.isActive) return;
+      switch (event.action) {
+        case NavAction.scrollToTop:
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+          break;
+        case NavAction.refresh:
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+          _onRefresh();
+          ref.resetNavScrollProgress(NavEntryIds.drafts);
+          break;
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.drafts_title)),
@@ -60,6 +118,7 @@ class _DraftsPageState extends ConsumerState<DraftsPage> {
             }
 
             return ListView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.all(12),
               itemCount: drafts.length,
               itemBuilder: (context, index) {

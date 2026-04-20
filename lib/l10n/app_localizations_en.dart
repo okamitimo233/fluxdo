@@ -2802,10 +2802,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get metaverse_title => 'Metaverse';
 
   @override
+  String get nav_bookmarks => 'Bookmarks';
+
+  @override
+  String get nav_drafts => 'Drafts';
+
+  @override
+  String get nav_history => 'History';
+
+  @override
   String get nav_home => 'Home';
 
   @override
+  String get nav_messages => 'Messages';
+
+  @override
   String get nav_mine => 'Me';
+
+  @override
+  String get nav_notifications => 'Notifications';
 
   @override
   String toast_authorizationFailed(String error) {
@@ -4562,6 +4577,89 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hcaptcha_webviewTitle => 'hCaptcha Accessibility';
 
   @override
+  String get bottomNav_actionPickerTitle => 'Choose action';
+
+  @override
+  String get bottomNav_customizeLayout => 'Customize entries';
+
+  @override
+  String get bottomNav_customizeLayoutDesc =>
+      'Choose which entries appear and their order';
+
+  @override
+  String get bottomNav_doubleTapAction => 'Double tap on active tab';
+
+  @override
+  String get bottomNav_doubleTapActionDesc =>
+      'Action triggered on the second tap within 300ms';
+
+  @override
+  String get bottomNav_editorAvailable => 'Available';
+
+  @override
+  String get bottomNav_editorEmptyAvailable => 'No more entries to add';
+
+  @override
+  String get bottomNav_editorEnabled => 'Enabled';
+
+  @override
+  String bottomNav_editorEnabledHint(int count, int min, int max) {
+    return '$count/$max items, at least $min';
+  }
+
+  @override
+  String get bottomNav_editorLockedHint => 'Required, cannot be removed';
+
+  @override
+  String bottomNav_editorMaxReached(int max) {
+    return 'At most $max items';
+  }
+
+  @override
+  String bottomNav_editorMinReached(int min) {
+    return 'Keep at least $min items';
+  }
+
+  @override
+  String get bottomNav_editorPreviewHint =>
+      'Drag to reorder. Home stays first.';
+
+  @override
+  String get bottomNav_editorRequiresLogin => 'Login required';
+
+  @override
+  String get bottomNav_editorRestoreDefault => 'Reset';
+
+  @override
+  String get bottomNav_editorRestoreDefaultConfirm =>
+      'Reset to the default layout?';
+
+  @override
+  String get bottomNav_editorTitle => 'Bottom layout';
+
+  @override
+  String get bottomNav_gesturesGroup => 'Gestures';
+
+  @override
+  String get bottomNav_singleTapAction => 'Single tap on active tab';
+
+  @override
+  String get bottomNav_singleTapActionDesc =>
+      'Action triggered when tapping an already-selected tab';
+
+  @override
+  String get bottomNav_title => 'Bottom Navigation';
+
+  @override
+  String get navTapAction_none => 'None';
+
+  @override
+  String get navTapAction_refresh => 'Refresh';
+
+  @override
+  String get navTapAction_scrollToTop => 'Scroll to top';
+
+  @override
   String get config_seedUserTitle => 'Seed user';
 
   @override
@@ -4664,6 +4762,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settings_appearance => 'Appearance';
+
+  @override
+  String get settings_bottomNav => 'Bottom Navigation';
 
   @override
   String get settings_dataManagement => 'Data Management';

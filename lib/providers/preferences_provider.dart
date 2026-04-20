@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 // ignore: depend_on_referenced_packages
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../navigation/nav_action_bus.dart';
 import '../services/network/request_scheduler_config.dart';
 import '../services/cf_clearance_refresh_service.dart';
 import '../services/network/cookie/android_cdp_feature.dart';
@@ -46,6 +47,12 @@ class AppPreferences {
   final int maxPerWindow;
   /// 滑动窗口时长（秒）
   final int windowSeconds;
+  /// 底栏：单击已选中 tab 执行的动作
+  final NavTapAction bottomSingleTapAction;
+  /// 底栏：双击已选中 tab 执行的动作
+  final NavTapAction bottomDoubleTapAction;
+  /// 底栏入口 id 列表（顺序即显示顺序）
+  final List<String> bottomNavIds;
 
   const AppPreferences({
     required this.autoPanguSpacing,
@@ -68,6 +75,9 @@ class AppPreferences {
     required this.maxConcurrent,
     required this.maxPerWindow,
     required this.windowSeconds,
+    required this.bottomSingleTapAction,
+    required this.bottomDoubleTapAction,
+    required this.bottomNavIds,
   });
 
   AppPreferences copyWith({
@@ -91,6 +101,9 @@ class AppPreferences {
     int? maxConcurrent,
     int? maxPerWindow,
     int? windowSeconds,
+    NavTapAction? bottomSingleTapAction,
+    NavTapAction? bottomDoubleTapAction,
+    List<String>? bottomNavIds,
   }) {
     return AppPreferences(
       autoPanguSpacing: autoPanguSpacing ?? this.autoPanguSpacing,
@@ -114,6 +127,11 @@ class AppPreferences {
       maxConcurrent: maxConcurrent ?? this.maxConcurrent,
       maxPerWindow: maxPerWindow ?? this.maxPerWindow,
       windowSeconds: windowSeconds ?? this.windowSeconds,
+      bottomSingleTapAction:
+          bottomSingleTapAction ?? this.bottomSingleTapAction,
+      bottomDoubleTapAction:
+          bottomDoubleTapAction ?? this.bottomDoubleTapAction,
+      bottomNavIds: bottomNavIds ?? this.bottomNavIds,
     );
   }
 }
@@ -141,6 +159,11 @@ class PreferencesNotifier extends StateNotifier<AppPreferences> {
   static const String _maxConcurrentKey = 'pref_max_concurrent';
   static const String _maxPerWindowKey = 'pref_max_per_window';
   static const String _windowSecondsKey = 'pref_window_seconds';
+  static const String _bottomSingleTapActionKey =
+      'pref_bottom_single_tap_action';
+  static const String _bottomDoubleTapActionKey =
+      'pref_bottom_double_tap_action';
+  static const String _bottomNavIdsKey = 'pref_bottom_nav_ids';
 
   static const _crashlyticsChannel =
       MethodChannel('com.github.lingyan000.fluxdo/crashlytics');
@@ -171,6 +194,16 @@ class PreferencesNotifier extends StateNotifier<AppPreferences> {
             maxConcurrent: _prefs.getInt(_maxConcurrentKey) ?? 3,
             maxPerWindow: _prefs.getInt(_maxPerWindowKey) ?? 6,
             windowSeconds: _prefs.getInt(_windowSecondsKey) ?? 3,
+            bottomSingleTapAction: NavTapActionX.fromStorageKey(
+              _prefs.getString(_bottomSingleTapActionKey),
+              fallback: NavTapAction.scrollToTop,
+            ),
+            bottomDoubleTapAction: NavTapActionX.fromStorageKey(
+              _prefs.getString(_bottomDoubleTapActionKey),
+              fallback: NavTapAction.refresh,
+            ),
+            bottomNavIds: _prefs.getStringList(_bottomNavIdsKey) ??
+                const [NavEntryIds.home, NavEntryIds.profile],
           ),
         ) {
     isPortraitLocked = state.portraitLock;
@@ -300,6 +333,22 @@ class PreferencesNotifier extends StateNotifier<AppPreferences> {
     state = state.copyWith(windowSeconds: clamped);
     await _prefs.setInt(_windowSecondsKey, clamped);
     RequestSchedulerConfig.windowSeconds = clamped;
+  }
+
+  Future<void> setBottomSingleTapAction(NavTapAction action) async {
+    state = state.copyWith(bottomSingleTapAction: action);
+    await _prefs.setString(_bottomSingleTapActionKey, action.toStorageKey());
+  }
+
+  Future<void> setBottomDoubleTapAction(NavTapAction action) async {
+    state = state.copyWith(bottomDoubleTapAction: action);
+    await _prefs.setString(_bottomDoubleTapActionKey, action.toStorageKey());
+  }
+
+  /// 写入底栏 id 列表（顺序即显示顺序）。调用方负责校验。
+  Future<void> setBottomNavIds(List<String> ids) async {
+    state = state.copyWith(bottomNavIds: ids);
+    await _prefs.setStringList(_bottomNavIdsKey, ids);
   }
 
   void _syncSchedulerConfig() {
