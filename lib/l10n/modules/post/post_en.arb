@@ -33,6 +33,7 @@
   "nested_sortOld": "Old",
   "nested_sortTop": "Top",
   "nested_title": "Threaded View",
+  "nested_continueThread": "Continue this thread",
   "poll_closed": "Closed",
   "poll_count": "Count",
   "poll_percentage": "Percentage",

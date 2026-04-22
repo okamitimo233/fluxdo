@@ -12,6 +12,7 @@ import '../content/discourse_html_content/chunked/chunked_html_content.dart';
 import '../post/post_item/widgets/post_footer_section/post_footer_section.dart';
 import 'nested_collapsed_bar.dart';
 import 'nested_post_gutter.dart';
+import 'nested_thread_sheet.dart';
 
 // 布局常量
 const double _avatarSize = NestedPostAvatar.size;
@@ -19,6 +20,7 @@ const double _columnGap = 8.0;
 const double _verticalGap = 6.0;
 const double _lineWidth = 2.0;
 const double _lineCenterX = _avatarSize / 2; // 竖线 X 中心（相对于帖子左边缘）
+const double _lineAvatarGap = 4.0; // L 连接线末端与头像之间的间距
 
 /// 嵌套帖子卡片
 ///
@@ -38,6 +40,7 @@ class NestedPostCard extends ConsumerStatefulWidget {
   final TopicDetail detail;
   final NestedTopicParams params;
   final int depth;
+  final int maxDepth;
   final bool isLastChild;
   final bool isLoggedIn;
   final void Function(Post? replyToPost) onReply;
@@ -57,6 +60,7 @@ class NestedPostCard extends ConsumerStatefulWidget {
     required this.detail,
     required this.params,
     required this.depth,
+    this.maxDepth = 10,
     this.isLastChild = false,
     required this.isLoggedIn,
     required this.onReply,
@@ -99,7 +103,8 @@ class _NestedPostCardState extends ConsumerState<NestedPostCard> {
   }
 
   bool get _hasReplies => widget.node.directReplyCount > 0 || _children.isNotEmpty;
-  bool get _showDepthLine => _hasReplies && !_collapsed;
+  bool get _atMaxDepth => widget.depth >= widget.maxDepth;
+  bool get _showDepthLine => _hasReplies && !_collapsed && !_atMaxDepth;
 
   int get _replyCount {
     final c = widget.node.totalDescendantCount > 0
@@ -161,20 +166,32 @@ class _NestedPostCardState extends ConsumerState<NestedPostCard> {
     final depthLineColor = _depthLineHovered ? highlightColor : defaultLineColor;
     final connectorColor = widget.parentLineHighlighted ? highlightColor : defaultLineColor;
 
+    // 已删除帖子：删除图标替代头像，只显示"已删除"
+    final bool isDeletedPlaceholder = widget.node.isDeletedPlaceholder;
+
     // 帖子内容列
-    final Widget contentColumn = _collapsed
-        ? NestedCollapsedBar(
-            username: post.username,
-            replyCount: _replyCount,
-            onTap: _toggleExpanded,
-          )
-        : _buildArticle(theme, post);
+    final Widget contentColumn = isDeletedPlaceholder
+        ? _buildDeletedLabel(theme)
+        : _collapsed
+            ? NestedCollapsedBar(
+                username: post.username,
+                replyCount: _replyCount,
+                onTap: _toggleExpanded,
+              )
+            : _buildArticle(theme, post);
 
     // 主体行 + 视觉竖线（IgnorePointer，仅绘制，不处理事件）
     Widget mainRow = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        NestedPostAvatar(avatarTemplate: post.avatarTemplate, username: post.username),
+        if (isDeletedPlaceholder)
+          SizedBox(
+            width: _avatarSize,
+            height: _avatarSize,
+            child: Icon(Icons.delete_outline, size: 18, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+          )
+        else
+          NestedPostAvatar(avatarTemplate: post.avatarTemplate, username: post.username),
         const SizedBox(width: _columnGap),
         Expanded(child: contentColumn),
       ],
@@ -214,9 +231,10 @@ class _NestedPostCardState extends ConsumerState<NestedPostCard> {
     }
 
     // 子节点
-    final bool showChildren = _expanded && !_collapsed &&
+    final bool showContinueThread = _atMaxDepth && _hasReplies;
+    final bool showChildren = !_atMaxDepth && _expanded && !_collapsed &&
         (_children.isNotEmpty || _isLoadingMore || _hasMore);
-    final bool showExpandBtn = !_expanded && !_collapsed && _hasReplies;
+    final bool showExpandBtn = !_atMaxDepth && !_expanded && !_collapsed && _hasReplies;
 
     Widget card = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,8 +248,13 @@ class _NestedPostCardState extends ConsumerState<NestedPostCard> {
           ),
         if (showExpandBtn)
           Padding(
-            padding: const EdgeInsets.only(left: _avatarSize + _columnGap, top: 4, bottom: 4),
-            child: _buildExpandButton(theme),
+            padding: const EdgeInsets.only(left: _avatarSize + _columnGap),
+            child: _wrapWithConnector(theme, _buildExpandButton(theme)),
+          ),
+        if (showContinueThread)
+          Padding(
+            padding: const EdgeInsets.only(left: _avatarSize + _columnGap),
+            child: _wrapWithConnector(theme, _buildContinueThread(theme)),
           ),
       ],
     );
@@ -262,14 +285,14 @@ class _NestedPostCardState extends ConsumerState<NestedPostCard> {
               ),
             ),
 
-          // L 形连接线（纯视觉）
+          // L 形连接线（纯视觉，末端与头像保留间距）
           if (!isRoot)
             Positioned(
               left: -(_columnGap + _lineCenterX) - _lineWidth / 2,
               top: -_verticalGap,
               child: IgnorePointer(
                 child: CustomPaint(
-                  size: Size(_lineCenterX + _columnGap + _lineWidth / 2, _verticalGap + _avatarSize / 2),
+                  size: Size(_lineCenterX + _columnGap + _lineWidth / 2 - _lineAvatarGap, _verticalGap + _avatarSize / 2),
                   painter: _LConnectorPainter(color: connectorColor),
                 ),
               ),
@@ -353,6 +376,20 @@ class _NestedPostCardState extends ConsumerState<NestedPostCard> {
           hideRepliesButton: true,
         ),
       ],
+    );
+  }
+
+  /// 已删除帖子标签（图标已在头像位置，这里只显示文字）
+  Widget _buildDeletedLabel(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Text(
+        context.l10n.common_deleted,
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+          fontStyle: FontStyle.italic,
+        ),
+      ),
     );
   }
 
@@ -452,6 +489,7 @@ class _NestedPostCardState extends ConsumerState<NestedPostCard> {
             detail: widget.detail,
             params: widget.params,
             depth: widget.depth + 1,
+            maxDepth: widget.maxDepth,
             isLastChild: i == _children.length - 1 && !_hasMore,
             isLoggedIn: widget.isLoggedIn,
             onReply: widget.onReply,
@@ -463,17 +501,95 @@ class _NestedPostCardState extends ConsumerState<NestedPostCard> {
             expansionState: widget.expansionState,
           ),
         if (_hasMore)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: _isLoadingMore
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                : GestureDetector(
-                    onTap: _loadChildren,
-                    child: Text(context.l10n.nested_loadMoreReplies,
-                      style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.primary)),
-                  ),
-          ),
+          _buildLoadMoreWithConnector(theme),
       ],
+    );
+  }
+
+  /// 为子树区域内的操作按钮添加 L 形连接线
+  Widget _wrapWithConnector(ThemeData theme, Widget child, {double topPadding = _verticalGap}) {
+    final lineColor = widget.parentLineHighlighted
+        ? theme.colorScheme.primary
+        : theme.colorScheme.outlineVariant;
+    const btnHalfHeight = 8.0;
+
+    return Padding(
+      padding: EdgeInsets.only(top: topPadding),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          child,
+          Positioned(
+            left: -(_columnGap + _lineCenterX) - _lineWidth / 2,
+            top: -topPadding,
+            child: IgnorePointer(
+              child: CustomPaint(
+                size: Size(
+                  _lineCenterX + _columnGap + _lineWidth / 2 - _lineAvatarGap,
+                  topPadding + btnHalfHeight,
+                ),
+                painter: _LConnectorPainter(color: lineColor),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 带 L 形连接线的"加载更多回复"按钮
+  Widget _buildLoadMoreWithConnector(ThemeData theme) {
+    Widget btn = Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: _isLoadingMore
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : GestureDetector(
+              onTap: _loadChildren,
+              child: Text(
+                context.l10n.nested_loadMoreReplies,
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: theme.colorScheme.primary),
+              ),
+            ),
+    );
+
+    return _wrapWithConnector(theme, btn);
+  }
+
+  Widget _buildContinueThread(ThemeData theme) {
+    return GestureDetector(
+      onTap: () => showNestedThreadSheet(
+        context: context,
+        node: widget.node,
+        topicId: widget.topicId,
+        detail: widget.detail,
+        params: widget.params,
+        maxDepth: widget.maxDepth,
+        isLoggedIn: widget.isLoggedIn,
+        onReply: widget.onReply,
+        onEdit: widget.onEdit,
+        onRefreshPost: widget.onRefreshPost,
+        onJumpToPost: widget.onJumpToPost,
+        onSolutionChanged: widget.onSolutionChanged,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.subdirectory_arrow_right, size: 14, color: theme.colorScheme.primary),
+          const SizedBox(width: 4),
+          Text(
+            context.l10n.nested_continueThread,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

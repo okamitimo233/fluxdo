@@ -3443,6 +3443,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get nested_title => '树形视图';
 
   @override
+  String get nested_continueThread => '继续此主题';
+
+  @override
   String get poll_closed => '已关闭';
 
   @override
