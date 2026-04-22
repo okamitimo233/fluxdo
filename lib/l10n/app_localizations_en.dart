@@ -3532,6 +3532,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nested_title => 'Threaded View';
 
   @override
+  String get nested_continueThread => 'Continue this thread';
+
+  @override
   String get poll_closed => 'Closed';
 
   @override

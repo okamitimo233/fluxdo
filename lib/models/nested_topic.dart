@@ -6,12 +6,14 @@ class NestedNode {
   final List<NestedNode> children;
   final int directReplyCount;
   final int totalDescendantCount;
+  final bool isDeletedPlaceholder;
 
   const NestedNode({
     required this.post,
     this.children = const [],
     this.directReplyCount = 0,
     this.totalDescendantCount = 0,
+    this.isDeletedPlaceholder = false,
   });
 
   factory NestedNode.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class NestedNode {
           .toList(),
       directReplyCount: json['direct_reply_count'] as int? ?? 0,
       totalDescendantCount: json['total_descendant_count'] as int? ?? 0,
+      isDeletedPlaceholder: json['deleted_post_placeholder'] as bool? ?? false,
     );
   }
 
@@ -34,12 +37,14 @@ class NestedNode {
     List<NestedNode>? children,
     int? directReplyCount,
     int? totalDescendantCount,
+    bool? isDeletedPlaceholder,
   }) {
     return NestedNode(
       post: post ?? this.post,
       children: children ?? this.children,
       directReplyCount: directReplyCount ?? this.directReplyCount,
       totalDescendantCount: totalDescendantCount ?? this.totalDescendantCount,
+      isDeletedPlaceholder: isDeletedPlaceholder ?? this.isDeletedPlaceholder,
     );
   }
 }
@@ -52,7 +57,7 @@ class NestedRootsResponse {
   final List<NestedNode> roots;
   final bool hasMoreRoots;
   final int page;
-  final List<int>? pinnedPostIds;
+  final int? pinnedPostNumber;
 
   const NestedRootsResponse({
     this.topicJson,
@@ -61,13 +66,12 @@ class NestedRootsResponse {
     required this.roots,
     required this.hasMoreRoots,
     required this.page,
-    this.pinnedPostIds,
+    this.pinnedPostNumber,
   });
 
   factory NestedRootsResponse.fromJson(Map<String, dynamic> json) {
     final rootsJson = json['roots'] as List<dynamic>? ?? [];
     final opPostJson = json['op_post'] as Map<String, dynamic>?;
-    final pinnedJson = json['pinned_post_ids'] as List<dynamic>?;
 
     return NestedRootsResponse(
       topicJson: json['topic'] as Map<String, dynamic>?,
@@ -78,7 +82,7 @@ class NestedRootsResponse {
           .toList(),
       hasMoreRoots: json['has_more_roots'] as bool? ?? false,
       page: json['page'] as int? ?? 0,
-      pinnedPostIds: pinnedJson?.map((e) => e as int).toList(),
+      pinnedPostNumber: json['pinned_post_number'] as int?,
     );
   }
 }

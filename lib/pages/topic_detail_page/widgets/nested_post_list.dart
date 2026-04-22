@@ -4,6 +4,7 @@ import '../../../l10n/s.dart';
 import '../../../models/nested_topic.dart';
 import '../../../models/topic.dart';
 import '../../../providers/nested_topic_provider.dart';
+import '../../../utils/responsive.dart';
 import '../../../widgets/nested/nested_post_card.dart';
 import '../../../widgets/post/post_item/post_item.dart';
 import 'topic_detail_header.dart';
@@ -87,10 +88,20 @@ class _NestedPostListState extends ConsumerState<NestedPostList> {
     }
   }
 
+  /// 根据设备类型计算最大嵌套深度
+  int _getMaxDepth(BuildContext context) {
+    return switch (Responsive.getDeviceType(context)) {
+      DeviceType.mobile => 5,
+      DeviceType.tablet => 7,
+      DeviceType.desktop => 10,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     _builtPostNumbers.clear();
+    final maxDepth = _getMaxDepth(context);
 
     // OP 也算可见
     final ns = widget.nestedState;
@@ -163,6 +174,7 @@ class _NestedPostListState extends ConsumerState<NestedPostList> {
                 detail: widget.detail,
                 params: p,
                 depth: 0,
+                maxDepth: maxDepth,
                 isLastChild: index == ns.roots.length - 1,
                 isLoggedIn: widget.isLoggedIn,
                 onReply: widget.onReply,

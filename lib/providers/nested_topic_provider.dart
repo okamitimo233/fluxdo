@@ -27,7 +27,7 @@ class NestedTopicState {
   final bool hasMoreRoots;
   final int currentPage;
   final String sort;
-  final List<int>? pinnedPostIds;
+  final int? pinnedPostNumber;
   final bool isLoadingMore;
 
   const NestedTopicState({
@@ -37,7 +37,7 @@ class NestedTopicState {
     this.hasMoreRoots = false,
     this.currentPage = 0,
     this.sort = 'old',
-    this.pinnedPostIds,
+    this.pinnedPostNumber,
     this.isLoadingMore = false,
   });
 
@@ -50,7 +50,7 @@ class NestedTopicState {
     bool? hasMoreRoots,
     int? currentPage,
     String? sort,
-    List<int>? pinnedPostIds,
+    int? pinnedPostNumber,
     bool? isLoadingMore,
   }) {
     return NestedTopicState(
@@ -60,7 +60,7 @@ class NestedTopicState {
       hasMoreRoots: hasMoreRoots ?? this.hasMoreRoots,
       currentPage: currentPage ?? this.currentPage,
       sort: sort ?? this.sort,
-      pinnedPostIds: pinnedPostIds ?? this.pinnedPostIds,
+      pinnedPostNumber: pinnedPostNumber ?? this.pinnedPostNumber,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
@@ -74,7 +74,7 @@ class NestedTopicNotifier extends AsyncNotifier<NestedTopicState> {
   @override
   Future<NestedTopicState> build() async {
     final service = ref.read(discourseServiceProvider);
-    final response = await service.getNestedRoots(arg.topicId, sort: 'old', page: 0);
+    final response = await service.getNestedRoots(arg.topicId, sort: 'old', page: 0, trackVisit: true);
 
     return NestedTopicState(
       topicJson: response.topicJson,
@@ -83,7 +83,7 @@ class NestedTopicNotifier extends AsyncNotifier<NestedTopicState> {
       hasMoreRoots: response.hasMoreRoots,
       currentPage: 0,
       sort: response.sort ?? 'old',
-      pinnedPostIds: response.pinnedPostIds,
+      pinnedPostNumber: response.pinnedPostNumber,
     );
   }
 
@@ -141,7 +141,7 @@ class NestedTopicNotifier extends AsyncNotifier<NestedTopicState> {
         hasMoreRoots: response.hasMoreRoots,
         currentPage: 0,
         sort: newSort,
-        pinnedPostIds: response.pinnedPostIds,
+        pinnedPostNumber: response.pinnedPostNumber,
       ));
     } catch (e, s) {
       if (!ref.mounted) return;

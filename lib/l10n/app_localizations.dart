@@ -6508,6 +6508,12 @@ abstract class AppLocalizations {
   /// **'树形视图'**
   String get nested_title;
 
+  /// No description provided for @nested_continueThread.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续此主题'**
+  String get nested_continueThread;
+
   /// No description provided for @poll_closed.
   ///
   /// In zh, this message translates to:
