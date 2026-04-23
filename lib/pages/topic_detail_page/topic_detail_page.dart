@@ -725,23 +725,34 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage>
         icon: const Icon(Icons.more_vert),
         tooltip: context.l10n.topicDetail_moreOptions,
         onSelected: (value) {
-          if (value == 'subscribe') {
-            showNotificationLevelSheet(
-              context,
-              detail.notificationLevel,
-              (level) => _handleNotificationLevelChanged(notifier, level),
-            );
-          } else if (value == 'edit_topic') {
-            _handleEditTopic();
-          } else if (value == 'bookmark') {
-            _handleBookmark(notifier);
-          } else if (value == 'read_later') {
-            _handleReadLater();
-          } else if (value == 'reading_settings') {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ReadingSettingsPage()),
-            );
+          switch (value) {
+            case 'edit_topic':
+              _handleEditTopic();
+            case 'bookmark':
+              _handleBookmark(notifier);
+            case 'read_later':
+              _handleReadLater();
+            case 'subscribe':
+              showNotificationLevelSheet(
+                context,
+                detail.notificationLevel,
+                (level) => _handleNotificationLevelChanged(notifier, level),
+              );
+            case 'share_link':
+              _shareTopic();
+            case 'share_image':
+              _shareAsImage();
+            case 'export':
+              _showExportSheet();
+            case 'open_in_browser':
+              _openInBrowser();
+            case 'filter':
+              _showFilterSheet();
+            case 'reading_settings':
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ReadingSettingsPage()),
+              );
           }
         },
         itemBuilder: (context) => [
@@ -823,6 +834,82 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage>
                 const SizedBox(width: 12),
                 Text(context.l10n.topic_notificationSettings),
               ],
+            ),
+          ),
+          const PopupMenuDivider(),
+          if (!detail.isPrivateMessage)
+            PopupMenuItem(
+              value: 'share_link',
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.link, size: 20, color: Theme.of(context).colorScheme.onSurface),
+                  const SizedBox(width: 12),
+                  Text(context.l10n.topicDetail_shareLink),
+                ],
+              ),
+            ),
+          if (!detail.isPrivateMessage)
+            PopupMenuItem(
+              value: 'share_image',
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.image_outlined, size: 20, color: Theme.of(context).colorScheme.onSurface),
+                  const SizedBox(width: 12),
+                  Text(context.l10n.topicDetail_generateShareImage),
+                ],
+              ),
+            ),
+          PopupMenuItem(
+            value: 'export',
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.download_outlined, size: 20, color: Theme.of(context).colorScheme.onSurface),
+                const SizedBox(width: 12),
+                Text(context.l10n.topicDetail_exportArticle),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'open_in_browser',
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.language, size: 20, color: Theme.of(context).colorScheme.onSurface),
+                const SizedBox(width: 12),
+                Text(context.l10n.topicDetail_openInBrowser),
+              ],
+            ),
+          ),
+          const PopupMenuDivider(),
+          PopupMenuItem(
+            value: 'filter',
+            child: Builder(
+              builder: (context) {
+                final hasFilter = notifier.isSummaryMode || notifier.isAuthorOnlyMode ||
+                    notifier.isTopLevelMode || _isNestedView;
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.filter_list,
+                      size: 20,
+                      color: hasFilter
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.onSurface,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      context.l10n.topicDetail_filter,
+                      style: hasFilter
+                          ? TextStyle(color: Theme.of(context).colorScheme.primary)
+                          : null,
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           const PopupMenuDivider(),

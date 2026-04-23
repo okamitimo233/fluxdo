@@ -466,21 +466,28 @@ class _SwipeBarrier extends StatefulWidget {
 
 class _SwipeBarrierState extends State<_SwipeBarrier> {
   double _totalDragDistance = 0;
+  bool _dismissed = false;
   static const double _dismissThreshold = 20.0;
+
+  void _dismiss() {
+    if (_dismissed) return;
+    _dismissed = true;
+    widget.onDismiss();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Positioned.fill(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: widget.onDismiss,
+        onTap: _dismiss,
         onVerticalDragStart: (_) {
           _totalDragDistance = 0;
         },
         onVerticalDragUpdate: (details) {
           _totalDragDistance += details.delta.dy.abs();
           if (_totalDragDistance >= _dismissThreshold) {
-            widget.onDismiss();
+            _dismiss();
           }
         },
       ),
