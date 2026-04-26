@@ -1,0 +1,4 @@
+{"file": "CLAUDE.md", "reason": "Contains existing project guidelines (language, dependencies, time handling) that should be incorporated into spec files"}
+{"file": "AGENTS.md", "reason": "Contains GitNexus usage rules and project-scoped instructions for AI agents"}
+{"file": ".trellis/spec/core/doh_proxy/backend/index.md", "reason": "Backend spec index - needs to be filled with actual project patterns"}
+{"file": ".trellis/spec/core/doh_proxy/frontend/index.md", "reason": "Frontend spec index - needs to be filled with actual project patterns"}

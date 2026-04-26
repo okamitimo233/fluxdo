@@ -1,0 +1,4 @@
+{"file": "CLAUDE.md", "reason": "Reference for existing conventions to verify against"}
+{"file": "AGENTS.md", "reason": "Reference for GitNexus integration patterns"}
+{"file": ".trellis/spec/core/doh_proxy/backend/index.md", "reason": "Backend spec to verify filled guidelines match project patterns"}
+{"file": ".trellis/spec/core/doh_proxy/frontend/index.md", "reason": "Frontend spec to verify filled guidelines match project patterns"}
