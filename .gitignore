@@ -59,8 +59,14 @@ ios/rust_libs/
 # FVM Version Cache
 .fvm/
 
-# Codex
+# AI Coding Tools
 .codex/
+.claude/
+.gemini/
+.opencode/
+.windsurf/
+.agent/
+.agents/
 
 # Firebase config (contains API keys)
 android/app/google-services.json
@@ -71,3 +77,7 @@ android/app/src/main/res/raw/proxy_ca.der
 
 # L10n merged ARB files (generated from lib/l10n/modules/)
 lib/l10n/merged/
+.gitnexus
+
+# Temporary directories
+undefined/
