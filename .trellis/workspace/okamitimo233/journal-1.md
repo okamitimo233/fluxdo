@@ -41,3 +41,39 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: 建立 Fork 工作流规范
+
+**Date**: 2026-04-26
+**Task**: 建立 Fork 工作流规范
+**Package**: fluxdo
+**Branch**: `main`
+
+### Summary
+
+创建完整的 fork 工作流规范：CONTRIBUTING.md (359行)、Git 辅助脚本 (sync-upstream, create-pr)、个人配置文件管理策略。实现安全的 PR 创建流程（带 dry-run 和用户确认）。设置 AGENTS.md 和 CLAUDE.md 为 assume-unchanged。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `dd4d4b3` | (see git log) |
+| `ed566ec` | (see git log) |
+| `798f62e` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
